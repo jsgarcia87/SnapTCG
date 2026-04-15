@@ -1,130 +1,566 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CardDex MVP - Scanner</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardDex MVP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #13161e;
+      --surface2:  #1a1e2a;
+      --border:    rgba(255,255,255,0.07);
+      --border-hi: rgba(255,255,255,0.15);
+      --text:      #e8e6e0;
+      --muted:     #7a7870;
+      --accent-pk: #f5c842;
+      --accent-mt: #8b5cf6;
+      --glow-pk:   rgba(245,200,66,0.18);
+      --glow-mt:   rgba(139,92,246,0.18);
+      --accent:    var(--accent-pk);
+      --glow:      var(--glow-pk);
+      --radius:    16px;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    /* Ambient background glow */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, var(--glow), transparent 70%);
+      pointer-events: none;
+      transition: background 0.6s ease;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 420px;
+      padding: 28px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.05) inset;
+    }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 24px; }
+    .logo {
+      font-family: 'Cinzel', serif;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, var(--accent) 0%, #fff 60%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      transition: background 0.5s ease;
+    }
+    .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; letter-spacing: 0.03em; }
+
+    /* Game selector */
+    .game-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .game-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 9px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: transparent;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+    .game-btn .icon { font-size: 18px; }
+    .game-btn.active-pokemon {
+      background: rgba(245,200,66,0.12);
+      color: var(--accent-pk);
+      box-shadow: 0 0 0 1px rgba(245,200,66,0.3);
+    }
+    .game-btn.active-magic {
+      background: rgba(139,92,246,0.12);
+      color: var(--accent-mt);
+      box-shadow: 0 0 0 1px rgba(139,92,246,0.3);
+    }
+
+    /* Card display */
+    .display-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2/3;
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .display-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset;
+      pointer-events: none;
+    }
+    #card-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    #card-image.visible { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+    }
+    .placeholder-icon { font-size: 40px; opacity: 0.3; }
+    .placeholder-text { font-size: 13px; text-align: center; max-width: 200px; line-height: 1.5; }
+
+    /* Spinner */
+    .spinner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface2);
+    }
+    .spinner.visible { display: flex; }
+    .spin-ring {
+      width: 40px; height: 40px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      transition: border-top-color 0.4s;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Price */
+    .price-box {
+      display: none;
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+    .price-box.visible { display: block; }
+    .price-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 4px; }
+    .price-row { display: flex; align-items: baseline; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .price-main { font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; transition: color 0.4s; }
+    .price-secondary { font-size: 13px; color: var(--muted); }
+
+    /* Card info */
+    .card-info {
+      display: none;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .card-info.visible { display: block; }
+    .card-info strong { color: var(--text); font-weight: 500; }
+
+    /* Search bar */
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--glow);
+    }
+    .search-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      width: 46px;
+      height: 46px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .search-btn:hover { opacity: 0.85; }
+    .search-btn:active { transform: scale(0.95); }
+
+    /* Camera button */
+    .camera-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .camera-label:hover {
+      border-color: var(--border-hi);
+      color: var(--text);
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      font-size: 12px;
+      color: #f87171;
+      text-align: center;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(248,113,113,0.08);
+      border-radius: 8px;
+      border: 1px solid rgba(248,113,113,0.2);
+    }
+    .error-msg.visible { display: block; }
+
+    /* Foil badge */
+    .foil-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(139,92,246,0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139,92,246,0.3);
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* Transition helpers */
+    body.mode-magic { --accent: var(--accent-mt); --glow: var(--glow-mt); }
+    body.mode-pokemon { --accent: var(--accent-pk); --glow: var(--glow-pk); }
+  </style>
 </head>
-<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-4 font-sans text-white">
+<body class="mode-pokemon">
 
-    <div class="bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-700">
-        
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-                CardDex MVP
-            </h1>
-            <p class="text-slate-400 text-sm mt-2">Busca o escanea cartas de Pokémon</p>
-        </div>
+<div class="card">
+  <div class="header">
+    <div class="logo" id="logo">CardDex</div>
+    <div class="subtitle" id="subtitle">Pokémon TCG · Busca y valora tus cartas</div>
+  </div>
 
-        <div id="card-display" class="relative w-full aspect-[2/3] bg-slate-700 rounded-2xl border-2 border-dashed border-slate-600 flex items-center justify-center mb-6 overflow-hidden shadow-inner">
-            <div id="loading-spinner" class="hidden animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            <span id="placeholder-text" class="text-slate-500 text-center px-4">La carta aparecerá aquí cuando busques o escanees</span>
-            <img id="card-image" src="" alt="Carta" class="hidden w-full h-full object-contain shadow-2xl" />
-        </div>
+  <!-- Selector de juego -->
+  <div class="game-selector">
+    <button class="game-btn active-pokemon" id="btn-pokemon" onclick="setGame('pokemon')">
+      <span class="icon">⚡</span> Pokémon
+    </button>
+    <button class="game-btn" id="btn-magic" onclick="setGame('magic')">
+      <span class="icon">✦</span> Magic
+    </button>
+  </div>
 
-        <div id="price-result" class="hidden mb-8 text-center animate-bounce">
-            <p class="text-slate-400 text-xs uppercase tracking-widest font-bold">Precio Medio (Cardmarket)</p>
-            <p id="price-value" class="text-5xl font-black text-emerald-400 mt-1">0.00 €</p>
-        </div>
-
-        <div class="space-y-4">
-            <div class="flex gap-2">
-                <input 
-                    type="text" 
-                    id="manual-search" 
-                    placeholder="Escribe el nombre (ej. Pikachu)" 
-                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                >
-                <button onclick="ejecutarBusqueda()" class="bg-blue-600 hover:bg-blue-500 px-4 rounded-xl transition-colors">
-                    🔍
-                </button>
-            </div>
-
-            <div class="relative">
-                <label for="camera-input" class="flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-2xl cursor-pointer transition-all shadow-lg active:scale-95">
-                    <span class="mr-2">📸</span> HACER FOTO (SCAN)
-                </label>
-                <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
-            </div>
-        </div>
-
-        <p id="error-msg" class="text-red-400 text-xs mt-4 text-center hidden font-medium"></p>
+  <!-- Área de visualización -->
+  <div class="display-wrap">
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-icon">🃏</div>
+      <div class="placeholder-text">Busca una carta para ver su imagen y precio</div>
     </div>
+    <div class="spinner" id="spinner"><div class="spin-ring" id="spin-ring"></div></div>
+    <img id="card-image" alt="Carta">
+  </div>
 
-    <script>
-        // CONFIGURACIÓN
-        // Si tienes una API Key de Pokémon, pégala aquí. Si no, déjala vacía (limita a 100 peticiones)
-        const POKEMON_API_KEY = ""; 
+  <!-- Info de la carta -->
+  <div class="card-info" id="card-info"></div>
 
-        async function buscarCartaPokemon(nombre) {
-            const errorMsg = document.getElementById('error-msg');
-            const cardImage = document.getElementById('card-image');
-            const placeholderText = document.getElementById('placeholder-text');
-            const loadingSpinner = document.getElementById('loading-spinner');
-            const priceResult = document.getElementById('price-result');
-            const priceValue = document.getElementById('price-value');
+  <!-- Precio -->
+  <div class="price-box" id="price-box">
+    <div class="price-label">Precio Cardmarket</div>
+    <div class="price-row">
+      <div class="price-main" id="price-main">—</div>
+      <div class="price-secondary" id="price-secondary"></div>
+    </div>
+  </div>
 
-            // Limpiar estado previo
-            errorMsg.classList.add('hidden');
-            loadingSpinner.classList.remove('hidden');
-            placeholderText.classList.add('hidden');
-            cardImage.classList.add('hidden');
-            priceResult.classList.add('hidden');
+  <!-- Búsqueda -->
+  <div class="search-row">
+    <input
+      type="text"
+      id="search-input"
+      class="search-input"
+      placeholder="Nombre de la carta..."
+      onkeypress="if(event.key==='Enter') ejecutarBusqueda()"
+    >
+    <button class="search-btn" onclick="ejecutarBusqueda()">🔍</button>
+  </div>
 
-            try {
-                const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"`, {
-                    headers: POKEMON_API_KEY ? { "X-Api-Key": POKEMON_API_KEY } : {}
-                });
-                
-                const data = await response.json();
+  <label class="camera-label" for="camera-input">
+    <span>📸</span> Hacer foto (scan)
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
+  </label>
 
-                if (data.data && data.data.length > 0) {
-                    const carta = data.data[0]; // Cogemos la primera coincidencia
-                    
-                    // 1. Mostrar Imagen
-                    cardImage.src = carta.images.large;
-                    cardImage.classList.remove('hidden');
+  <div class="error-msg" id="error-msg"></div>
+</div>
 
-                    // 2. Mostrar Precio (buscamos el precio de Cardmarket)
-                    const precio = carta.cardmarket?.prices?.averageSellPrice;
-                    if (precio) {
-                        priceValue.innerText = `${precio} €`;
-                    } else {
-                        priceValue.innerText = "N/A";
-                    }
-                    priceResult.classList.remove('hidden');
+<script>
+  // ─── CONFIGURACIÓN ─────────────────────────────────────────────
+  const POKEMON_API_KEY = ""; // Opcional: pega tu key aquí para más requests
+  let juegoActual = 'pokemon';
 
-                } else {
-                    errorMsg.innerText = "No se encontró ninguna carta con ese nombre.";
-                    errorMsg.classList.remove('hidden');
-                    placeholderText.classList.remove('hidden');
-                }
-            } catch (error) {
-                errorMsg.innerText = "Error de conexión con la API.";
-                errorMsg.classList.remove('hidden');
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        }
+  // ─── CAMBIO DE JUEGO ───────────────────────────────────────────
+  function setGame(juego) {
+    juegoActual = juego;
+    const esMagic = juego === 'magic';
 
-        // Función que se activa al darle al botón de buscar
-        function ejecutarBusqueda() {
-            const nombre = document.getElementById('manual-search').value;
-            if (nombre) buscarCartaPokemon(nombre);
-        }
+    // Modo visual
+    document.body.classList.toggle('mode-magic', esMagic);
+    document.body.classList.toggle('mode-pokemon', !esMagic);
 
-        // Simulación de "Tras hacer la foto"
-        document.getElementById('camera-input').addEventListener('change', function(e) {
-            if (e.target.files[0]) {
-                alert("Foto capturada. En el siguiente paso (OCR), extraeremos el nombre automáticamente. Por ahora, escribe el nombre en el cuadro de texto para probar la API.");
-            }
-        });
+    // Botones
+    document.getElementById('btn-pokemon').className = 'game-btn' + (!esMagic ? ' active-pokemon' : '');
+    document.getElementById('btn-magic').className   = 'game-btn' + (esMagic  ? ' active-magic'   : '');
 
-        // Permitir buscar al pulsar "Enter"
-        document.getElementById('manual-search').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') ejecutarBusqueda();
-        });
-    </script>
+    // Textos
+    document.getElementById('subtitle').textContent = esMagic
+      ? 'Magic: The Gathering · Busca y valora tus cartas'
+      : 'Pokémon TCG · Busca y valora tus cartas';
+
+    document.getElementById('search-input').placeholder = esMagic
+      ? 'Ej: Black Lotus, Jace...'
+      : 'Ej: Pikachu, Charizard...';
+
+    // Reset
+    resetUI();
+  }
+
+  // ─── RESET UI ──────────────────────────────────────────────────
+  function resetUI() {
+    hide('card-image', 'card-info', 'price-box', 'error-msg', 'spinner');
+    show('placeholder');
+    document.getElementById('card-image').classList.remove('visible');
+  }
+
+  function show(...ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('visible'); }); }
+  function hide(...ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('visible'); }); }
+
+  // ─── ESTADOS DE CARGA ──────────────────────────────────────────
+  function mostrarCargando() {
+    hide('card-image', 'card-info', 'price-box', 'error-msg', 'placeholder');
+    show('spinner');
+  }
+
+  function mostrarResultado({ imagen, nombre, set, precio, precioFoil, moneda }) {
+    // Imagen
+    const img = document.getElementById('card-image');
+    img.src = imagen;
+    img.onload = () => img.classList.add('visible');
+    show('card-image');
+    hide('spinner', 'placeholder');
+
+    // Info de la carta
+    const infoEl = document.getElementById('card-info');
+    if (nombre) {
+      infoEl.innerHTML = `<strong>${nombre}</strong>${set ? ` · ${set}` : ''}`;
+      show('card-info');
+    }
+
+    // Precio
+    const boxEl = document.getElementById('price-box');
+    const mainEl = document.getElementById('price-main');
+    const secEl  = document.getElementById('price-secondary');
+
+    if (precio !== null && precio !== undefined) {
+      const sym = moneda === 'usd' ? '$' : '€';
+      mainEl.textContent = `${parseFloat(precio).toFixed(2)} ${sym}`;
+
+      // Precio foil como secundario (solo Magic)
+      if (precioFoil) {
+        secEl.innerHTML = `Foil: <span style="color:var(--accent-mt)">${parseFloat(precioFoil).toFixed(2)} ${sym}</span>`;
+      } else {
+        secEl.textContent = '';
+      }
+      show('price-box');
+    } else {
+      mainEl.textContent = 'N/D';
+      secEl.textContent = 'Sin precio en Cardmarket';
+      show('price-box');
+    }
+  }
+
+  function mostrarError(msg) {
+    hide('spinner');
+    show('placeholder');
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    show('error-msg');
+  }
+
+  // ─── API POKÉMON TCG ───────────────────────────────────────────
+  async function buscarPokemon(nombre) {
+    const headers = POKEMON_API_KEY ? { "X-Api-Key": POKEMON_API_KEY } : {};
+    const url = `https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"&pageSize=10&orderBy=-set.releaseDate`;
+    const res  = await fetch(url, { headers });
+
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (!data.data || data.data.length === 0) {
+      throw new Error('No se encontró ninguna carta con ese nombre.');
+    }
+
+    // Buscar la primera con precio disponible, o simplemente la primera
+    const carta = data.data.find(c => c.cardmarket?.prices?.averageSellPrice) || data.data[0];
+
+    const precio =
+      carta.cardmarket?.prices?.averageSellPrice ??
+      carta.cardmarket?.prices?.trendPrice ??
+      carta.tcgplayer?.prices?.holofoil?.market ??
+      carta.tcgplayer?.prices?.normal?.market ??
+      null;
+
+    return {
+      imagen:  carta.images.large,
+      nombre:  carta.name,
+      set:     carta.set?.name,
+      precio,
+      precioFoil: null,
+      moneda:  'eur'
+    };
+  }
+
+  // ─── API SCRYFALL (MAGIC) ──────────────────────────────────────
+  async function buscarMagic(nombre) {
+    // fuzzy: acepta nombres incompletos y con errores tipográficos
+    const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`;
+    const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+
+    if (data.object === 'error') {
+      // Si no encuentra exacta, intentar búsqueda general y coger la primera
+      if (data.type === 'ambiguous') {
+        throw new Error(`Nombre ambiguo. Prueba a ser más específico.`);
+      }
+      throw new Error('Carta no encontrada en Scryfall.');
+    }
+
+    // Manejo de cartas de DOBLE CARA (transform, modal_dfc, etc.)
+    let imagen;
+    if (data.image_uris) {
+      imagen = data.image_uris.large || data.image_uris.normal;
+    } else if (data.card_faces && data.card_faces[0]?.image_uris) {
+      // Doble cara: usamos la cara frontal
+      imagen = data.card_faces[0].image_uris.large || data.card_faces[0].image_uris.normal;
+    } else {
+      throw new Error('No se pudo obtener la imagen de la carta.');
+    }
+
+    const precio     = data.prices?.eur     ?? data.prices?.usd     ?? null;
+    const precioFoil = data.prices?.eur_foil ?? data.prices?.usd_foil ?? null;
+    const moneda     = data.prices?.eur ? 'eur' : 'usd';
+
+    return {
+      imagen,
+      nombre:  data.name,
+      set:     data.set_name,
+      precio,
+      precioFoil: (precioFoil && precioFoil !== precio) ? precioFoil : null,
+      moneda
+    };
+  }
+
+  // ─── DISPATCHER PRINCIPAL ──────────────────────────────────────
+  async function ejecutarBusqueda() {
+    const nombre = document.getElementById('search-input').value.trim();
+    if (!nombre) return;
+
+    mostrarCargando();
+    hide('error-msg');
+
+    try {
+      const resultado = juegoActual === 'magic'
+        ? await buscarMagic(nombre)
+        : await buscarPokemon(nombre);
+
+      mostrarResultado(resultado);
+    } catch (err) {
+      console.error(err);
+      mostrarError(err.message || 'Error de conexión. Comprueba tu internet.');
+    }
+  }
+
+  // ─── CÁMARA (placeholder OCR) ──────────────────────────────────
+  document.getElementById('camera-input').addEventListener('change', function(e) {
+    if (!e.target.files[0]) return;
+    const juego = juegoActual === 'magic' ? 'Magic' : 'Pokémon';
+    alert(`Foto capturada. En el próximo paso se integrará OCR para detectar el nombre automáticamente.\n\nPor ahora escribe el nombre en el buscador para probar la API de ${juego}.`);
+  });
+</script>
 </body>
 </html>
