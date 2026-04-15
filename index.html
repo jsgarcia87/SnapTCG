@@ -3,61 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner TCG MVP</title>
+    <title>CardDex MVP - Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+<body class="bg-slate-900 flex flex-col items-center justify-center min-h-screen p-4 font-sans text-white">
 
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center">
+    <div class="bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-8 border border-slate-700">
         
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">TCG Scanner</h1>
-        <p class="text-sm text-gray-500 mb-6 text-center">Escanea tu carta de Magic o Pokémon para ver el precio.</p>
-
-        <div id="image-preview" class="w-full h-64 bg-gray-200 rounded-lg border-2 border-dashed border-gray-400 flex items-center justify-center mb-6 overflow-hidden">
-            <span id="placeholder-text" class="text-gray-400">La foto aparecerá aquí</span>
-            <img id="scanned-image" src="" alt="Carta escaneada" class="hidden object-cover w-full h-full" />
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                CardDex MVP
+            </h1>
+            <p class="text-slate-400 text-sm mt-2">Busca o escanea cartas de Pokémon</p>
         </div>
 
-        <label for="camera-input" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-center cursor-pointer transition duration-200 shadow-md">
-            📸 Escanear Carta
-        </label>
-        
-        <input 
-            type="file" 
-            id="camera-input" 
-            accept="image/*" 
-            capture="environment" 
-            class="hidden"
-        >
-
-        <div id="price-result" class="mt-6 hidden w-full text-center">
-            <p class="text-gray-500 text-sm">Precio estimado (Cardmarket)</p>
-            <p class="text-4xl font-extrabold text-green-600 mt-1">-- €</p>
+        <div id="card-display" class="relative w-full aspect-[2/3] bg-slate-700 rounded-2xl border-2 border-dashed border-slate-600 flex items-center justify-center mb-6 overflow-hidden shadow-inner">
+            <div id="loading-spinner" class="hidden animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <span id="placeholder-text" class="text-slate-500 text-center px-4">La carta aparecerá aquí cuando busques o escanees</span>
+            <img id="card-image" src="" alt="Carta" class="hidden w-full h-full object-contain shadow-2xl" />
         </div>
 
+        <div id="price-result" class="hidden mb-8 text-center animate-bounce">
+            <p class="text-slate-400 text-xs uppercase tracking-widest font-bold">Precio Medio (Cardmarket)</p>
+            <p id="price-value" class="text-5xl font-black text-emerald-400 mt-1">0.00 €</p>
+        </div>
+
+        <div class="space-y-4">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="manual-search" 
+                    placeholder="Escribe el nombre (ej. Pikachu)" 
+                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                >
+                <button onclick="ejecutarBusqueda()" class="bg-blue-600 hover:bg-blue-500 px-4 rounded-xl transition-colors">
+                    🔍
+                </button>
+            </div>
+
+            <div class="relative">
+                <label for="camera-input" class="flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-2xl cursor-pointer transition-all shadow-lg active:scale-95">
+                    <span class="mr-2">📸</span> HACER FOTO (SCAN)
+                </label>
+                <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+            </div>
+        </div>
+
+        <p id="error-msg" class="text-red-400 text-xs mt-4 text-center hidden font-medium"></p>
     </div>
 
     <script>
-        const cameraInput = document.getElementById('camera-input');
-        const scannedImage = document.getElementById('scanned-image');
-        const placeholderText = document.getElementById('placeholder-text');
-        const priceResult = document.getElementById('price-result');
+        // CONFIGURACIÓN
+        // Si tienes una API Key de Pokémon, pégala aquí. Si no, déjala vacía (limita a 100 peticiones)
+        const POKEMON_API_KEY = ""; 
 
-        cameraInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                // Creamos una URL temporal para mostrar la imagen capturada
-                const imageUrl = URL.createObjectURL(file);
+        async function buscarCartaPokemon(nombre) {
+            const errorMsg = document.getElementById('error-msg');
+            const cardImage = document.getElementById('card-image');
+            const placeholderText = document.getElementById('placeholder-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const priceResult = document.getElementById('price-result');
+            const priceValue = document.getElementById('price-value');
+
+            // Limpiar estado previo
+            errorMsg.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+            placeholderText.classList.add('hidden');
+            cardImage.classList.add('hidden');
+            priceResult.classList.add('hidden');
+
+            try {
+                const response = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"`, {
+                    headers: POKEMON_API_KEY ? { "X-Api-Key": POKEMON_API_KEY } : {}
+                });
                 
-                // Ocultamos el texto y mostramos la imagen
-                placeholderText.classList.add('hidden');
-                scannedImage.src = imageUrl;
-                scannedImage.classList.remove('hidden');
+                const data = await response.json();
 
-                // Simulamos que ha encontrado un precio mostrando el bloque oculto
-                // (Aquí es donde en el futuro conectarías tu API)
-                priceResult.classList.remove('hidden');
+                if (data.data && data.data.length > 0) {
+                    const carta = data.data[0]; // Cogemos la primera coincidencia
+                    
+                    // 1. Mostrar Imagen
+                    cardImage.src = carta.images.large;
+                    cardImage.classList.remove('hidden');
+
+                    // 2. Mostrar Precio (buscamos el precio de Cardmarket)
+                    const precio = carta.cardmarket?.prices?.averageSellPrice;
+                    if (precio) {
+                        priceValue.innerText = `${precio} €`;
+                    } else {
+                        priceValue.innerText = "N/A";
+                    }
+                    priceResult.classList.remove('hidden');
+
+                } else {
+                    errorMsg.innerText = "No se encontró ninguna carta con ese nombre.";
+                    errorMsg.classList.remove('hidden');
+                    placeholderText.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorMsg.innerText = "Error de conexión con la API.";
+                errorMsg.classList.remove('hidden');
+            } finally {
+                loadingSpinner.classList.add('hidden');
             }
+        }
+
+        // Función que se activa al darle al botón de buscar
+        function ejecutarBusqueda() {
+            const nombre = document.getElementById('manual-search').value;
+            if (nombre) buscarCartaPokemon(nombre);
+        }
+
+        // Simulación de "Tras hacer la foto"
+        document.getElementById('camera-input').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                alert("Foto capturada. En el siguiente paso (OCR), extraeremos el nombre automáticamente. Por ahora, escribe el nombre en el cuadro de texto para probar la API.");
+            }
+        });
+
+        // Permitir buscar al pulsar "Enter"
+        document.getElementById('manual-search').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') ejecutarBusqueda();
         });
     </script>
 </body>
