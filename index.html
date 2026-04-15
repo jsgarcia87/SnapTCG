@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner TCG MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center">
+        
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">TCG Scanner</h1>
+        <p class="text-sm text-gray-500 mb-6 text-center">Escanea tu carta de Magic o Pokémon para ver el precio.</p>
+
+        <div id="image-preview" class="w-full h-64 bg-gray-200 rounded-lg border-2 border-dashed border-gray-400 flex items-center justify-center mb-6 overflow-hidden">
+            <span id="placeholder-text" class="text-gray-400">La foto aparecerá aquí</span>
+            <img id="scanned-image" src="" alt="Carta escaneada" class="hidden object-cover w-full h-full" />
+        </div>
+
+        <label for="camera-input" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl text-center cursor-pointer transition duration-200 shadow-md">
+            📸 Escanear Carta
+        </label>
+        
+        <input 
+            type="file" 
+            id="camera-input" 
+            accept="image/*" 
+            capture="environment" 
+            class="hidden"
+        >
+
+        <div id="price-result" class="mt-6 hidden w-full text-center">
+            <p class="text-gray-500 text-sm">Precio estimado (Cardmarket)</p>
+            <p class="text-4xl font-extrabold text-green-600 mt-1">-- €</p>
+        </div>
+
+    </div>
+
+    <script>
+        const cameraInput = document.getElementById('camera-input');
+        const scannedImage = document.getElementById('scanned-image');
+        const placeholderText = document.getElementById('placeholder-text');
+        const priceResult = document.getElementById('price-result');
+
+        cameraInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Creamos una URL temporal para mostrar la imagen capturada
+                const imageUrl = URL.createObjectURL(file);
+                
+                // Ocultamos el texto y mostramos la imagen
+                placeholderText.classList.add('hidden');
+                scannedImage.src = imageUrl;
+                scannedImage.classList.remove('hidden');
+
+                // Simulamos que ha encontrado un precio mostrando el bloque oculto
+                // (Aquí es donde en el futuro conectarías tu API)
+                priceResult.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
