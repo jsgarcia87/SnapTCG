@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CardDex MVP</title>
+  <title>CardDex MVP - Multi Search & OCR</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -38,7 +39,6 @@
       padding: 24px 16px;
     }
 
-    /* Ambient background glow */
     body::before {
       content: '';
       position: fixed;
@@ -59,10 +59,13 @@
       max-width: 420px;
       padding: 28px;
       box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 1px 0 rgba(255,255,255,0.05) inset;
+      max-height: 95vh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Header */
-    .header { text-align: center; margin-bottom: 24px; }
+    .header { text-align: center; margin-bottom: 24px; flex-shrink: 0; }
     .logo {
       font-family: 'Cinzel', serif;
       font-size: 28px;
@@ -86,225 +89,123 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 4px;
+      flex-shrink: 0;
     }
     .game-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 9px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.25s ease;
-      background: transparent;
-      color: var(--muted);
-      letter-spacing: 0.02em;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 16px; border: none; border-radius: 9px;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.25s ease; background: transparent; color: var(--muted);
     }
-    .game-btn .icon { font-size: 18px; }
-    .game-btn.active-pokemon {
-      background: rgba(245,200,66,0.12);
-      color: var(--accent-pk);
-      box-shadow: 0 0 0 1px rgba(245,200,66,0.3);
-    }
-    .game-btn.active-magic {
-      background: rgba(139,92,246,0.12);
-      color: var(--accent-mt);
-      box-shadow: 0 0 0 1px rgba(139,92,246,0.3);
-    }
+    .game-btn.active-pokemon { background: rgba(245,200,66,0.12); color: var(--accent-pk); box-shadow: 0 0 0 1px rgba(245,200,66,0.3); }
+    .game-btn.active-magic { background: rgba(139,92,246,0.12); color: var(--accent-mt); box-shadow: 0 0 0 1px rgba(139,92,246,0.3); }
 
-    /* Card display */
-    .display-wrap {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 2/3;
-      border-radius: var(--radius);
-      overflow: hidden;
+    /* Contenedor dinámico (Imagen única o Lista de resultados) */
+    .dynamic-content {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 200px;
       margin-bottom: 16px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
+      /* Ocultar barra de scroll para que quede más limpio */
+      scrollbar-width: none; 
     }
-    .display-wrap::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: var(--radius);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset;
-      pointer-events: none;
-    }
-    #card-image {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+    .dynamic-content::-webkit-scrollbar { display: none; }
+
+    /* Card display (Modo único) */
+    .display-wrap {
+      position: relative; width: 100%; aspect-ratio: 2/3;
+      border-radius: var(--radius); overflow: hidden;
+      background: var(--surface2); border: 1px solid var(--border);
       display: none;
+    }
+    .display-wrap.visible { display: block; }
+    #card-image { width: 100%; height: 100%; object-fit: contain; display: block; animation: fadeIn 0.4s ease; }
+
+    /* Lista de Resultados (Modo cuadrícula) */
+    .results-grid {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
       animation: fadeIn 0.4s ease;
     }
-    #card-image.visible { display: block; }
+    .results-grid.visible { display: grid; }
+    
+    .result-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .result-item:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .result-item img { width: 100%; aspect-ratio: 2/3; object-fit: contain; border-radius: 6px; margin-bottom: 8px; }
+    .result-item .res-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-item .res-set { font-size: 10px; color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-item .res-price { font-size: 13px; font-family: 'Cinzel', serif; font-weight: 700; color: var(--accent); }
+
+    /* Botón Volver a Lista */
+    .btn-back {
+      display: none;
+      width: 100%; padding: 10px; margin-bottom: 12px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+      text-align: center;
+    }
+    .btn-back.visible { display: block; }
 
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
 
     .placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      color: var(--muted);
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
     }
+    .placeholder.hidden { display: none; }
     .placeholder-icon { font-size: 40px; opacity: 0.3; }
     .placeholder-text { font-size: 13px; text-align: center; max-width: 200px; line-height: 1.5; }
 
     /* Spinner */
-    .spinner {
-      display: none;
-      position: absolute;
-      inset: 0;
-      align-items: center;
-      justify-content: center;
-      background: var(--surface2);
+    .spinner-wrap {
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+      padding: 40px 0;
     }
-    .spinner.visible { display: flex; }
+    .spinner-wrap.visible { display: flex; }
     .spin-ring {
-      width: 40px; height: 40px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      transition: border-top-color 0.4s;
+      width: 40px; height: 40px; border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
     }
+    .spinner-text { font-size: 13px; color: var(--accent); font-weight: 500; text-align: center; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Price */
+    /* Price Box */
     .price-box {
-      display: none;
-      text-align: center;
-      margin-bottom: 16px;
-      padding: 14px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      animation: fadeIn 0.3s ease;
+      display: none; text-align: center; margin-bottom: 16px; padding: 14px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; flex-shrink: 0;
     }
     .price-box.visible { display: block; }
     .price-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 4px; }
-    .price-row { display: flex; align-items: baseline; justify-content: center; gap: 12px; flex-wrap: wrap; }
-    .price-main { font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; transition: color 0.4s; }
-    .price-secondary { font-size: 13px; color: var(--muted); }
-
-    /* Card info */
-    .card-info {
-      display: none;
-      font-size: 12px;
-      color: var(--muted);
-      text-align: center;
-      margin-bottom: 16px;
-      padding: 8px 12px;
-      background: var(--surface2);
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    .card-info.visible { display: block; }
-    .card-info strong { color: var(--text); font-weight: 500; }
+    .price-main { font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; }
+    .price-secondary { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
     /* Search bar */
-    .search-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .search-input {
-      flex: 1;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .search-input::placeholder { color: var(--muted); }
-    .search-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--glow);
-    }
-    .search-btn {
-      background: var(--accent);
-      border: none;
-      border-radius: 10px;
-      width: 46px;
-      height: 46px;
-      font-size: 18px;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .search-btn:hover { opacity: 0.85; }
-    .search-btn:active { transform: scale(0.95); }
+    .search-row { display: flex; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
+    .search-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; }
+    .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
+    .search-btn { background: var(--accent); border: none; border-radius: 10px; width: 46px; height: 46px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
     /* Camera button */
     .camera-label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 13px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px;
+      border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0; transition: all 0.2s;
     }
-    .camera-label:hover {
-      border-color: var(--border-hi);
-      color: var(--text);
-      background: rgba(255,255,255,0.04);
-    }
+    .camera-label:hover { border-color: var(--accent); color: var(--accent); }
 
     /* Error */
-    .error-msg {
-      display: none;
-      font-size: 12px;
-      color: #f87171;
-      text-align: center;
-      margin-top: 10px;
-      padding: 8px 12px;
-      background: rgba(248,113,113,0.08);
-      border-radius: 8px;
-      border: 1px solid rgba(248,113,113,0.2);
-    }
+    .error-msg { display: none; font-size: 12px; color: #f87171; text-align: center; margin-top: 10px; padding: 8px 12px; background: rgba(248,113,113,0.08); border-radius: 8px; border: 1px solid rgba(248,113,113,0.2); flex-shrink: 0; }
     .error-msg.visible { display: block; }
 
-    /* Foil badge */
-    .foil-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 2px 8px;
-      border-radius: 20px;
-      background: rgba(139,92,246,0.15);
-      color: #a78bfa;
-      border: 1px solid rgba(139,92,246,0.3);
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
-    /* Transition helpers */
     body.mode-magic { --accent: var(--accent-mt); --glow: var(--glow-mt); }
     body.mode-pokemon { --accent: var(--accent-pk); --glow: var(--glow-pk); }
   </style>
@@ -317,7 +218,6 @@
     <div class="subtitle" id="subtitle">Pokémon TCG · Busca y valora tus cartas</div>
   </div>
 
-  <!-- Selector de juego -->
   <div class="game-selector">
     <button class="game-btn active-pokemon" id="btn-pokemon" onclick="setGame('pokemon')">
       <span class="icon">⚡</span> Pokémon
@@ -327,42 +227,40 @@
     </button>
   </div>
 
-  <!-- Área de visualización -->
-  <div class="display-wrap">
+  <div class="dynamic-content" id="dynamic-content">
+    
     <div class="placeholder" id="placeholder">
       <div class="placeholder-icon">🃏</div>
-      <div class="placeholder-text">Busca una carta para ver su imagen y precio</div>
+      <div class="placeholder-text">Busca o escanea una carta para ver sus ediciones y precios</div>
     </div>
-    <div class="spinner" id="spinner"><div class="spin-ring" id="spin-ring"></div></div>
-    <img id="card-image" alt="Carta">
+
+    <div class="spinner-wrap" id="spinner-wrap">
+      <div class="spin-ring"></div>
+      <div class="spinner-text" id="spinner-text">Buscando cartas...</div>
+    </div>
+
+    <div class="results-grid" id="results-grid"></div>
+
+    <button class="btn-back" id="btn-back" onclick="volverALista()">← Volver a las ediciones</button>
+
+    <div class="display-wrap" id="display-wrap">
+      <img id="card-image" alt="Carta">
+    </div>
   </div>
 
-  <!-- Info de la carta -->
-  <div class="card-info" id="card-info"></div>
-
-  <!-- Precio -->
   <div class="price-box" id="price-box">
-    <div class="price-label">Precio Cardmarket</div>
-    <div class="price-row">
-      <div class="price-main" id="price-main">—</div>
-      <div class="price-secondary" id="price-secondary"></div>
-    </div>
+    <div class="price-label" id="price-card-name">Precio Cardmarket</div>
+    <div class="price-main" id="price-main">—</div>
+    <div class="price-secondary" id="price-secondary"></div>
   </div>
 
-  <!-- Búsqueda -->
   <div class="search-row">
-    <input
-      type="text"
-      id="search-input"
-      class="search-input"
-      placeholder="Nombre de la carta..."
-      onkeypress="if(event.key==='Enter') ejecutarBusqueda()"
-    >
+    <input type="text" id="search-input" class="search-input" placeholder="Nombre de la carta..." onkeypress="if(event.key==='Enter') ejecutarBusqueda()">
     <button class="search-btn" onclick="ejecutarBusqueda()">🔍</button>
   </div>
 
   <label class="camera-label" for="camera-input">
-    <span>📸</span> Hacer foto (scan)
+    <span>📸</span> Escanear con la cámara (OCR)
     <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none">
   </label>
 
@@ -370,196 +268,207 @@
 </div>
 
 <script>
-  // ─── CONFIGURACIÓN ─────────────────────────────────────────────
-  const POKEMON_API_KEY = ""; // Opcional: pega tu key aquí para más requests
+  const POKEMON_API_KEY = ""; 
   let juegoActual = 'pokemon';
+  let ultimosResultados = []; // Guardamos la lista en memoria
 
-  // ─── CAMBIO DE JUEGO ───────────────────────────────────────────
   function setGame(juego) {
     juegoActual = juego;
     const esMagic = juego === 'magic';
-
-    // Modo visual
     document.body.classList.toggle('mode-magic', esMagic);
     document.body.classList.toggle('mode-pokemon', !esMagic);
-
-    // Botones
     document.getElementById('btn-pokemon').className = 'game-btn' + (!esMagic ? ' active-pokemon' : '');
     document.getElementById('btn-magic').className   = 'game-btn' + (esMagic  ? ' active-magic'   : '');
-
-    // Textos
-    document.getElementById('subtitle').textContent = esMagic
-      ? 'Magic: The Gathering · Busca y valora tus cartas'
-      : 'Pokémon TCG · Busca y valora tus cartas';
-
-    document.getElementById('search-input').placeholder = esMagic
-      ? 'Ej: Black Lotus, Jace...'
-      : 'Ej: Pikachu, Charizard...';
-
-    // Reset
+    document.getElementById('subtitle').textContent = esMagic ? 'Magic: The Gathering · Busca y valora tus cartas' : 'Pokémon TCG · Busca y valora tus cartas';
+    document.getElementById('search-input').placeholder = esMagic ? 'Ej: Black Lotus, Jace...' : 'Ej: Pikachu, Charizard...';
     resetUI();
   }
 
-  // ─── RESET UI ──────────────────────────────────────────────────
   function resetUI() {
-    hide('card-image', 'card-info', 'price-box', 'error-msg', 'spinner');
-    show('placeholder');
-    document.getElementById('card-image').classList.remove('visible');
+    document.getElementById('placeholder').classList.remove('hidden');
+    document.getElementById('spinner-wrap').classList.remove('visible');
+    document.getElementById('results-grid').classList.remove('visible');
+    document.getElementById('display-wrap').classList.remove('visible');
+    document.getElementById('price-box').classList.remove('visible');
+    document.getElementById('error-msg').classList.remove('visible');
+    document.getElementById('btn-back').classList.remove('visible');
+    ultimosResultados = [];
   }
 
-  function show(...ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('visible'); }); }
-  function hide(...ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('visible'); }); }
-
-  // ─── ESTADOS DE CARGA ──────────────────────────────────────────
-  function mostrarCargando() {
-    hide('card-image', 'card-info', 'price-box', 'error-msg', 'placeholder');
-    show('spinner');
-  }
-
-  function mostrarResultado({ imagen, nombre, set, precio, precioFoil, moneda }) {
-    // Imagen
-    const img = document.getElementById('card-image');
-    img.src = imagen;
-    img.onload = () => img.classList.add('visible');
-    show('card-image');
-    hide('spinner', 'placeholder');
-
-    // Info de la carta
-    const infoEl = document.getElementById('card-info');
-    if (nombre) {
-      infoEl.innerHTML = `<strong>${nombre}</strong>${set ? ` · ${set}` : ''}`;
-      show('card-info');
-    }
-
-    // Precio
-    const boxEl = document.getElementById('price-box');
-    const mainEl = document.getElementById('price-main');
-    const secEl  = document.getElementById('price-secondary');
-
-    if (precio !== null && precio !== undefined) {
-      const sym = moneda === 'usd' ? '$' : '€';
-      mainEl.textContent = `${parseFloat(precio).toFixed(2)} ${sym}`;
-
-      // Precio foil como secundario (solo Magic)
-      if (precioFoil) {
-        secEl.innerHTML = `Foil: <span style="color:var(--accent-mt)">${parseFloat(precioFoil).toFixed(2)} ${sym}</span>`;
-      } else {
-        secEl.textContent = '';
-      }
-      show('price-box');
-    } else {
-      mainEl.textContent = 'N/D';
-      secEl.textContent = 'Sin precio en Cardmarket';
-      show('price-box');
-    }
+  function mostrarCargando(texto = "Buscando cartas...") {
+    resetUI();
+    document.getElementById('placeholder').classList.add('hidden');
+    document.getElementById('spinner-text').textContent = texto;
+    document.getElementById('spinner-wrap').classList.add('visible');
   }
 
   function mostrarError(msg) {
-    hide('spinner');
-    show('placeholder');
-    const el = document.getElementById('error-msg');
-    el.textContent = msg;
-    show('error-msg');
+    resetUI();
+    document.getElementById('error-msg').textContent = msg;
+    document.getElementById('error-msg').classList.add('visible');
   }
 
-  // ─── API POKÉMON TCG ───────────────────────────────────────────
+  // --- RENDERIZADO DE LA LISTA DE VERSIONES ---
+  function renderizarLista(resultados) {
+    document.getElementById('spinner-wrap').classList.remove('visible');
+    const grid = document.getElementById('results-grid');
+    grid.innerHTML = '';
+    ultimosResultados = resultados;
+
+    if (resultados.length === 1) {
+      // Si solo hay una, la mostramos directamente
+      seleccionarCarta(0);
+      return;
+    }
+
+    resultados.forEach((carta, index) => {
+      const div = document.createElement('div');
+      div.className = 'result-item';
+      div.onclick = () => seleccionarCarta(index);
+      
+      const sym = carta.moneda === 'usd' ? '$' : '€';
+      const precioTxt = carta.precio ? `${parseFloat(carta.precio).toFixed(2)} ${sym}` : 'N/D';
+
+      div.innerHTML = `
+        <img src="${carta.imagenThumb || carta.imagen}" alt="${carta.nombre}">
+        <div class="res-name">${carta.nombre}</div>
+        <div class="res-set">${carta.set || 'Desconocido'}</div>
+        <div class="res-price">${precioTxt}</div>
+      `;
+      grid.appendChild(div);
+    });
+
+    grid.classList.add('visible');
+  }
+
+  // --- VISTA DETALLE DE UNA SOLA CARTA ---
+  function seleccionarCarta(index) {
+    const carta = ultimosResultados[index];
+    document.getElementById('results-grid').classList.remove('visible');
+    
+    // Si venimos de una lista de varias opciones, mostramos el botón volver
+    if (ultimosResultados.length > 1) {
+      document.getElementById('btn-back').classList.add('visible');
+    }
+
+    const img = document.getElementById('card-image');
+    img.src = carta.imagen;
+    document.getElementById('display-wrap').classList.add('visible');
+
+    const sym = carta.moneda === 'usd' ? '$' : '€';
+    document.getElementById('price-card-name').textContent = `${carta.nombre} (${carta.set})`;
+    document.getElementById('price-main').textContent = carta.precio ? `${parseFloat(carta.precio).toFixed(2)} ${sym}` : 'N/D';
+    
+    const secEl = document.getElementById('price-secondary');
+    if (carta.precioFoil) {
+      secEl.innerHTML = `Foil: <span style="color:var(--accent)">${parseFloat(carta.precioFoil).toFixed(2)} ${sym}</span>`;
+    } else {
+      secEl.textContent = carta.precio ? 'Precio medio' : 'Sin datos de venta';
+    }
+    
+    document.getElementById('price-box').classList.add('visible');
+  }
+
+  function volverALista() {
+    document.getElementById('display-wrap').classList.remove('visible');
+    document.getElementById('price-box').classList.remove('visible');
+    document.getElementById('btn-back').classList.remove('visible');
+    document.getElementById('results-grid').classList.add('visible');
+  }
+
+  // --- APIS (Ajustadas para devolver Arrays) ---
   async function buscarPokemon(nombre) {
     const headers = POKEMON_API_KEY ? { "X-Api-Key": POKEMON_API_KEY } : {};
-    const url = `https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"&pageSize=10&orderBy=-set.releaseDate`;
+    const url = `https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"&orderBy=-set.releaseDate`;
     const res  = await fetch(url, { headers });
-
     if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
     const data = await res.json();
+    if (!data.data || data.data.length === 0) throw new Error('No se encontró ninguna carta.');
 
-    if (!data.data || data.data.length === 0) {
-      throw new Error('No se encontró ninguna carta con ese nombre.');
-    }
-
-    // Buscar la primera con precio disponible, o simplemente la primera
-    const carta = data.data.find(c => c.cardmarket?.prices?.averageSellPrice) || data.data[0];
-
-    const precio =
-      carta.cardmarket?.prices?.averageSellPrice ??
-      carta.cardmarket?.prices?.trendPrice ??
-      carta.tcgplayer?.prices?.holofoil?.market ??
-      carta.tcgplayer?.prices?.normal?.market ??
-      null;
-
-    return {
-      imagen:  carta.images.large,
-      nombre:  carta.name,
-      set:     carta.set?.name,
-      precio,
-      precioFoil: null,
-      moneda:  'eur'
-    };
+    return data.data.map(carta => ({
+      imagenThumb: carta.images.small,
+      imagen: carta.images.large,
+      nombre: carta.name,
+      set: carta.set?.name,
+      precio: carta.cardmarket?.prices?.averageSellPrice ?? carta.tcgplayer?.prices?.normal?.market ?? null,
+      precioFoil: carta.tcgplayer?.prices?.holofoil?.market ?? null,
+      moneda: 'eur'
+    }));
   }
 
-  // ─── API SCRYFALL (MAGIC) ──────────────────────────────────────
   async function buscarMagic(nombre) {
-    // fuzzy: acepta nombres incompletos y con errores tipográficos
-    const url = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`;
+    // Usamos el endpoint de 'search' que devuelve todas las impresiones/sets de la carta
+    const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(nombre)}&unique=prints`;
     const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
+    if (data.object === 'error') throw new Error('Carta no encontrada en Scryfall.');
 
-    if (data.object === 'error') {
-      // Si no encuentra exacta, intentar búsqueda general y coger la primera
-      if (data.type === 'ambiguous') {
-        throw new Error(`Nombre ambiguo. Prueba a ser más específico.`);
+    return data.data.map(carta => {
+      let imgThumb, imgLarge;
+      if (carta.image_uris) {
+        imgThumb = carta.image_uris.small;
+        imgLarge = carta.image_uris.large || carta.image_uris.normal;
+      } else if (carta.card_faces && carta.card_faces[0]?.image_uris) {
+        imgThumb = carta.card_faces[0].image_uris.small;
+        imgLarge = carta.card_faces[0].image_uris.large || carta.card_faces[0].image_uris.normal;
       }
-      throw new Error('Carta no encontrada en Scryfall.');
-    }
 
-    // Manejo de cartas de DOBLE CARA (transform, modal_dfc, etc.)
-    let imagen;
-    if (data.image_uris) {
-      imagen = data.image_uris.large || data.image_uris.normal;
-    } else if (data.card_faces && data.card_faces[0]?.image_uris) {
-      // Doble cara: usamos la cara frontal
-      imagen = data.card_faces[0].image_uris.large || data.card_faces[0].image_uris.normal;
-    } else {
-      throw new Error('No se pudo obtener la imagen de la carta.');
-    }
-
-    const precio     = data.prices?.eur     ?? data.prices?.usd     ?? null;
-    const precioFoil = data.prices?.eur_foil ?? data.prices?.usd_foil ?? null;
-    const moneda     = data.prices?.eur ? 'eur' : 'usd';
-
-    return {
-      imagen,
-      nombre:  data.name,
-      set:     data.set_name,
-      precio,
-      precioFoil: (precioFoil && precioFoil !== precio) ? precioFoil : null,
-      moneda
-    };
+      return {
+        imagenThumb: imgThumb,
+        imagen: imgLarge,
+        nombre: carta.name,
+        set: carta.set_name,
+        precio: carta.prices?.eur ?? carta.prices?.usd ?? null,
+        precioFoil: carta.prices?.eur_foil ?? null,
+        moneda: carta.prices?.eur ? 'eur' : 'usd'
+      };
+    });
   }
 
-  // ─── DISPATCHER PRINCIPAL ──────────────────────────────────────
   async function ejecutarBusqueda() {
     const nombre = document.getElementById('search-input').value.trim();
     if (!nombre) return;
-
-    mostrarCargando();
-    hide('error-msg');
-
+    mostrarCargando("Buscando ediciones...");
     try {
-      const resultado = juegoActual === 'magic'
-        ? await buscarMagic(nombre)
-        : await buscarPokemon(nombre);
-
-      mostrarResultado(resultado);
+      const resultados = juegoActual === 'magic' ? await buscarMagic(nombre) : await buscarPokemon(nombre);
+      renderizarLista(resultados);
     } catch (err) {
-      console.error(err);
-      mostrarError(err.message || 'Error de conexión. Comprueba tu internet.');
+      mostrarError(err.message || 'Error de conexión.');
     }
   }
 
-  // ─── CÁMARA (placeholder OCR) ──────────────────────────────────
-  document.getElementById('camera-input').addEventListener('change', function(e) {
-    if (!e.target.files[0]) return;
-    const juego = juegoActual === 'magic' ? 'Magic' : 'Pokémon';
-    alert(`Foto capturada. En el próximo paso se integrará OCR para detectar el nombre automáticamente.\n\nPor ahora escribe el nombre en el buscador para probar la API de ${juego}.`);
+  // --- INTEGRACIÓN CÁMARA (OCR CON TESSERACT.JS) ---
+  document.getElementById('camera-input').addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    mostrarCargando("Analizando imagen (IA en proceso)...");
+
+    try {
+      // Usamos Tesseract directamente en el navegador
+      const worker = await Tesseract.createWorker('eng+spa');
+      const result = await worker.recognize(file);
+      await worker.terminate();
+
+      // Extraemos todas las líneas de texto que encontró la IA
+      const textLines = result.data.lines
+        .map(l => l.text.trim())
+        .filter(t => t.length > 3); // Ignoramos "ruido" de 1 o 2 letras
+
+      if (textLines.length > 0) {
+        // Asumimos que la primera línea válida es el nombre de la carta
+        const posibleNombre = textLines[0]; 
+        document.getElementById('search-input').value = posibleNombre;
+        
+        // Ejecutamos la búsqueda automáticamente
+        ejecutarBusqueda();
+      } else {
+        mostrarError("No se pudo leer el nombre de la carta. ¿Hay muchos reflejos?");
+      }
+    } catch (error) {
+      console.error(error);
+      mostrarError("Error al procesar la imagen.");
+    }
   });
 </script>
 </body>
