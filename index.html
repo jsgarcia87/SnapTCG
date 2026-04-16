@@ -382,19 +382,46 @@
   }
 
   async function buscarMagic(nombre) {
-    const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(nombre)}&unique=prints`;
+    // 1. Usamos el buscador "fuzzy" (tolerante a errores) para obtener el nombre oficial.
+    // Esto arregla los problemas si el OCR lee algo con errores o falta una letra.
+    const fuzzyUrl = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`;
+    const fuzzyRes  = await fetch(fuzzyUrl, { headers: { 'Accept': 'application/json' } });
+    const fuzzyData = await fuzzyRes.json();
+
+    if (fuzzyData.object === 'error') {
+      throw new Error('Carta no encontrada en Magic. Revisa el nombre o la foto.');
+    }
+
+    // Guardamos el nombre oficial y exacto en inglés (ej: "Jace, the Mind Sculptor")
+    const nombreOficial = fuzzyData.name;
+
+    // 2. Buscamos todas las ediciones usando el nombre exacto.
+    // La sintaxis !"Nombre" obliga a Scryfall a buscar la coincidencia literal.
+    const query = encodeURIComponent(`!"${nombreOficial}"`);
+    const url = `https://api.scryfall.com/cards/search?q=${query}&unique=prints`;
+    
     const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
-    if (data.object === 'error') throw new Error('Carta no encontrada en Scryfall.');
 
+    if (data.object === 'error') {
+      throw new Error('No se pudieron cargar las versiones de esta carta.');
+    }
+
+    // 3. Mapeamos los resultados
     return data.data.map(carta => {
       let imgThumb, imgLarge;
+      
+      // Manejo seguro de imágenes (cartas normales, doble cara o sin imagen oficial)
       if (carta.image_uris) {
         imgThumb = carta.image_uris.small;
         imgLarge = carta.image_uris.large || carta.image_uris.normal;
       } else if (carta.card_faces && carta.card_faces[0]?.image_uris) {
         imgThumb = carta.card_faces[0].image_uris.small;
         imgLarge = carta.card_faces[0].image_uris.large || carta.card_faces[0].image_uris.normal;
+      } else {
+        // Fallback visual si la edición no tiene foto escaneada en la API
+        imgThumb = 'https://via.placeholder.com/146x204/1a1e2a/e8e6e0?text=Sin+Foto';
+        imgLarge = 'https://via.placeholder.com/488x680/1a1e2a/e8e6e0?text=Sin+Foto';
       }
 
       return {
