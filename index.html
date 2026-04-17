@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CardDex MVP - Live Scanner</title>
+  <title>CardDex MVP - Colección y Escáner</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -57,7 +57,7 @@
     .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; letter-spacing: 0.03em; }
 
     .game-selector {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;
       background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 4px; flex-shrink: 0;
     }
     .game-btn {
@@ -80,7 +80,7 @@
     .display-wrap.visible { display: block; }
     #card-image { width: 100%; height: 100%; object-fit: contain; display: block; animation: fadeIn 0.4s ease; }
 
-    /* === ESTILOS DEL ESCÁNER EN VIVO === */
+    /* === ESCÁNER === */
     .scanner-wrap {
       position: relative; width: 100%; aspect-ratio: 2/3; border-radius: var(--radius); overflow: hidden;
       background: #000; border: 1px solid var(--accent); display: none; box-shadow: 0 0 15px var(--glow);
@@ -88,18 +88,9 @@
     .scanner-wrap.visible { display: block; }
     #live-video { width: 100%; height: 100%; object-fit: cover; }
     
-    /* Overlay y zona de recorte (Guía) */
     .scanner-overlay {
       position: absolute; inset: 0; pointer-events: none;
-      /* Ensombramos todo excepto la franja superior donde suele ir el nombre */
-      background: 
-        linear-gradient(to bottom, 
-          rgba(0,0,0,0.6) 0%, 
-          rgba(0,0,0,0.6) 10%, 
-          rgba(0,0,0,0) 10%, 
-          rgba(0,0,0,0) 30%, 
-          rgba(0,0,0,0.8) 30%, 
-          rgba(0,0,0,0.8) 100%);
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.6) 10%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.8) 100%);
     }
     .scanner-guide {
       position: absolute; top: 10%; left: 5%; right: 5%; height: 20%;
@@ -109,7 +100,6 @@
       content: "Alinea el nombre aquí"; position: absolute; top: -25px; width: 100%;
       text-align: center; color: var(--accent); font-size: 12px; font-weight: bold; text-shadow: 0 1px 3px #000;
     }
-
     .btn-capture {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: var(--accent); color: #000; font-weight: 700; border: none;
@@ -117,8 +107,8 @@
       z-index: 10; font-family: 'DM Sans', sans-serif; font-size: 14px;
     }
     .btn-capture:active { transform: translateX(-50%) scale(0.95); }
-    /* =================================== */
 
+    /* === LISTAS === */
     .results-grid { display: none; grid-template-columns: 1fr 1fr; gap: 12px; animation: fadeIn 0.4s ease; }
     .results-grid.visible { display: grid; }
     .result-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 8px; cursor: pointer; text-align: center; transition: transform 0.2s, border-color 0.2s; }
@@ -150,6 +140,7 @@
     .price-main { font-family: 'Cinzel', serif; font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1; }
     .price-secondary { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
+    /* === BUSCADOR Y BOTONES === */
     .search-row { display: flex; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
     .search-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text); outline: none; }
     .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
@@ -160,6 +151,19 @@
 
     .error-msg { display: none; font-size: 12px; color: #f87171; text-align: center; margin-top: 10px; padding: 8px 12px; background: rgba(248,113,113,0.08); border-radius: 8px; border: 1px solid rgba(248,113,113,0.2); flex-shrink: 0; }
     .error-msg.visible { display: block; }
+
+    /* === HISTORIAL DE SESIÓN === */
+    .session-history {
+      display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; flex-shrink: 0;
+    }
+    .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .history-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .total-badge { background: var(--accent); color: #000; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 800; }
+    .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; scrollbar-width: none; }
+    .history-list::-webkit-scrollbar { display: none; }
+    .history-item { display: flex; align-items: center; gap: 10px; background: var(--surface2); padding: 8px; border-radius: 8px; border: 1px solid var(--border); }
+    .btn-export { width: 100%; margin-top: 12px; background: transparent; border: 1px solid var(--border-hi); color: var(--muted); padding: 10px; border-radius: 10px; font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+    .btn-export:hover { border-color: var(--accent); color: var(--text); }
 
     body.mode-magic { --accent: var(--accent-mt); --glow: var(--glow-mt); }
     body.mode-pokemon { --accent: var(--accent-pk); --glow: var(--glow-pk); }
@@ -231,6 +235,20 @@
   </button>
 
   <div class="error-msg" id="error-msg"></div>
+
+  <div class="session-history" id="session-history-container">
+    <div class="history-header">
+      <h3 class="history-title">Sesión Actual</h3>
+      <div id="total-value-badge" class="total-badge">Total: 0.00 €</div>
+    </div>
+    
+    <div id="history-list" class="history-list">
+      </div>
+
+    <button class="btn-export" onclick="exportarLista()">
+      📥 Exportar lista (Consola)
+    </button>
+  </div>
 </div>
 
 <script>
@@ -238,6 +256,7 @@
   let juegoActual = 'pokemon';
   let ultimosResultados = [];
   let videoStream = null;
+  let sesionCartas = []; // Variables de la sesión
 
   function setGame(juego) {
     juegoActual = juego;
@@ -284,7 +303,6 @@
     document.getElementById('error-msg').classList.remove('visible');
 
     try {
-      // Solicitamos la cámara trasera del dispositivo
       videoStream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "environment" } 
       });
@@ -296,7 +314,7 @@
       document.getElementById('btn-stop-scanner').style.display = 'flex';
     } catch (err) {
       console.error(err);
-      mostrarError("Error al acceder a la cámara. Asegúrate de dar permisos al navegador.");
+      mostrarError("Error al acceder a la cámara. Asegúrate de dar permisos.");
       detenerEscaner();
     }
   }
@@ -311,15 +329,14 @@
     document.getElementById('btn-stop-scanner').style.display = 'none';
   }
 
+  // --- MEJORA OCR ---
   async function capturarYProcesar() {
     const video = document.getElementById('live-video');
     if (!videoStream) return;
 
-    // Creamos un canvas oculto para hacer la foto del vídeo
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // TRUCO DE RENDIMIENTO: Solo capturamos el 35% superior del vídeo (donde está el nombre)
     const anchoOriginal = video.videoWidth;
     const altoOriginal = video.videoHeight;
     const altoRecorte = altoOriginal * 0.35; // Solo el tercio superior
@@ -327,17 +344,16 @@
     canvas.width = anchoOriginal;
     canvas.height = altoRecorte;
 
-    // Dibujamos el recorte en el canvas
+    // Filtros para ayudar a la IA (Blanco y negro + contraste)
+    ctx.filter = 'grayscale(100%) contrast(150%) brightness(120%)';
     ctx.drawImage(video, 0, 0, anchoOriginal, altoRecorte, 0, 0, anchoOriginal, altoRecorte);
     
-    // Obtenemos la imagen recortada en base64
     const imageDataUrl = canvas.toDataURL('image/jpeg');
 
     detenerEscaner();
-    mostrarCargando("Leyendo carta (IA rápida)...");
+    mostrarCargando("Leyendo carta...");
 
     try {
-      // Lanzamos la IA a leer solo ese trozo de imagen recortado
       const worker = await Tesseract.createWorker('eng+spa');
       const result = await worker.recognize(imageDataUrl);
       await worker.terminate();
@@ -347,19 +363,18 @@
         .filter(t => t.length > 3);
 
       if (textLines.length > 0) {
-        // Asumimos que la primera línea gruesa es el nombre
         document.getElementById('search-input').value = textLines[0];
         ejecutarBusqueda();
       } else {
-        mostrarError("No se pudo leer el nombre. Asegúrate de encuadrar bien la parte superior de la carta.");
+        mostrarError("No se pudo leer el nombre. Alinea bien la zona superior de la carta.");
       }
     } catch (error) {
       console.error(error);
       mostrarError("Hubo un error procesando la imagen.");
     }
   }
-  // -----------------------------------
 
+  // --- RENDERIZADO Y SELECCIÓN ---
   function renderizarLista(resultados) {
     document.getElementById('spinner-wrap').classList.remove('visible');
     const grid = document.getElementById('results-grid');
@@ -415,6 +430,9 @@
     }
 
     document.getElementById('price-box').classList.add('visible');
+
+    // NUEVO: Añadir a la sesión
+    añadirAHistorial(carta);
   }
 
   function volverALista() {
@@ -424,6 +442,59 @@
     document.getElementById('results-grid').classList.add('visible');
   }
 
+  // --- HISTORIAL DE SESIÓN ---
+  function añadirAHistorial(carta) {
+    sesionCartas.push(carta);
+    actualizarVistaHistorial();
+  }
+
+  function actualizarVistaHistorial() {
+    const contenedor = document.getElementById('session-history-container');
+    const lista = document.getElementById('history-list');
+    const totalBadge = document.getElementById('total-value-badge');
+    
+    if (sesionCartas.length === 0) {
+      contenedor.style.display = 'none';
+      return;
+    }
+    
+    contenedor.style.display = 'block';
+    lista.innerHTML = '';
+    let total = 0;
+
+    // Renderizar de la más reciente a la más antigua
+    [...sesionCartas].reverse().forEach((c) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      
+      const precioVal = c.precio ? parseFloat(c.precio) : 0;
+      total += precioVal;
+      const sym = c.moneda === 'usd' ? '$' : '€';
+
+      item.innerHTML = `
+        <img src="${c.imagenThumb}" style="width: 30px; border-radius: 4px;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text);">${c.nombre}</div>
+          <div style="font-size: 10px; color: var(--muted);">${c.set}</div>
+        </div>
+        <div style="font-size: 13px; font-weight: 700; color: var(--accent);">${precioVal.toFixed(2)}${sym}</div>
+      `;
+      lista.appendChild(item);
+    });
+
+    totalBadge.textContent = `Total: ${total.toFixed(2)} €`;
+  }
+
+  function exportarLista() {
+    if (sesionCartas.length === 0) {
+      alert("La lista está vacía.");
+      return;
+    }
+    console.table(sesionCartas.map(c => ({ Nombre: c.nombre, Set: c.set, Precio: c.precio })));
+    alert("Lista exportada a la consola del navegador (Pulsa F12 en tu ordenador para verla).");
+  }
+
+  // --- LLAMADAS A LAS APIS ---
   async function buscarPokemon(nombre) {
     const headers = POKEMON_API_KEY ? { "X-Api-Key": POKEMON_API_KEY } : {};
     const url = `https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(nombre)}"&orderBy=-set.releaseDate`;
@@ -443,8 +514,8 @@
     }));
   }
 
-  // --- API DE MAGIC CORREGIDA (PROCESO DE 2 PASOS) ---
   async function buscarMagic(nombre) {
+    // 1. Buscador tolerante a errores OCR (Fuzzy)
     const fuzzyUrl = `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`;
     const fuzzyRes  = await fetch(fuzzyUrl, { headers: { 'Accept': 'application/json' } });
     const fuzzyData = await fuzzyRes.json();
@@ -454,15 +525,15 @@
     }
 
     const nombreOficial = fuzzyData.name;
+    
+    // 2. Buscador estricto para extraer todas las ediciones
     const query = encodeURIComponent(`!"${nombreOficial}"`);
     const url = `https://api.scryfall.com/cards/search?q=${query}&unique=prints`;
     
     const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
     const data = await res.json();
 
-    if (data.object === 'error') {
-      throw new Error('No se pudieron cargar las versiones de esta carta.');
-    }
+    if (data.object === 'error') throw new Error('No se pudieron cargar las versiones.');
 
     return data.data.map(carta => {
       let imgThumb, imgLarge;
@@ -501,7 +572,6 @@
       mostrarError(err.message || 'Error de conexión.');
     }
   }
-
 </script>
 </body>
 </html>
