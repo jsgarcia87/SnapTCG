@@ -1,5 +1,7 @@
 /**
  * api.js — Capa de llamadas a APIs externas
+ * Author: Sangar Studio
+ * Version: 2.0.0
  * Pokémon TCG API v2  |  Scryfall API (Magic)
  */
 

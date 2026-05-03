@@ -1,5 +1,7 @@
 /**
  * app.js — Main application logic
+ * Author: Sangar Studio
+ * Version: 2.0.0
  * Improved feedback, accessibility support, and dynamic theming
  */
 

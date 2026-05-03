@@ -1,5 +1,7 @@
 /**
  * deckbuilder.js — Premium Deck Builder Logic
+ * Author: Sangar Studio
+ * Version: 2.0.0
  * Actualizado con reglas competitivas y análisis de composición
  */
 

@@ -1,5 +1,7 @@
 /**
  * scanner.js — Premium Auto-Scanner Logic
+ * Author: Sangar Studio
+ * Version: 2.0.0
  * Continuous scanning with visual feedback
  */
 
