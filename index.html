@@ -125,8 +125,17 @@
         </div>
 
         <div id="deck-editor-section" style="display:flex; flex-direction:column; gap:20px;">
-          <div class="deck-name-row">
+          <div class="deck-name-row" style="flex-direction:column; gap:10px;">
             <input type="text" class="deck-name-input" id="deck-name-input" placeholder="Nombre de tu mazo...">
+            <select id="deck-format-selector" class="gt-btn" style="width:100%; justify-content:flex-start; border:1px solid var(--border-color);" onchange="updateFormat()">
+              <option value="standard">Formato: Estándar (60 cartas)</option>
+              <option value="commander">Formato: Commander / EDH (100 cartas)</option>
+            </select>
+          </div>
+          
+          <!-- MÉTRICAS DE COMPOSICIÓN -->
+          <div id="deck-metrics" class="deck-stats" style="display:none; padding:12px; background:rgba(255,255,255,0.03); border-radius:12px; font-size:11px; grid-template-columns: repeat(3, 1fr);">
+            <!-- Se llenará vía JS -->
           </div>
           
           <div class="deck-action-bar">

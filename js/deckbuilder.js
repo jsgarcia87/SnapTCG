@@ -1,10 +1,16 @@
 /**
  * deckbuilder.js — Premium Deck Builder Logic
+ * Actualizado con reglas competitivas y análisis de composición
  */
 
 const DECK_RULES = {
-  pokemon: { min: 60, max: 60, maxCopies: 4, label: "Pokémon Standard", icon: "⚡" },
-  magic:   { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: "✦" }
+  pokemon: {
+    standard: { min: 60, max: 60, maxCopies: 4, label: "Pokémon Standard", icon: "⚡" }
+  },
+  magic: {
+    standard:  { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: "✦" },
+    commander: { min: 100, max: 100, maxCopies: 1, label: "Magic Commander", icon: "👑" }
+  }
 };
 
 const BASIC_LANDS = ["Plains","Island","Swamp","Mountain","Forest","Wastes"];
@@ -13,6 +19,7 @@ const BASIC_ENERGIES = ["Basic Energy"];
 let currentDeck = [];
 let allDecks = [];
 let editingDeckIdx = -1;
+let currentFormat = "standard";
 
 function saveDecks() { localStorage.setItem("snaptcg_decks", JSON.stringify(allDecks)); }
 function loadDecks() {
@@ -28,11 +35,21 @@ function isUnlimited(card, juego) {
   return false;
 }
 
-function getRules(juego) { return DECK_RULES[juego] || DECK_RULES.pokemon; }
+function getRules() { 
+  const rules = DECK_RULES[juegoActual][currentFormat] || DECK_RULES[juegoActual]["standard"];
+  return rules;
+}
+
 function totalCards() { return currentDeck.reduce((s, e) => s + e.qty, 0); }
 
+function updateFormat() {
+  currentFormat = document.getElementById("deck-format-selector").value;
+  renderDeckStats();
+  renderDeckList();
+}
+
 function addCardToDeck(card, juego) {
-  const rules = getRules(juego);
+  const rules = getRules();
   const total = totalCards();
   
   if (total >= rules.max) {
@@ -43,7 +60,7 @@ function addCardToDeck(card, juego) {
   if (!isUnlimited(card, juego)) {
     const entry = currentDeck.find(e => e.card.id === card.id);
     if (entry && entry.qty >= rules.maxCopies) {
-      showDeckToast(`Máximo ${rules.maxCopies} copias`, "warn");
+      showDeckToast(`Máximo ${rules.maxCopies} copia(s) en ${rules.label}`, "warn");
       return;
     }
   }
@@ -69,7 +86,7 @@ function removeCardFromDeck(cardId, all = false) {
 }
 
 function renderDeckStats() {
-  const rules = getRules(juegoActual);
+  const rules = getRules();
   const total = totalCards();
   const value = currentDeck.reduce((s, e) => s + (parseFloat(e.card.precio ?? 0) * e.qty), 0);
 
@@ -78,9 +95,58 @@ function renderDeckStats() {
   document.getElementById("deck-stat-value").textContent = value.toFixed(2) + "€";
 
   const pct = Math.min(100, (total / rules.max) * 100);
-  document.getElementById("deck-progress-fill").style.width = pct + "%";
+  const fill = document.getElementById("deck-progress-fill");
+  fill.style.width = pct + "%";
+  
+  // Color dinámico según validez
+  if (total === rules.max) fill.style.background = "#4ade80"; // Verde: Legal
+  else if (total > rules.max) fill.style.background = "#f87171"; // Rojo: Ilegal
+  else fill.style.background = "var(--accent-color)";
+
   document.getElementById("deck-progress-label").textContent = `${total} / ${rules.max} cartas`;
   document.getElementById("deck-format-badge").textContent = rules.label;
+  
+  renderDeckMetrics();
+}
+
+function renderDeckMetrics() {
+  const metricsContainer = document.getElementById("deck-metrics");
+  if (currentDeck.length === 0) {
+    metricsContainer.style.display = "none";
+    return;
+  }
+  
+  metricsContainer.style.display = "grid";
+  let html = "";
+  
+  if (juegoActual === "pokemon") {
+    let pkm = 0, tra = 0, ene = 0;
+    currentDeck.forEach(e => {
+      const type = (e.card.supertype || "").toLowerCase();
+      if (type.includes("pokemon")) pkm += e.qty;
+      else if (type.includes("trainer")) tra += e.qty;
+      else if (type.includes("energy")) ene += e.qty;
+    });
+    html = `
+      <div><strong>PKM:</strong> ${pkm}</div>
+      <div><strong>TRA:</strong> ${tra}</div>
+      <div><strong>ENE:</strong> ${ene}</div>
+    `;
+  } else {
+    let cre = 0, lan = 0, spe = 0;
+    currentDeck.forEach(e => {
+      const type = (e.card.type || "").toLowerCase();
+      if (type.includes("creature")) cre += e.qty;
+      else if (type.includes("land")) lan += e.qty;
+      else spe += e.qty;
+    });
+    html = `
+      <div><strong>CRE:</strong> ${cre}</div>
+      <div><strong>LAN:</strong> ${lan}</div>
+      <div><strong>SPE:</strong> ${spe}</div>
+    `;
+  }
+  metricsContainer.innerHTML = html;
 }
 
 function renderDeckList() {
@@ -92,7 +158,14 @@ function renderDeckList() {
     return;
   }
 
-  currentDeck.forEach(entry => {
+  // Ordenar: Criaturas/Pokémon primero
+  const sorted = [...currentDeck].sort((a, b) => {
+    const typeA = (a.card.supertype || a.card.type || "");
+    const typeB = (b.card.supertype || b.card.type || "");
+    return typeA.localeCompare(typeB);
+  });
+
+  sorted.forEach(entry => {
     const row = document.createElement("div");
     row.className = "deck-card-row";
     row.innerHTML = `
@@ -117,7 +190,7 @@ function saveDeck() {
 
   const deck = {
     id: editingDeckIdx > -1 ? allDecks[editingDeckIdx].id : Date.now(),
-    nombre, juego: juegoActual, cards: [...currentDeck],
+    nombre, juego: juegoActual, formato: currentFormat, cards: [...currentDeck],
     total: totalCards(),
     value: currentDeck.reduce((s, e) => s + (parseFloat(e.card.precio ?? 0) * e.qty), 0).toFixed(2),
     date: new Date().toLocaleDateString()
@@ -144,11 +217,14 @@ function renderDeckLibrary() {
     const item = document.createElement("div");
     item.className = "saved-deck-item";
     item.onclick = (e) => { if(e.target.tagName !== 'BUTTON') loadDeck(idx); };
+    
+    const rules = DECK_RULES[deck.juego][deck.formato] || DECK_RULES[deck.juego]["standard"];
+    
     item.innerHTML = `
-      <div class="sdi-icon">${deck.juego === 'magic' ? '✦' : '⚡'}</div>
+      <div class="sdi-icon">${rules.icon}</div>
       <div class="sdi-info">
         <p class="sdi-name">${deck.nombre}</p>
-        <p class="sdi-meta">${deck.total} cartas • ${deck.value}€</p>
+        <p class="sdi-meta">${deck.total} cartas • ${deck.value}€ • ${rules.label}</p>
       </div>
       <div class="sdi-actions">
         <button class="sdi-btn danger" onclick="event.stopPropagation(); deleteDeck(${idx})">🗑</button>
@@ -162,7 +238,11 @@ function loadDeck(idx) {
   const deck = allDecks[idx];
   currentDeck = [...deck.cards];
   editingDeckIdx = idx;
+  currentFormat = deck.formato || "standard";
+  
   document.getElementById("deck-name-input").value = deck.nombre;
+  document.getElementById("deck-format-selector").value = currentFormat;
+  
   setGame(deck.juego);
   showDeckTab('editor');
   renderDeckList();
@@ -192,6 +272,22 @@ function showDeckTab(tab) {
   document.getElementById('deck-library-section').style.display = isEditor ? 'none' : 'block';
   document.getElementById('deck-tab-editor').classList.toggle('active', isEditor);
   document.getElementById('deck-tab-library').classList.toggle('active', !isEditor);
+  
+  // Solo mostrar Commander si es Magic
+  const fmtSelector = document.getElementById("deck-format-selector");
+  const commanderOpt = fmtSelector.querySelector('option[value="commander"]');
+  if (juegoActual === "magic") {
+    commanderOpt.disabled = false;
+    commanderOpt.style.display = "block";
+  } else {
+    commanderOpt.disabled = true;
+    commanderOpt.style.display = "none";
+    if (currentFormat === "commander") {
+      currentFormat = "standard";
+      fmtSelector.value = "standard";
+    }
+  }
+  
   if (!isEditor) renderDeckLibrary();
 }
 
@@ -214,7 +310,6 @@ function showDeckToast(msg, type) {
   }, 2000);
 }
 
-// Add these animations to CSS via JS for convenience or just rely on CSS
 const style = document.createElement('style');
 style.textContent = `
   @keyframes toastIn { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
@@ -232,7 +327,8 @@ function addCurrentCardToDeck() {
 function exportCurrentDeck() {
   if (currentDeck.length === 0) return;
   let txt = `DECK: ${document.getElementById("deck-name-input").value || "Nuevo Mazo"}\n`;
-  currentDeck.forEach(e => txt += `${e.qty}x ${e.card.nombre}\n`);
+  txt += `FORMAT: ${getRules().label}\n\n`;
+  currentDeck.forEach(e => txt += `${e.qty} ${e.card.nombre}\n`);
   document.getElementById("modal-export-content").value = txt;
   document.getElementById("modal-overlay").classList.add("active");
 }
