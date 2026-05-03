@@ -107,6 +107,12 @@ async function autoScan() {
   // Visual success feedback
   setScannerStatus(`¡CARTA LEÍDA: ${cleaned}!`, "success");
   
+  const scannerContainer = document.querySelector('.scanner-container');
+  if (scannerContainer) {
+    scannerContainer.classList.add('scan-success-glow');
+    setTimeout(() => scannerContainer.classList.remove('scan-success-glow'), 1000);
+  }
+  
   setTimeout(() => {
     document.getElementById('search-input').value = cleaned;
     detenerEscaner();

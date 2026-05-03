@@ -92,6 +92,12 @@ function mostrarError(msg) {
 // ─────────────────────────────────────────────
 //  RESULT RENDERING
 // ─────────────────────────────────────────────
+function getCardCountInDeck(cardId) {
+  if (typeof currentDeck === 'undefined') return 0;
+  const entry = currentDeck.find(e => e.card.id === cardId);
+  return entry ? entry.qty : 0;
+}
+
 function renderizarLista(resultados) {
   document.getElementById("spinner-wrap").classList.remove("visible");
   document.getElementById("placeholder").style.display = "none";
@@ -109,12 +115,14 @@ function renderizarLista(resultados) {
   resultados.forEach((carta, index) => {
     const sym = carta.moneda === "usd" ? "$" : "€";
     const price = carta.precio ? `${parseFloat(carta.precio).toFixed(2)}${sym}` : "N/D";
+    const inDeckCount = getCardCountInDeck(carta.id);
     
     const cardEl = document.createElement("article");
     cardEl.className = "card-item";
     cardEl.setAttribute("role", "button");
     cardEl.setAttribute("tabindex", "0");
     cardEl.innerHTML = `
+      ${inDeckCount > 0 ? `<div class="possession-badge">x${inDeckCount}</div>` : ''}
       <img src="${carta.imagenThumb || carta.imagen}" alt="${carta.nombre}" class="card-thumb" loading="lazy">
       <div class="card-info">
         <h3 class="card-name">${carta.nombre}</h3>
