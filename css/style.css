@@ -611,7 +611,141 @@ body::before {
   gap: 10px;
 }
 
-/* Accessibility: Mobile button sizes */
-button, .nav-btn, .gt-btn {
-  min-height: 44px;
+/* 
+   =============================================
+   SISTEMA DE BOTONES UNIFICADO
+   =============================================
+*/
+
+/* Reset Base para todos los botones */
+button, .btn {
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  transition: all var(--transition-fast);
+  user-select: none;
+  min-height: 48px;
+}
+
+button:active, .btn:active {
+  transform: scale(0.96);
+}
+
+/* Variante Primaria (Acción Principal) */
+.btn-primary, .dab-btn.primary {
+  background: var(--accent-color);
+  color: #000;
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-primary:hover, .dab-btn.primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+
+/* Variante Secundaria / Ghost (Acciones de soporte) */
+.btn-secondary, .dab-btn, .gt-btn, .pill-btn, .search-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover, .dab-btn:hover, .gt-btn:hover, .pill-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-bright);
+}
+
+/* Variante Peligro (Eliminar/Reset) */
+.btn-danger, .dab-btn.danger, .sdi-btn.danger {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.btn-danger:hover, .dab-btn.danger:hover {
+  background: #f87171;
+  color: #000;
+}
+
+/* Ajustes específicos para componentes */
+.game-toggle {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px;
+}
+
+.gt-btn {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+}
+
+.gt-btn.active-pokemon, .gt-btn.active-magic {
+  background: var(--surface-hover);
+  color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.nav-btn {
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  min-height: var(--nav-height);
+  padding: 0;
+}
+
+.nav-btn:active { transform: none; } /* No escala en la nav bar */
+
+.search-btn {
+  width: 48px;
+  padding: 0;
+  background: var(--accent-color);
+  color: #000;
+  border: none;
+}
+
+.pill-switcher {
+  display: flex;
+  background: rgba(0,0,0,0.2);
+  padding: 4px;
+  border-radius: 16px;
+  gap: 4px;
+}
+
+.pill-btn {
+  flex: 1;
+  min-height: 36px;
+  font-size: 12px;
+  border: none;
+}
+
+.pill-btn.active {
+  background: var(--surface-hover);
+  color: var(--accent-color);
+}
+
+/* Otros botones especiales */
+.btn-back {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.btn-export-session {
+  width: 100%;
+  margin-top: 10px;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent-color);
+  border: 1px solid var(--accent-glow);
 }
