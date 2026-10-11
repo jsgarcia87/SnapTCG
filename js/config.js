@@ -4,8 +4,8 @@
  * La "anon key" es pública por diseño: la seguridad real la dan las políticas RLS de supabase/schema.sql.
  * NUNCA pongas aquí la "service_role key".
  */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://rgyoatclhoblugdjekwl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_KYvI4sknHO6o-ViZpLjtvQ_xJjbawpG"; // "Publishable key" (pública por diseño)
 
 // UUID del usuario dueño de la colección pública (Authentication → Users en Supabase).
 const PUBLIC_OWNER_ID = "";

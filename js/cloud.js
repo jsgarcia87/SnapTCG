@@ -8,7 +8,7 @@
  */
 
 const COLLECTION_KEY = "snaptcg_collection";
-const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js";
 
 let collection = [];          // [{ card, qty }]
 let sbClient = null;
