@@ -134,7 +134,7 @@ function renderDeckMetrics() {
   if (juegoActual === "pokemon") {
     let pkm = 0, tra = 0, ene = 0;
     currentDeck.forEach(e => {
-      const type = (e.card.supertype || "").toLowerCase();
+      const type = (e.card.supertype || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       if (type.includes("pokemon")) pkm += e.qty;
       else if (type.includes("trainer")) tra += e.qty;
       else if (type.includes("energy")) ene += e.qty;

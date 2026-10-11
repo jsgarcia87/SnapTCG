@@ -401,7 +401,7 @@ body::before {
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   padding-bottom: var(--safe-area-bottom);
   z-index: 100;
 }
@@ -784,3 +784,71 @@ button:active, .btn:active {
 .col-login { display: flex; gap: 8px; }
 .col-login input { flex: 1; min-width: 0; }
 #collection-body .card-item .dcr-controls { margin-top: 8px; justify-content: center; }
+
+/* ───────────── Estilos que faltaban (modal, spinner, historial, editor de mazos) ───────────── */
+@keyframes toastIn  { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toastOut { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -20px); } }
+
+/* Modal (bottom sheet) */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px);
+}
+.modal-overlay.active { display: flex; }
+
+/* Carga y navegación de resultados */
+.spinner-wrap { display: none; text-align: center; }
+.spinner-wrap.visible { display: block; }
+.spinner-text { color: var(--text-secondary); font-size: 13px; }
+.btn-back { display: none; }
+
+/* Historial de la sesión */
+.session-history { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+.history-header { display: flex; justify-content: space-between; align-items: center; }
+.history-title { font-family: var(--font-display); font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+.total-badge { background: rgba(var(--accent-rgb), 0.12); color: var(--accent-color); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 800; }
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item { display: flex; align-items: center; gap: 12px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px; }
+
+/* Editor de mazos */
+.deck-name-row { display: flex; }
+.deck-name-input {
+  width: 100%; min-height: 44px; padding: 10px 14px; font: inherit; font-size: 14px;
+  color: var(--text-primary); background: var(--surface-color);
+  border: 1px solid var(--border-color); border-radius: var(--radius-sm); outline: none;
+}
+.deck-name-input:focus { border-color: var(--accent-color); }
+.deck-action-bar { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+.deck-action-bar .dab-btn { min-height: 44px; justify-content: center; }
+.deck-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 6px; }
+.stat-val { font-size: 18px; font-weight: 800; color: var(--accent-color); font-variant-numeric: tabular-nums; }
+.stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.deck-progress { display: flex; flex-direction: column; gap: 8px; }
+.progress-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-secondary); }
+.deck-format-badge { background: rgba(var(--accent-rgb), 0.12); color: var(--accent-color); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; }
+.progress-bar-wrap { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.progress-bar-fill { height: 100%; width: 0; background: var(--accent-color); border-radius: 4px; transition: width var(--transition-normal), background var(--transition-normal); }
+.deck-list-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 28px 12px; border: 1px dashed var(--border-color); border-radius: var(--radius-md); }
+.deck-card-row { display: flex; align-items: center; gap: 12px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 8px; }
+.deck-card-row img { width: 36px; height: 50px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.dcr-info { flex: 1; min-width: 0; }
+.dcr-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcr-set { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcr-controls { display: flex; align-items: center; gap: 8px; }
+.dcr-qty { min-width: 18px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dcr-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 20px; font-weight: 800; cursor: pointer; }
+.dcr-btn:hover { background: rgba(255,255,255,0.12); }
+.dcr-btn.remove { color: #f87171; }
+
+/* Biblioteca de mazos guardados */
+.deck-library { display: flex; flex-direction: column; gap: 10px; }
+.saved-deck-item { display: flex; align-items: center; gap: 12px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; cursor: pointer; transition: border-color var(--transition-fast); }
+.saved-deck-item:hover { border-color: var(--accent-color); }
+.sdi-icon { font-size: 24px; width: 40px; text-align: center; }
+.sdi-info { flex: 1; min-width: 0; }
+.sdi-name { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sdi-meta { font-size: 12px; color: var(--text-secondary); }
+.sdi-actions { display: flex; gap: 6px; }
+.sdi-btn { min-width: 44px; min-height: 44px; border-radius: var(--radius-sm); cursor: pointer; }
