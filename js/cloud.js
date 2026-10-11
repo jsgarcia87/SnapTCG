@@ -50,7 +50,8 @@ async function initCloud() {
     }
   }
   await onAuthChanged();
-  if (location.hash === "#coleccion") switchTab("collection");
+  // Tras el enlace mágico Supabase devuelve los tokens en el fragmento (#access_token=...)
+  if (location.hash === "#coleccion" || location.hash.includes("access_token")) switchTab("collection");
 }
 
 async function onAuthChanged() {
@@ -164,7 +165,7 @@ async function cloudLogin() {
   const email = input.value.trim();
   if (!email) return;
   const { error } = await sbClient.auth.signInWithOtp({
-    email, options: { shouldCreateUser: false, emailRedirectTo: location.href.split("#")[0] + "#coleccion" }
+    email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname }
   });
   showDeckToast(error ? "No se pudo enviar el enlace" : "Revisa tu correo: enlace enviado", error ? "warn" : "success");
   if (error) console.error(error);
