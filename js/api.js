@@ -30,7 +30,9 @@ async function buscarPokemon(nombre) {
     precio:      c.cardmarket?.prices?.averageSellPrice ?? c.tcgplayer?.prices?.normal?.market ?? null,
     precioFoil:  c.tcgplayer?.prices?.holofoil?.market ?? null,
     moneda:      "eur",
-    tipo:        "pokemon"
+    tipo:        "pokemon",
+    supertype:   c.supertype ?? "",
+    subtypes:    c.subtypes ?? []
   }));
 }
 
@@ -65,8 +67,9 @@ async function buscarMagic(nombre) {
       precioFoil:  c.prices?.eur_foil ?? null,
       moneda:      c.prices?.eur ? "eur" : "usd",
       tipo:        "magic",
-      manaCost:    c.mana_cost ?? "",
-      typeLine:    c.type_line ?? ""
+      manaCost:    c.mana_cost || c.card_faces?.[0]?.mana_cost || "",
+      typeLine:    c.type_line ?? "",
+      cmc:         c.cmc ?? null
     };
   });
 }

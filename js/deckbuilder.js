@@ -16,14 +16,17 @@ const DECK_RULES = {
 };
 
 const BASIC_LANDS = ["Plains","Island","Swamp","Mountain","Forest","Wastes"];
-const BASIC_ENERGIES = ["Basic Energy"];
+const BASIC_ENERGIES = ["Grass","Fire","Water","Lightning","Psychic","Fighting","Darkness","Metal","Fairy"]
+  .map(t => `${t} Energy`);
 
 let currentDeck = [];
 let allDecks = [];
 let editingDeckIdx = -1;
 let currentFormat = "standard";
 
-function saveDecks() { localStorage.setItem("snaptcg_decks", JSON.stringify(allDecks)); }
+function saveDecks() {
+  localStorage.setItem("snaptcg_decks", JSON.stringify(allDecks));
+}
 function loadDecks() {
   try {
     const raw = localStorage.getItem("snaptcg_decks");
@@ -32,8 +35,14 @@ function loadDecks() {
 }
 
 function isUnlimited(card, juego) {
-  if (juego === "magic") return BASIC_LANDS.some(l => card.nombre.includes(l));
-  if (juego === "pokemon") return BASIC_ENERGIES.some(e => card.nombre.includes(e));
+  const nombre = (card.nombre || "").replace(/^(Basic|Snow-Covered) /, "");
+  if (juego === "magic") {
+    return /\bBasic\b.*\bLand\b/.test(card.typeLine || "") || BASIC_LANDS.includes(nombre);
+  }
+  if (juego === "pokemon") {
+    if (card.supertype === "Energy" && (card.subtypes || []).includes("Basic")) return true;
+    return BASIC_ENERGIES.includes(nombre); // Mazos guardados antes de añadir supertype
+  }
   return false;
 }
 
@@ -109,6 +118,7 @@ function renderDeckStats() {
   document.getElementById("deck-format-badge").textContent = rules.label;
   
   renderDeckMetrics();
+  if (typeof renderDeckAnalysis === "function") renderDeckAnalysis();
 }
 
 function renderDeckMetrics() {
@@ -137,7 +147,7 @@ function renderDeckMetrics() {
   } else {
     let cre = 0, lan = 0, spe = 0;
     currentDeck.forEach(e => {
-      const type = (e.card.type || "").toLowerCase();
+      const type = (e.card.typeLine || "").toLowerCase();
       if (type.includes("creature")) cre += e.qty;
       else if (type.includes("land")) lan += e.qty;
       else spe += e.qty;
@@ -162,8 +172,8 @@ function renderDeckList() {
 
   // Ordenar: Criaturas/Pokémon primero
   const sorted = [...currentDeck].sort((a, b) => {
-    const typeA = (a.card.supertype || a.card.type || "");
-    const typeB = (b.card.supertype || b.card.type || "");
+    const typeA = (a.card.supertype || a.card.typeLine || "");
+    const typeB = (b.card.supertype || b.card.typeLine || "");
     return typeA.localeCompare(typeB);
   });
 
@@ -202,6 +212,7 @@ function saveDeck() {
   else { allDecks.push(deck); }
 
   saveDecks();
+  if (typeof cloudSyncDecks === "function") cloudSyncDecks();
   showDeckToast("¡Mazo guardado!", "success");
   renderDeckLibrary();
 }
@@ -254,8 +265,9 @@ function loadDeck(idx) {
 
 function deleteDeck(idx) {
   if (confirm("¿Borrar este mazo?")) {
-    allDecks.splice(idx, 1);
+    const removed = allDecks.splice(idx, 1)[0];
     saveDecks();
+    if (typeof cloudDeleteDeck === "function") cloudDeleteDeck(removed.id);
     renderDeckLibrary();
   }
 }
@@ -270,10 +282,14 @@ function newDeck() {
 
 function showDeckTab(tab) {
   const isEditor = tab === 'editor';
+  const isAnalysis = tab === 'analysis';
+  const isLibrary = tab === 'library';
   document.getElementById('deck-editor-section').style.display = isEditor ? 'flex' : 'none';
-  document.getElementById('deck-library-section').style.display = isEditor ? 'none' : 'block';
+  document.getElementById('deck-analysis-section').style.display = isAnalysis ? 'block' : 'none';
+  document.getElementById('deck-library-section').style.display = isLibrary ? 'block' : 'none';
   document.getElementById('deck-tab-editor').classList.toggle('active', isEditor);
-  document.getElementById('deck-tab-library').classList.toggle('active', !isEditor);
+  document.getElementById('deck-tab-analysis').classList.toggle('active', isAnalysis);
+  document.getElementById('deck-tab-library').classList.toggle('active', isLibrary);
   
   // Solo mostrar Commander si es Magic
   const fmtSelector = document.getElementById("deck-format-selector");
@@ -290,7 +306,8 @@ function showDeckTab(tab) {
     }
   }
   
-  if (!isEditor) renderDeckLibrary();
+  if (isLibrary) renderDeckLibrary();
+  if (isAnalysis) renderDeckAnalysis();
 }
 
 function showDeckToast(msg, type) {

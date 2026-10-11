@@ -749,3 +749,38 @@ button:active, .btn:active {
   color: var(--accent-color);
   border: 1px solid var(--accent-glow);
 }
+
+/* ───────────── Análisis del mazo ───────────── */
+.analysis { display: flex; flex-direction: column; gap: 14px; }
+.an-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.an-card h3 { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-color); }
+.an-sub { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+.an-muted { font-size: 12px; color: var(--text-secondary); }
+.an-muted strong { color: var(--text-primary); }
+.an-empty { text-align: center; color: var(--text-secondary); padding: 40px 16px; font-size: 14px; }
+.an-warn { background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.35); color: #fca5a5; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; }
+.bar-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 10px; font-size: 12px; }
+.bar-label { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent-color); border-radius: 4px; transition: width var(--transition-normal); }
+.bar-val { color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+.curve { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding-top: 14px; }
+.curve-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.curve-bar { width: 100%; min-height: 2px; background: var(--accent-color); border-radius: 4px 4px 0 0; }
+.curve-n { font-size: 11px; color: var(--text-primary); height: 14px; }
+.curve-x { font-size: 11px; color: var(--text-muted); }
+.an-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.an-table td, .an-table th { padding: 8px 0; border-bottom: 1px solid var(--border-color); text-align: left; }
+.an-table td:last-child, .an-table th:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.an-table-3 td:nth-child(2), .an-table-3 th:nth-child(2) { text-align: right; font-weight: 700; }
+.an-table th { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.an-table small { color: var(--text-muted); }
+.p-high { color: #4ade80; } .p-mid { color: var(--accent-color); } .p-low { color: #f87171; }
+.an-select { width: 100%; min-height: 44px; justify-content: flex-start; border: 1px solid var(--border-color); }
+#btn-simulate { min-height: 44px; }
+
+/* ───────────── Colección ───────────── */
+.col-mode { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.col-login { display: flex; gap: 8px; }
+.col-login input { flex: 1; min-width: 0; }
+#collection-body .card-item .dcr-controls { margin-top: 8px; justify-content: center; }

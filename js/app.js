@@ -53,16 +53,16 @@ function setGame(juego) {
 //  NAVIGATION
 // ─────────────────────────────────────────────
 function switchTab(tab) {
-  const isScanner = tab === 'scanner';
-  document.getElementById('tab-scanner').classList.toggle('active', isScanner);
-  document.getElementById('tab-deck').classList.toggle('active', !isScanner);
-  document.getElementById('main-tab-scanner').classList.toggle('active', isScanner);
-  document.getElementById('main-tab-deck').classList.toggle('active', !isScanner);
-  
-  if (!isScanner) { 
-    renderDeckStats(); 
-    renderDeckList(); 
+  ['scanner', 'deck', 'collection'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('main-tab-' + t).classList.toggle('active', t === tab);
+  });
+
+  if (tab === 'deck') {
+    renderDeckStats();
+    renderDeckList();
   }
+  if (tab === 'collection') renderCollection();
 }
 
 // ─────────────────────────────────────────────
@@ -249,4 +249,5 @@ async function ejecutarBusqueda() {
 document.addEventListener("DOMContentLoaded", () => {
   updateAppTheme();
   switchTab("scanner");
+  initCloud();
 });

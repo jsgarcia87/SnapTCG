@@ -74,3 +74,24 @@ SnapTCG/
 ---
 
 Desarrollado con ❤️ para la comunidad de TCG.
+
+---
+
+## 🌐 Demo pública y colección en la nube
+
+### Demo (GitHub Pages)
+La app es estática (sin build), así que se publica tal cual:
+**Settings → Pages → Source: *Deploy from a branch* → Branch: `main` / `(root)`**.
+URL: `https://jsgarcia87.github.io/SnapTCG/`. Añade `?demo` a la URL para forzar el modo local aunque la nube esté configurada.
+
+### Colección pública con Supabase (opcional)
+Sin configurar nada, la colección y los mazos se guardan en `localStorage` (modo demo). Para publicar tus cartas:
+
+1. Crea un proyecto en [supabase.com](https://supabase.com) y ejecuta [`supabase/schema.sql`](supabase/schema.sql) en el **SQL Editor**.
+2. **Authentication → Users → Add user**: crea tu usuario (email). Copia su **UUID**.
+3. **Authentication → Providers/Sign In**: desactiva *Allow new users to sign up*.
+4. **Authentication → URL Configuration**: añade `https://jsgarcia87.github.io/SnapTCG/` a *Redirect URLs* (y como *Site URL*).
+5. Rellena [`js/config.js`](js/config.js) con `SUPABASE_URL`, `SUPABASE_ANON_KEY` (Project Settings → API → *anon public*) y `PUBLIC_OWNER_ID` (el UUID del paso 2).
+6. Haz commit y push. Entra en la pestaña **Colección**, inicia sesión con tu email (enlace mágico) y añade cartas desde el detalle de carta.
+
+**Seguridad:** la *anon key* es pública por diseño; las políticas RLS permiten a cualquiera **leer** la colección, pero solo el dueño autenticado puede escribir. Los mazos son privados (solo tú los ves). No pongas nunca la `service_role key` en el repositorio.

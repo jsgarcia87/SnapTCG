@@ -125,11 +125,17 @@
         </div>
       </section>
 
+      <!-- Tab: Colección -->
+      <section id="tab-collection" class="tab-section" aria-labelledby="main-tab-collection">
+        <div id="collection-body" class="analysis"></div>
+      </section>
+
       <!-- Tab: Deck Builder -->
       <section id="tab-deck" class="tab-section" aria-labelledby="main-tab-deck">
         <!-- Deck Builder content will be injected or managed here -->
         <div class="pill-switcher">
           <button class="pill-btn active" id="deck-tab-editor" onclick="showDeckTab('editor')">Editor</button>
+          <button class="pill-btn" id="deck-tab-analysis" onclick="showDeckTab('analysis')">Análisis</button>
           <button class="pill-btn" id="deck-tab-library" onclick="showDeckTab('library')">Mis Mazos</button>
         </div>
 
@@ -183,6 +189,10 @@
           </div>
         </div>
 
+        <div id="deck-analysis-section" style="display:none;">
+          <div id="deck-analysis-body" class="analysis"></div>
+        </div>
+
         <div id="deck-library-section" style="display:none;">
           <div id="deck-library-list" class="deck-library"></div>
         </div>
@@ -199,6 +209,10 @@
       <button class="nav-btn" id="main-tab-deck" onclick="switchTab('deck')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         <span class="nav-label">Mazos</span>
+      </button>
+      <button class="nav-btn" id="main-tab-collection" onclick="switchTab('collection')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        <span class="nav-label">Colección</span>
       </button>
     </nav>
 
@@ -225,9 +239,14 @@
               <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em;">Precio Actual</p>
               <p class="modal-title" id="price-main" style="color:var(--accent-color)">0.00 €</p>
             </div>
-            <button class="btn-primary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">
-              Añadir al mazo
-            </button>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn-primary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">
+                Añadir al mazo
+              </button>
+              <button class="btn-secondary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()">
+                Añadir a colección
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -249,9 +268,12 @@
   </div>
 
   <!-- External scripts initialization -->
+  <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/deckbuilder.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
