@@ -8,4 +8,4 @@ const SUPABASE_URL = "https://rgyoatclhoblugdjekwl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_KYvI4sknHO6o-ViZpLjtvQ_xJjbawpG"; // "Publishable key" (pública por diseño)
 
 // UUID del usuario dueño de la colección pública (Authentication → Users en Supabase).
-const PUBLIC_OWNER_ID = "";
+const PUBLIC_OWNER_ID = "f3ceaa4f-8a71-47b4-8ed6-c573ce402114";
