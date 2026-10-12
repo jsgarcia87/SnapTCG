@@ -94,6 +94,7 @@ async function persistCollectionEntry(entry, removed) {
 
 async function collectionAdd(card) {
   if (!canEditCollection()) return;
+  if (!cloudReady()) recordPriceSnapshot(card);
   let entry = collection.find(e => e.card.id === card.id);
   if (entry) entry.qty++;
   else { entry = { card, qty: 1 }; collection.push(entry); }
@@ -148,6 +149,66 @@ async function addCurrentCardToCollection() {
   if (!card) return;
   await collectionAdd(card);
   showDeckToast(`${card.nombre} añadida a la colección ✓`, "success");
+}
+
+/* ───────────── Histórico de precios ───────────── */
+
+const sinceDay = (days) => new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
+
+/** Serie diaria [{day, v}] de una carta (nube: price_history; demo: snapshots locales). */
+async function loadCardHistory(card, days = 365) {
+  if (!cloudReady()) return localCardHistory(card, days);
+  const { data, error } = await sbClient.from("price_history").select("day,eur,usd")
+    .eq("card_id", card.id).gte("day", sinceDay(days)).order("day");
+  if (error) throw error;
+  const key = card.moneda === "usd" ? "usd" : "eur";
+  return data.filter(r => r[key] != null).map(r => ({ day: r.day, v: Number(r[key]) }));
+}
+
+/** Valor de la colección por día: [{day, eur, usd, cards}]. */
+async function loadValueHistory(days = 365) {
+  if (!cloudReady()) return localValueHistory(days);
+  const owner = collectionOwner();
+  if (!owner) return [];
+  const { data, error } = await sbClient.from("collection_value_history").select("day,eur,usd,cards")
+    .eq("owner", owner).gte("day", sinceDay(days)).order("day");
+  if (error) throw error;
+  return data.map(r => ({ day: r.day, eur: Number(r.eur), usd: Number(r.usd), cards: r.cards }));
+}
+
+let valueRange = 90;
+let valueRows = null;
+
+function setValueRange(days) { valueRange = days; paintValueChart(); }
+
+function paintValueChart() {
+  const box = document.getElementById("value-chart");
+  if (!box || !valueRows) return;
+  const useUsd = valueRows.every(r => !(r.eur > 0)) && valueRows.some(r => r.usd > 0);
+  const moneda = useUsd ? "usd" : "eur";
+  const since = sinceDay(valueRange);
+  const pts = valueRows.filter(r => r.day >= since).map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur }));
+  if (valueRows.length < 2 || pts.length < 2) {
+    box.innerHTML = `<div class="an-muted">${cloudReady()
+      ? "El histórico se registra cada día (tarea diaria a las 10:30 UTC). Vuelve mañana para ver la evolución."
+      : "Cada día que abras la app se guarda el valor de tu colección. Vuelve mañana para ver la evolución."}</div>`;
+    return;
+  }
+  const t = trendFromHistory(valueRows.map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur })));
+  box.innerHTML = `${rangePills(valueRange, [30, 90, 365], "setValueRange")}
+    ${lineChart(pts, { moneda, label: "Valor de la colección" })}
+    <div class="an-muted">Hoy <strong>${esc(formatMoney(pts[pts.length - 1].v, moneda))}</strong>
+      ${t && t.d7 != null ? ` · 7 d ${trendBadge(t.d7) || "<span class='trend'>= estable</span>"}` : ""}
+      ${t && t.d30 != null ? ` · 30 d ${trendBadge(t.d30) || "<span class='trend'>= estable</span>"}` : ""}</div>`;
+}
+
+async function renderValueChart() {
+  const box = document.getElementById("value-chart");
+  if (!box) return;
+  if (!cloudReady() && collection.length) recordValueSnapshot(collection);
+  try { valueRows = await loadValueHistory(365); }
+  catch (e) { console.error(e); box.innerHTML = `<div class="an-muted">No se pudo cargar el histórico.</div>`; return; }
+  paintValueChart();
 }
 
 /* ───────────── Mazos: copia de seguridad en la nube ───────────── */
@@ -262,6 +323,7 @@ function renderCollection() {
       <div class="stat-chip"><span class="stat-val">${collection.length}</span><span class="stat-lbl">Únicas</span></div>
       <div class="stat-chip"><span class="stat-val">${esc(formatValue(value))}</span><span class="stat-lbl">Valor</span></div>
     </div>
+    <div class="an-card"><h3>Valor en el tiempo</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
     <div class="col-prices ${viejo ? "stale" : ""}">
       <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${value.usd > 0 ? " · hay cartas en $ (no convertidas)" : ""}</span>
       ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">↻ Actualizar precios</button>` : ""}
@@ -289,4 +351,5 @@ function renderCollection() {
         </article>`;
       }).join("")}
     </div>`;
+  renderValueChart();
 }

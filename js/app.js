@@ -188,13 +188,53 @@ function pintarPrecioModal(carta) {
     if (t && (t.d7 != null || t.d30 != null)) {
       html += `<div class="trend-row">${t.d7 != null ? `7 d ${trendBadge(t.d7) || "<span class='trend'>= estable</span>"}` : ""}
         ${t.d30 != null ? ` · 30 d ${trendBadge(t.d30) || "<span class='trend'>= estable</span>"}` : ""}
-        <small>media de hoy vs. media de ventas</small></div>`;
+        <small>${carta.tipo === "magic" ? "frente a su precio guardado" : "media de hoy vs. media de ventas"}</small></div>`;
     }
     const fecha = timeAgo(priceDate(carta));
     html += `<small class="price-source">${esc(carta.fuente || "")}${fecha ? ` · actualizado ${fecha}` : ""}${carta.moneda === "usd" ? " · en dólares" : ""}</small>`;
   }
   if (carta.enCache) html += `<small class="price-source">Resultados guardados (sin conexión)</small>`;
   meta.innerHTML = html;
+
+  const box = document.getElementById("price-chart");
+  if (carta.precio != null && box.dataset.cardId !== carta.id) cargarHistorialModal(carta, 90);
+  else if (carta.precio == null && !(carta.preciosCargados === false)) { box.innerHTML = ""; box.dataset.cardId = ""; }
+}
+
+let modalHist = { id: null, pts: [] };
+
+async function cargarHistorialModal(carta, days = 90) {
+  const box = document.getElementById("price-chart");
+  box.dataset.cardId = carta.id;
+  box.innerHTML = `<div class="an-muted">Cargando histórico…</div>`;
+  let pts;
+  try { pts = await loadCardHistory(carta, 365); }
+  catch { if (window._currentCard === carta) box.innerHTML = ""; return; }
+  if (window._currentCard !== carta) return;
+  modalHist = { id: carta.id, pts };
+  // Magic no trae tendencia de la API: se calcula con el histórico propio
+  if (carta.tipo === "magic") {
+    const t = trendFromHistory(pts);
+    if (t && (t.d7 != null || t.d30 != null)) { carta.tendencia = t; pintarPrecioModal(carta); }
+  }
+  pintarGraficoModal(carta, days);
+}
+
+function pintarGraficoModal(carta, days) {
+  const box = document.getElementById("price-chart");
+  const pts = modalHist.id === carta.id ? modalHist.pts : [];
+  const visibles = pts.filter(p => p.day >= sinceDay(days));
+  if (pts.length < 2 || visibles.length < 2) {
+    box.innerHTML = `<div class="an-muted">${pts.length < 2
+      ? "Aún no hay histórico de esta carta. Se registra cada día para las cartas de tu colección."
+      : "No hay datos en este rango."}</div>${pts.length >= 2 ? rangePills(days, [30, 90, 365], "cambiarRangoModal") : ""}`;
+    return;
+  }
+  box.innerHTML = `${rangePills(days, [30, 90, 365], "cambiarRangoModal")}${lineChart(visibles, { moneda: carta.moneda, label: "Evolución del precio" })}`;
+}
+
+function cambiarRangoModal(days) {
+  if (window._currentCard) pintarGraficoModal(window._currentCard, days);
 }
 
 async function reintentarPrecioModal() {

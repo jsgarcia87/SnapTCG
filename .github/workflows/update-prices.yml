@@ -1,0 +1,28 @@
+name: Actualizar histórico de precios
+
+on:
+  schedule:
+    - cron: "30 10 * * *"   # a diario, 10:30 UTC (TCGdex y Scryfall actualizan antes)
+  workflow_dispatch: {}       # también se puede lanzar a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Guardar precios de hoy
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/update-prices.mjs

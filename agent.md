@@ -36,6 +36,7 @@ SnapTCG/
 ├── css/
 │   └── style.css      # Sistema de diseño, tokens de color dinámicos, media queries y animaciones
 ├── js/
+│   ├── charts.js      # Gráficas de línea en SVG (sin librerías) y selector de rango
 │   ├── prices.js      # Red resiliente (timeout + reintentos), caché localStorage, formato de precios y refresco
 │   ├── api.js         # Integración y normalización de APIs externas (TCGdex/Pokémon TCG API y Scryfall)
 │   ├── scanner.js     # Gestión de WebRTC (getUserMedia), preprocesamiento Canvas y ciclo OCR continuo
@@ -45,7 +46,11 @@ SnapTCG/
 │   ├── stats.js       # Estadísticas del mazo, probabilidades hipergeométricas y simulación Monte Carlo
 │   └── app.js         # Orquestación de estado general, tematización dinámica, navegación y UI
 ├── supabase/
-│   └── schema.sql     # Tablas collection y decks con políticas RLS
+│   └── schema.sql     # Tablas collection, decks, price_history y collection_value_history con RLS
+├── scripts/
+│   └── update-prices.mjs  # Trabajo diario (Node 20): guarda el histórico en Supabase; reutiliza js/prices.js
+├── .github/workflows/
+│   └── update-prices.yml  # Cron diario 10:30 UTC + ejecución manual; usa los secretos SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY
 ├── .gitignore
 ├── README.md          # Documentación orientada al usuario final
 ├── .DS_Store          # Basura de macOS (commiteada por error; ver sección 9)
@@ -62,6 +67,7 @@ SnapTCG/
      ```html
      <script src="js/config.js"></script>
      <script src="js/prices.js"></script>
+     <script src="js/charts.js"></script>
      <script src="js/api.js"></script>
      <script src="js/scanner.js"></script>
      <script src="js/deckbuilder.js"></script>
@@ -76,6 +82,13 @@ SnapTCG/
    - `applyPokemonPricing` / `applyScryfallPricing`: rellenan `precio`, `precioFoil`, `moneda`, `fuente`, `actualizado` (fecha de la fuente), `consultado` (cuándo se pidió) y `tendencia {d7, d30}`. Pokémon: precio = `avg` de Cardmarket; tendencia = media de hoy (`avg1`) vs `avg7`/`avg30` (misma métrica; `trend` de Cardmarket no se mezcla). Sin Cardmarket, cae a TCGplayer (USD).
    - `hidratarPrecios(cards, onUpdate)` (progresivo, concurrencia 6), `hidratarPrecioPokemon`, `refreshCardPrices(cards)` (Scryfall por lotes de 75 en `/cards/collection`; TCGdex por ficha).
    - Utilidades: `formatMoney`, `timeAgo`, `trendBadge`, `sumValue`/`formatValue` (EUR y USD se suman por separado, nunca se convierten).
+   - Histórico: `trendFromHistory(points)` (d7/d30 desde una serie diaria; la usan la app y el trabajo diario), y snapshots locales para el modo demo (`recordPriceSnapshot`, `recordValueSnapshot`, `localCardHistory`, `localValueHistory`; claves `snaptcg_history_v1` y `snaptcg_value_history_v1`).
+
+   **`js/charts.js`**: `lineChart(points, {moneda, label})` devuelve un SVG accesible (`role="img"` + `aria-label` con el resumen; puntos con `<title>` como tooltip) y `rangePills(actual, opciones, fn)` el selector 30 d / 90 d / 1 año.
+
+   **Histórico en la nube** (`cloud.js`): `loadCardHistory(card)` lee `price_history` (lectura pública) o los snapshots locales; `loadValueHistory()` lee `collection_value_history` del dueño. En el detalle de carta (`app.js`: `cargarHistorialModal`) la gráfica aparece si hay ≥ 2 puntos, y para Magic la tendencia se calcula con ese histórico.
+
+   **Trabajo diario** (`scripts/update-prices.mjs`): lee `collection` y `decks` con la service key, consulta Scryfall (lotes de 75) y TCGdex (5 en paralelo), hace upsert en `price_history` (idempotente por `card_id, day`), calcula la tendencia de Magic, actualiza `collection.card` con `PATCH` (sin tocar `qty`) y guarda el valor por dueño. Falla (exit 1) si no obtiene ningún precio. Las claves `sb_secret_...` van solo en la cabecera `apikey`.
 
    **`js/api.js`**:
    - `buscarPokemon(nombre)`: TCGdex GraphQL (inglés) → TCGdex REST en español → Pokémon TCG API (respaldo, admite `POKEMON_API_KEY`). Los precios llegan después, por ficha (`preciosCargados: false` hasta entonces). Orden: coincidencias exactas primero, cartas sin imagen al final; máx. 60.
@@ -246,7 +259,9 @@ Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmark
 ## ⚠️ 9. Limitaciones Conocidas
 
 - **Mazos antiguos**: los mazos guardados antes de añadir `supertype`/`subtypes` a las cartas Pokémon muestran métricas PKM/TRA/ENE a 0 hasta volver a añadir las cartas (las energías básicas sí se reconocen por nombre).
-- **Sin histórico de precios**: solo hay tendencia en Pokémon (medias de Cardmarket). Magic no tiene tendencia hasta implementar `price_history` (Fase 2).
+- **Histórico solo para cartas seguidas**: el trabajo diario registra únicamente cartas de la colección y los mazos; una carta que solo se busca no tiene gráfica. El histórico empieza el día que se activa el trabajo (no hay backfill).
+- **Tendencia de Magic**: necesita ≥ 7 días de histórico (≥ 30 para d30). Pokémon usa las medias de Cardmarket y no depende del histórico propio.
+- **Cron de GitHub**: se desactiva tras 60 días sin actividad en el repo; puede retrasarse unos minutos.
 - **Dos monedas**: Cardmarket (EUR) y, en su defecto, TCGplayer (USD). No se convierten; los totales las muestran por separado.
 - **Orden de resultados de TCGdex**: llega arbitrario (no cronológico), no hay fecha de lanzamiento en la lista.
 - **Precio de TCGdex**: `trend` y `avg` de Cardmarket pueden diferir mucho en cartas poco vendidas; se usa `avg`.

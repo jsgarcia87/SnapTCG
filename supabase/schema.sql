@@ -45,3 +45,39 @@ create policy "decks_owner_all" on public.decks
   for all to authenticated
   using (owner = auth.uid())
   with check (owner = auth.uid());
+
+-- ───────── Histórico de precios (lectura pública; solo escribe el trabajo diario con la service key) ─────────
+create table if not exists public.price_history (
+  card_id  text    not null,
+  game     text    not null check (game in ('pokemon', 'magic')),
+  day      date    not null,
+  eur      numeric,
+  usd      numeric,
+  eur_foil numeric,
+  usd_foil numeric,
+  source   text,
+  primary key (card_id, day)
+);
+
+alter table public.price_history enable row level security;
+
+drop policy if exists "price_history_public_read" on public.price_history;
+create policy "price_history_public_read" on public.price_history
+  for select using (true);
+-- Sin políticas de escritura: solo la service key (que ignora RLS) puede insertar.
+
+-- ───────── Valor de la colección en el tiempo ─────────
+create table if not exists public.collection_value_history (
+  owner uuid    not null references auth.users(id) on delete cascade,
+  day   date    not null,
+  eur   numeric not null default 0,
+  usd   numeric not null default 0,
+  cards integer not null default 0,
+  primary key (owner, day)
+);
+
+alter table public.collection_value_history enable row level security;
+
+drop policy if exists "value_history_public_read" on public.collection_value_history;
+create policy "value_history_public_read" on public.collection_value_history
+  for select using (true);

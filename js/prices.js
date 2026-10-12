@@ -253,7 +253,7 @@ async function refreshCardPrices(cards, onProgress) {
         const byId = new Map((data.data || []).map(c => [c.id, c]));
         chunk.forEach(card => {
           const fresh = byId.get(card.id);
-          if (fresh) { applyScryfallPricing(card, fresh, bulk); result.ok++; } else result.failed++;
+          if (fresh) { applyScryfallPricing(card, fresh, bulk); recordPriceSnapshot(card); result.ok++; } else result.failed++;
           tick();
         });
       } catch { result.failed += chunk.length; chunk.forEach(tick); }
@@ -261,9 +261,75 @@ async function refreshCardPrices(cards, onProgress) {
   }
 
   await runPool(pokemon, 6, async (card) => {
-    try { await hidratarPrecioPokemon(card, true); result.ok++; }
+    try { await hidratarPrecioPokemon(card, true); recordPriceSnapshot(card); result.ok++; }
     catch { result.failed++; }
     tick();
   });
   return result;
+}
+
+/* ───────────── Histórico: tendencia y snapshots locales (modo demo) ───────────── */
+
+/**
+ * Tendencia a partir de una serie diaria [{day:"YYYY-MM-DD", v:number}] ordenada.
+ * d7/d30 comparan el último valor con el de hace 7/30 días (o el más próximo anterior); null si no hay tanto histórico.
+ */
+function trendFromHistory(points) {
+  if (!points || points.length < 2) return null;
+  const last = points[points.length - 1];
+  const lastT = Date.parse(last.day);
+  const at = (days) => {
+    let best = null;
+    for (const p of points) { if (Date.parse(p.day) <= lastT - days * 86400e3) best = p; else break; }
+    return best;
+  };
+  const p7 = at(7), p30 = at(30);
+  return { d7: p7 ? pctChange(last.v, p7.v) : null, d30: p30 ? pctChange(last.v, p30.v) : null };
+}
+
+const HIST_KEY = "snaptcg_history_v1";
+const VALUE_HIST_KEY = "snaptcg_value_history_v1";
+const todayUTC = () => new Date().toISOString().slice(0, 10);
+
+function readJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+}
+
+/** Guarda el precio de hoy de una carta en el navegador (histórico del modo demo). */
+function recordPriceSnapshot(card) {
+  if (card.precio == null) return;
+  try {
+    const all = readJSON(HIST_KEY, {});
+    const arr = all[card.id] || (all[card.id] = []);
+    const last = arr[arr.length - 1];
+    if (last && last[0] === todayUTC()) { last[1] = card.precio; last[2] = card.moneda; }
+    else arr.push([todayUTC(), card.precio, card.moneda]);
+    if (arr.length > 400) arr.splice(0, arr.length - 400);
+    localStorage.setItem(HIST_KEY, JSON.stringify(all));
+  } catch { /* almacenamiento no disponible */ }
+}
+
+function localCardHistory(card, days) {
+  const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
+  return (readJSON(HIST_KEY, {})[card.id] || [])
+    .filter(([d, , m]) => d >= since && (m || "eur") === (card.moneda || "eur"))
+    .map(([day, v]) => ({ day, v }));
+}
+
+/** Guarda el valor total de la colección de hoy (modo demo). */
+function recordValueSnapshot(entries) {
+  try {
+    const v = sumValue(entries);
+    const arr = readJSON(VALUE_HIST_KEY, []);
+    const n = entries.reduce((s, e) => s + e.qty, 0);
+    const row = [todayUTC(), +v.eur.toFixed(2), +v.usd.toFixed(2), n];
+    if (arr.length && arr[arr.length - 1][0] === todayUTC()) arr[arr.length - 1] = row; else arr.push(row);
+    if (entries.length === 0 && arr.length === 1) return;
+    localStorage.setItem(VALUE_HIST_KEY, JSON.stringify(arr.slice(-800)));
+  } catch { /* almacenamiento no disponible */ }
+}
+
+function localValueHistory(days) {
+  const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
+  return readJSON(VALUE_HIST_KEY, []).filter(r => r[0] >= since).map(([day, eur, usd, cards]) => ({ day, eur, usd, cards }));
 }

@@ -871,3 +871,17 @@ button:active, .btn:active {
 .col-prices.stale > span { color: #fbbf24; }
 .card-price { font-variant-numeric: tabular-nums; }
 .trend-row small { display: block; margin-top: 2px; }
+
+/* ───────────── Gráficas ───────────── */
+.price-chart, .value-chart { display: flex; flex-direction: column; gap: 8px; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart-line { fill: none; stroke: var(--accent-color); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.chart-area { fill: rgba(var(--accent-rgb), 0.12); stroke: none; }
+.chart-grid { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.chart-end { fill: var(--accent-color); }
+.chart-hit { fill: transparent; cursor: pointer; }
+.chart-hit:hover { fill: rgba(var(--accent-rgb), 0.35); }
+.chart-label { fill: var(--text-secondary); font-size: 9px; font-family: var(--font-main); }
+.range-pills { display: flex; gap: 6px; }
+.range-pill { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.range-pill.active { background: rgba(var(--accent-rgb), 0.14); color: var(--accent-color); border-color: transparent; }

@@ -96,3 +96,15 @@ Sin configurar nada, la colección y los mazos se guardan en `localStorage` (mod
 6. Haz commit y push. Entra en la pestaña **Colección**, inicia sesión con tu email (enlace mágico) y añade cartas desde el detalle de carta.
 
 **Seguridad:** la *anon key* es pública por diseño; las políticas RLS permiten a cualquiera **leer** la colección, pero solo el dueño autenticado puede escribir. Los mazos son privados (solo tú los ves). No pongas nunca la `service_role key` en el repositorio.
+
+### Histórico de precios (tendencias y gráficas)
+Una tarea diaria de GitHub Actions ([`.github/workflows/update-prices.yml`](.github/workflows/update-prices.yml), 10:30 UTC) guarda en Supabase el precio de cada carta de tu colección y mazos, la tendencia de Magic y el valor total de la colección. La web dibuja las gráficas de 30 d / 90 d / 1 año. Para activarla:
+
+1. Vuelve a ejecutar [`supabase/schema.sql`](supabase/schema.sql) en el SQL Editor (es idempotente; crea `price_history` y `collection_value_history`).
+2. En GitHub: **Settings → Secrets and variables → Actions → New repository secret**, y crea dos secretos:
+   - `SUPABASE_URL`: la URL de tu proyecto.
+   - `SUPABASE_SERVICE_ROLE_KEY`: la clave **secreta** (*Project Settings → API Keys → Secret key* o `service_role`). Solo en secretos de Actions, **nunca** en el repo ni en `config.js`.
+3. Lánzala una vez a mano: **Actions → Actualizar histórico de precios → Run workflow**. A partir de ahí se ejecuta sola cada día.
+
+Notas: el histórico empieza el día que se activa (no hay datos anteriores) y GitHub desactiva las tareas programadas tras 60 días sin actividad en el repo. En modo demo (sin Supabase) el histórico se acumula en el navegador cuando actualizas precios o abres la colección.
+
