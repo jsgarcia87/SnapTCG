@@ -25,7 +25,8 @@
 - **Gestión de Biblioteca**: Guarda múltiples mazos localmente y edítalos cuando quieras.
 
 ### 3. Consultas en Tiempo Real
-- **Precios Actualizados**: Integración directa con **Scryfall** (Magic) y **Pokémon TCG API**.
+- **Precios con contexto**: cada precio indica su fuente (Cardmarket / TCGplayer) y cuándo se actualizó. En Pokémon se muestra la tendencia frente a las medias de 7 y 30 días.
+- **Fuentes**: **TCGdex** (Pokémon, con respaldo en Pokémon TCG API) y **Scryfall** (Magic). Caché local, reintentos automáticos y botón «Actualizar precios» en Colección y en el análisis de mazos.
 - **Indicador de Posesión**: Al buscar cartas, la app te indica si ya tienes copias de esa carta en tu mazo actual mediante un badge visual.
 
 ---

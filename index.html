@@ -102,6 +102,13 @@
               <p class="spinner-text" id="spinner-text" style="margin-top:16px;">Sincronizando con la base de datos...</p>
             </div>
 
+            <!-- Error con reintento -->
+            <div class="error-box" id="error-box" role="alert" style="display:none">
+              <p class="error-title" id="error-title"></p>
+              <p class="error-text" id="error-text"></p>
+              <button class="btn-primary" id="error-retry" onclick="ejecutarBusqueda()">Reintentar</button>
+            </div>
+
             <!-- Results Grid -->
             <div class="results-grid" id="results-grid"></div>
             
@@ -238,6 +245,7 @@
             <div>
               <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em;">Precio Actual</p>
               <p class="modal-title" id="price-main" style="color:var(--accent-color)">0.00 €</p>
+              <div class="price-trend" id="price-trend"></div>
             </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
               <button class="btn-primary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">
@@ -269,6 +277,7 @@
 
   <!-- External scripts initialization -->
   <script src="js/config.js"></script>
+  <script src="js/prices.js"></script>
   <script src="js/api.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/deckbuilder.js"></script>

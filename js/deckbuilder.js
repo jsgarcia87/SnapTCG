@@ -99,11 +99,11 @@ function removeCardFromDeck(cardId, all = false) {
 function renderDeckStats() {
   const rules = getRules();
   const total = totalCards();
-  const value = currentDeck.reduce((s, e) => s + (parseFloat(e.card.precio ?? 0) * e.qty), 0);
+  const value = sumValue(currentDeck);
 
   document.getElementById("deck-stat-total").textContent = total;
   document.getElementById("deck-stat-uniq").textContent = currentDeck.length;
-  document.getElementById("deck-stat-value").textContent = value.toFixed(2) + "€";
+  document.getElementById("deck-stat-value").textContent = formatValue(value);
 
   const pct = Math.min(100, (total / rules.max) * 100);
   const fill = document.getElementById("deck-progress-fill");
@@ -204,7 +204,7 @@ function saveDeck() {
     id: editingDeckIdx > -1 ? allDecks[editingDeckIdx].id : Date.now(),
     nombre, juego: juegoActual, formato: currentFormat, cards: [...currentDeck],
     total: totalCards(),
-    value: currentDeck.reduce((s, e) => s + (parseFloat(e.card.precio ?? 0) * e.qty), 0).toFixed(2),
+    value: sumValue(currentDeck).eur.toFixed(2),
     date: new Date().toLocaleDateString()
   };
 

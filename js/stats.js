@@ -90,14 +90,11 @@ function analyzeDeck(deck, juego) {
   const res = {
     total, juego, categories: {}, curve: new Array(8).fill(0), colors: { W: 0, U: 0, B: 0, R: 0, G: 0 },
     avgCmc: 0, nonLand: 0, lands: 0, basics: 0, energies: 0, basicEnergies: 0, subtypes: {},
-    missingData: 0, value: 0, avgPrice: 0, top: []
+    missingData: 0, valor: { eur: 0, usd: 0, missing: 0 }, precioMasAntiguo: null, top: []
   };
   let cmcSum = 0;
 
   deck.forEach(({ card, qty }) => {
-    const price = parseFloat(card.precio ?? 0) || 0;
-    res.value += price * qty;
-
     if (!hasCardData(card, juego)) { res.missingData += qty; return; }
 
     if (juego === "magic") {
@@ -126,12 +123,14 @@ function analyzeDeck(deck, juego) {
   });
 
   res.avgCmc = res.nonLand ? cmcSum / res.nonLand : 0;
-  res.avgPrice = total ? res.value / total : 0;
+  res.valor = sumValue(deck);
   res.top = deck
-    .map(e => ({ nombre: e.card.nombre, precio: parseFloat(e.card.precio ?? 0) || 0, qty: e.qty }))
+    .map(e => ({ nombre: e.card.nombre, precio: parseFloat(e.card.precio) || 0, moneda: e.card.moneda, qty: e.qty }))
     .filter(e => e.precio > 0)
     .sort((a, b) => b.precio - a.precio)
     .slice(0, 3);
+  const fechas = deck.map(e => priceDate(e.card)).filter(Boolean).map(f => new Date(f).getTime()).filter(t => !isNaN(t));
+  res.precioMasAntiguo = fechas.length ? new Date(Math.min(...fechas)).toISOString() : null;
   return res;
 }
 
@@ -288,9 +287,13 @@ function renderDeckAnalysis() {
   html += `</div>`;
 
   /* — Valor — */
+  const antiguo = timeAgo(a.precioMasAntiguo);
   html += `<div class="an-card"><h3>Valor del mazo</h3>
-    <div class="an-muted">Total: <strong>${a.value.toFixed(2)}€</strong> · Media por carta: <strong>${a.avgPrice.toFixed(2)}€</strong></div>
-    ${a.top.map(t => barRow(t.nombre + (t.qty > 1 ? ` x${t.qty}` : ""), t.precio, a.top[0].precio, t.precio.toFixed(2) + "€")).join("")}
+    <div class="an-muted">Total: <strong>${formatValue(a.valor)}</strong>${a.valor.missing ? ` · ${a.valor.missing} carta(s) sin precio` : ""}</div>
+    ${a.valor.usd > 0 ? `<div class="an-muted">Hay cartas en dólares (TCGplayer): no se convierten a euros.</div>` : ""}
+    ${a.top.map(t => barRow(t.nombre + (t.qty > 1 ? ` x${t.qty}` : ""), t.precio, a.top[0].precio, formatMoney(t.precio, t.moneda))).join("")}
+    <div class="an-muted">Precios${antiguo ? ` de ${antiguo}` : " sin fecha"}</div>
+    <button class="dab-btn" id="btn-refresh-deck" onclick="refreshDeckPrices()">↻ Actualizar precios</button>
   </div>`;
 
   body.innerHTML = html;
@@ -312,4 +315,14 @@ function runDeckSimulation() {
     draw: simulateLandDrops(N, a.lands, 10000, 5, true)
   };
   document.getElementById("sim-result").innerHTML = simResultHtml(analysisSim);
+}
+
+async function refreshDeckPrices() {
+  const btn = document.getElementById("btn-refresh-deck");
+  if (btn) { btn.disabled = true; btn.textContent = "Actualizando…"; }
+  try {
+    const r = await refreshCardPrices(currentDeck.map(e => e.card));
+    showDeckToast(r.failed ? `Precios actualizados (${r.failed} sin respuesta)` : "Precios actualizados ✓", r.failed ? "warn" : "success");
+  } catch { showDeckToast("No se pudieron actualizar los precios", "warn"); }
+  renderDeckStats();
 }

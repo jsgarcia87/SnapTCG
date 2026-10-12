@@ -22,7 +22,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
 | **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo `SINGLE_LINE` con whitelist de caracteres. |
 | **Tipografía** | Google Fonts | `DM Sans` (cuerpo/UI) y `Cinzel` (títulos/display). |
-| **API Pokémon** | [Pokémon TCG API v2](https://pokemontcg.io/) | Búsqueda por nombre ordenada por fecha de lanzamiento, con precios de Cardmarket / TCGPlayer. |
+| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: lista por GraphQL (`/v2/graphql`, solo inglés) y fichas REST con precios (`pricing.cardmarket` con `avg`, `avg1`, `avg7`, `avg30`, y `tcgplayer`). Sin resultados en inglés se busca en español por REST. pokemontcg.io solo si TCGdex falla (es inestable: 502 y latencias de 20 s). |
 | **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa (`/cards/named?fuzzy=...`) y listado de todas las ediciones (`/cards/search?q=!&unique=prints`). |
 | **Persistencia** | Web Storage (`localStorage`) | Clave `snaptcg_decks` para la biblioteca de mazos del usuario. |
 
@@ -36,7 +36,8 @@ SnapTCG/
 ├── css/
 │   └── style.css      # Sistema de diseño, tokens de color dinámicos, media queries y animaciones
 ├── js/
-│   ├── api.js         # Capa de integración y normalización de APIs externas (Pokémon y Scryfall)
+│   ├── prices.js      # Red resiliente (timeout + reintentos), caché localStorage, formato de precios y refresco
+│   ├── api.js         # Integración y normalización de APIs externas (TCGdex/Pokémon TCG API y Scryfall)
 │   ├── scanner.js     # Gestión de WebRTC (getUserMedia), preprocesamiento Canvas y ciclo OCR continuo
 │   ├── deckbuilder.js # Motor de reglas de mazos (Standard, Commander), métricas y persistencia
 │   ├── config.js      # URL/anon key de Supabase y PUBLIC_OWNER_ID (vacío = modo demo local)
@@ -60,6 +61,7 @@ SnapTCG/
    - Carga ordenada de scripts al pie:
      ```html
      <script src="js/config.js"></script>
+     <script src="js/prices.js"></script>
      <script src="js/api.js"></script>
      <script src="js/scanner.js"></script>
      <script src="js/deckbuilder.js"></script>
@@ -68,10 +70,17 @@ SnapTCG/
      <script src="js/app.js"></script>
      ```
 
-2. **`js/api.js`**:
-   - `buscarPokemon(nombre)`: Consulta `api.pokemontcg.io/v2/cards`. Admite `POKEMON_API_KEY` (constante al inicio de `api.js`, vacía por defecto) enviada en la cabecera `X-Api-Key`. Sin clave funciona, pero con límites de tasa más estrictos. Devuelve lista normalizada.
-   - `buscarMagic(nombre)`: Consulta en dos pasos a Scryfall (fuzzy para resolver nombre canónico y prints para obtener todas las ediciones).
-   - `buscarCartas(nombre, juego)`: Enrutador que delega según el juego activo.
+2. **`js/prices.js`** (se carga antes que `api.js`):
+   - `fetchJSON(url, {retries, timeout, okStatuses})`: fetch con timeout y reintentos con backoff (429/5xx/red). Lanza errores con `code` (`network`, `http`, `parse`).
+   - Caché: `cacheGet/cacheSet` (clave `snaptcg_cache_v1`, máx. 40 entradas). TTL: búsquedas 12 h, precios por carta 6 h. Sin conexión se sirve la caché caducada (`card.enCache`).
+   - `applyPokemonPricing` / `applyScryfallPricing`: rellenan `precio`, `precioFoil`, `moneda`, `fuente`, `actualizado` (fecha de la fuente), `consultado` (cuándo se pidió) y `tendencia {d7, d30}`. Pokémon: precio = `avg` de Cardmarket; tendencia = media de hoy (`avg1`) vs `avg7`/`avg30` (misma métrica; `trend` de Cardmarket no se mezcla). Sin Cardmarket, cae a TCGplayer (USD).
+   - `hidratarPrecios(cards, onUpdate)` (progresivo, concurrencia 6), `hidratarPrecioPokemon`, `refreshCardPrices(cards)` (Scryfall por lotes de 75 en `/cards/collection`; TCGdex por ficha).
+   - Utilidades: `formatMoney`, `timeAgo`, `trendBadge`, `sumValue`/`formatValue` (EUR y USD se suman por separado, nunca se convierten).
+
+   **`js/api.js`**:
+   - `buscarPokemon(nombre)`: TCGdex GraphQL (inglés) → TCGdex REST en español → Pokémon TCG API (respaldo, admite `POKEMON_API_KEY`). Los precios llegan después, por ficha (`preciosCargados: false` hasta entonces). Orden: coincidencias exactas primero, cartas sin imagen al final; máx. 60.
+   - `buscarMagic(nombre)`: Scryfall en dos pasos (fuzzy + prints). Su `actualizado` es la fecha de `bulk-data` (`default_cards`), ya que Scryfall refresca los precios una vez al día.
+   - `buscarCartas(nombre, juego)`: enrutador con caché y recurso a la caché caducada si hay fallo de red.
 
 3. **`js/scanner.js`**:
    - `iniciarEscaner()` / `detenerEscaner()`: Gestiona el flujo `navigator.mediaDevices.getUserMedia` (`facingMode: 'environment'`, resolución ideal 1280x720).
@@ -237,7 +246,10 @@ Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmark
 ## ⚠️ 9. Limitaciones Conocidas
 
 - **Mazos antiguos**: los mazos guardados antes de añadir `supertype`/`subtypes` a las cartas Pokémon muestran métricas PKM/TRA/ENE a 0 hasta volver a añadir las cartas (las energías básicas sí se reconocen por nombre).
-- **API de Pokémon sin clave**: sin `POKEMON_API_KEY` hay límites de tasa más bajos y el servicio puede ser lento o devolver errores.
+- **Sin histórico de precios**: solo hay tendencia en Pokémon (medias de Cardmarket). Magic no tiene tendencia hasta implementar `price_history` (Fase 2).
+- **Dos monedas**: Cardmarket (EUR) y, en su defecto, TCGplayer (USD). No se convierten; los totales las muestran por separado.
+- **Orden de resultados de TCGdex**: llega arbitrario (no cronológico), no hay fecha de lanzamiento en la lista.
+- **Precio de TCGdex**: `trend` y `avg` de Cardmarket pueden diferir mucho en cartas poco vendidas; se usa `avg`.
 - **Sin tests automatizados**: la validación es manual en navegador.
 - **`.DS_Store` commiteado**: ya está en `.gitignore`, pero el archivo sigue en el repositorio; elimínalo con `git rm --cached .DS_Store`.
 - **Nube sin probar contra Supabase real**: la lógica se probó con un cliente simulado; falta una prueba de extremo a extremo con un proyecto real.

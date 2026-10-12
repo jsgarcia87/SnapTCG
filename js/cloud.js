@@ -112,6 +112,37 @@ async function collectionRemove(cardId) {
   renderCollection();
 }
 
+async function persistAllCollection() {
+  if (!cloudReady()) { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); return; }
+  if (!sbSession || collection.length === 0) return;
+  const owner = sbSession.user.id;
+  const rows = collection.map(e => ({
+    owner, card_id: e.card.id, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+  }));
+  const { error } = await sbClient.from("collection").upsert(rows, { onConflict: "owner,card_id" });
+  if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
+}
+
+let refreshingCollection = false;
+async function refreshCollectionPrices() {
+  if (!canEditCollection() || refreshingCollection || collection.length === 0) return;
+  refreshingCollection = true;
+  const btn = document.getElementById("btn-refresh-collection");
+  const setLabel = (d, t) => { if (btn) btn.textContent = `Actualizando… ${d}/${t}`; };
+  if (btn) btn.disabled = true;
+  try {
+    const r = await refreshCardPrices(collection.map(e => e.card), setLabel);
+    await persistAllCollection();
+    showDeckToast(r.failed ? `Actualizadas ${r.ok}; ${r.failed} sin respuesta` : `${r.ok} precios actualizados ✓`, r.failed ? "warn" : "success");
+  } catch (e) {
+    console.error(e);
+    showDeckToast("No se pudieron actualizar los precios", "warn");
+  } finally {
+    refreshingCollection = false;
+    renderCollection();
+  }
+}
+
 async function addCurrentCardToCollection() {
   const card = window._currentCard;
   if (!card) return;
@@ -210,7 +241,10 @@ function renderCollection() {
   }
 
   const total = collection.reduce((s, e) => s + e.qty, 0);
-  const value = collection.reduce((s, e) => s + (parseFloat(e.card.precio) || 0) * e.qty, 0);
+  const value = sumValue(collection);
+  const fechas = collection.map(e => priceDate(e.card)).filter(Boolean).map(f => new Date(f).getTime()).filter(t => !isNaN(t));
+  const masAntiguo = fechas.length ? new Date(Math.min(...fechas)).toISOString() : null;
+  const viejo = masAntiguo && Date.now() - new Date(masAntiguo).getTime() > 3 * 86400e3;
   const text = collectionFilter.text.toLowerCase();
   const list = collection
     .filter(e => collectionFilter.game === "all" || e.card.tipo === collectionFilter.game)
@@ -226,7 +260,11 @@ function renderCollection() {
     <div class="deck-stats">
       <div class="stat-chip"><span class="stat-val">${total}</span><span class="stat-lbl">Cartas</span></div>
       <div class="stat-chip"><span class="stat-val">${collection.length}</span><span class="stat-lbl">Únicas</span></div>
-      <div class="stat-chip"><span class="stat-val">${value.toFixed(2)}€</span><span class="stat-lbl">Valor</span></div>
+      <div class="stat-chip"><span class="stat-val">${esc(formatValue(value))}</span><span class="stat-lbl">Valor</span></div>
+    </div>
+    <div class="col-prices ${viejo ? "stale" : ""}">
+      <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${value.usd > 0 ? " · hay cartas en $ (no convertidas)" : ""}</span>
+      ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">↻ Actualizar precios</button>` : ""}
     </div>
     <div class="pill-switcher">${pills}</div>
     <input type="search" class="deck-name-input" id="collection-search" placeholder="Filtrar por nombre..." value="${esc(collectionFilter.text)}"
@@ -235,15 +273,14 @@ function renderCollection() {
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "Sin resultados." : (editable ? "Aún no tienes cartas. Búscalas en el Escáner y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
     <div class="results-grid" style="display:grid">
       ${list.map(e => {
-        const c = e.card, sym = c.moneda === "usd" ? "$" : "€";
-        const price = c.precio ? `${parseFloat(c.precio).toFixed(2)}${sym}` : "N/D";
+        const c = e.card;
         return `<article class="card-item">
           <div class="possession-badge">x${e.qty}</div>
           <img src="${esc(c.imagenThumb || c.imagen || "")}" alt="${esc(c.nombre)}" class="card-thumb" loading="lazy">
           <div class="card-info">
             <h3 class="card-name">${esc(c.nombre)}</h3>
             <p class="card-meta">${esc(c.set || "Desconocido")}</p>
-            <p class="card-price">${price}</p>
+            <p class="card-price">${precioHtml(c)}</p>
             ${editable ? `<div class="dcr-controls">
               <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="collectionRemove('${esc(c.id)}')">−</button>
               <button class="dcr-btn" aria-label="Añadir una copia" onclick="collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">+</button>
