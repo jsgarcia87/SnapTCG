@@ -274,6 +274,9 @@ Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmark
 - **Dos monedas**: Cardmarket (EUR) y, en su defecto, TCGplayer (USD). No se convierten; los totales las muestran por separado.
 - **Orden de resultados de TCGdex**: llega arbitrario (no cronológico), no hay fecha de lanzamiento en la lista.
 - **Precio de TCGdex**: `trend` y `avg` de Cardmarket pueden diferir mucho en cartas poco vendidas; se usa `avg`.
+- **Responsive verificado en**: 320, 360, 390, 412, 768, 980, 1024 y 1280 px, sin desbordes horizontales en las 7 vistas (Inicio, Buscar, editor, análisis, biblioteca, colección y detalle). Para repetirlo: cargar datos de prueba, redimensionar y comprobar que ningún elemento visible tiene `getBoundingClientRect().right > clientWidth`. Reglas que evitan los desbordes: `min-width: 0` en hijos flex/grid con texto, columnas `minmax(0, …)` y truncado con `text-overflow` en bloques (no en `inline`).
+- **Escritorio en móvil**: si Chrome tiene «Sitio para ordenador», el ancho de página es ~980 px y se muestra el diseño de escritorio; `avisarModoEscritorio()` (app.js) lo detecta (táctil + pantalla ≤ 500 px + ancho ≥ 900 px) y muestra un aviso para desactivarlo.
+- **Escapado**: todo texto de APIs/usuario que va a `innerHTML` debe pasar por `esc()` (definida en stats.js); ya se aplica en búsqueda, colección, editor y biblioteca de mazos.
 - **Dos hojas de estilo**: `design.css` sobrescribe partes de `style.css` (p. ej. `.bottom-nav` quedó sin uso, `.search-container` y varios estilos del modal antiguo). Pendiente consolidarlas en una sola.
 - **Sin tests automatizados**: la validación es manual en navegador.
 - **`.DS_Store` commiteado**: ya está en `.gitignore`, pero el archivo sigue en el repositorio; elimínalo con `git rm --cached .DS_Store`.

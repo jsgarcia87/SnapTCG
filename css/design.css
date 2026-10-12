@@ -158,7 +158,7 @@ body.modal-open { overflow: hidden; }
   .nav-btn.active::before { display: none; }
   .nav-label { font-size: 14px; }
 
-  .home { display: grid; grid-template-columns: 1.5fr 1fr; gap: var(--space-5); align-items: start; }
+  .home { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
   .home .hero-card, .home .quick-actions { grid-column: 1 / -1; }
   .hero-card { padding: var(--space-6); }
   .hero-spark { margin: 0 calc(var(--space-6) * -1) calc(var(--space-3) * -1); }
@@ -182,3 +182,25 @@ body.modal-open { overflow: hidden; }
 @media (min-width: 1280px) {
   .results-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 }
+
+/* ───────────── Robustez en pantallas pequeñas (≥ 320 px) ───────────── */
+.search-input { min-width: 0; width: 100%; }
+.sdi-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.sdi-name, .sdi-meta { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mover-name, .mover-price { min-width: 0; }
+.deck-card-row, .history-item, .mover, .saved-deck-item { min-width: 0; }
+.dcr-info { min-width: 0; }
+@media (max-width: 359px) {
+  .app-content { padding-left: 14px; padding-right: 14px; }
+  .app-header { padding-left: 14px; padding-right: 14px; }
+  .quick-actions { gap: var(--space-2); }
+  .quick-btn { font-size: 12px; }
+  .detail-actions { grid-template-columns: 1fr; }
+  .hero-card { padding: var(--space-4); }
+  .hero-spark { margin: 0 calc(var(--space-4) * -1) 0; }
+}
+
+/* Aviso: móvil con la versión de escritorio (banner fijo: no participa en la cuadrícula) */
+.desktop-hint { position: fixed; top: 8px; left: 8px; right: 8px; z-index: 250; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: #2a2210; border: 1px solid rgba(251, 191, 36, 0.5); font-size: 14px; color: var(--text-primary); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+.desktop-hint[hidden] { display: none; }
+.desktop-hint p { flex: 1; }

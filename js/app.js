@@ -316,6 +316,22 @@ function closeModal() {
 
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
+// Aviso si un móvil carga la versión de escritorio ("Sitio para ordenador" activado en el navegador)
+function avisarModoEscritorio() {
+  try {
+    const pequena = Math.min(screen.width, screen.height) <= 500;
+    const tactil = matchMedia("(pointer: coarse)").matches;
+    if (pequena && tactil && innerWidth >= 900 && !sessionStorage.getItem("snaptcg_hint_escritorio")) {
+      document.getElementById("desktop-hint").hidden = false;
+    }
+  } catch { /* sin sessionStorage o matchMedia */ }
+}
+
+function cerrarAvisoEscritorio() {
+  document.getElementById("desktop-hint").hidden = true;
+  try { sessionStorage.setItem("snaptcg_hint_escritorio", "1"); } catch { /* opcional */ }
+}
+
 function volverALista() {
   document.getElementById("btn-back").style.display = "none";
   document.getElementById("results-grid").style.display = "grid";
@@ -399,5 +415,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setGame(juego);
   switchTab(HASH_TAB[location.hash] || "home");
   actualizarVistaHistorial();
+  avisarModoEscritorio();
   initCloud();
 });

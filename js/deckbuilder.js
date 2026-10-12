@@ -181,15 +181,15 @@ function renderDeckList() {
     const row = document.createElement("div");
     row.className = "deck-card-row";
     row.innerHTML = `
-      <img src="${entry.card.imagenThumb}" alt="">
+      <img src="${esc(entry.card.imagenThumb)}" alt="">
       <div class="dcr-info">
-        <p class="dcr-name">${entry.card.nombre}</p>
-        <p class="dcr-set">${entry.card.set}</p>
+        <p class="dcr-name">${esc(entry.card.nombre)}</p>
+        <p class="dcr-set">${esc(entry.card.set)}</p>
       </div>
       <div class="dcr-controls">
-        <button class="dcr-btn remove" onclick="removeCardFromDeck('${entry.card.id}')">−</button>
+        <button class="dcr-btn remove" onclick="removeCardFromDeck('${esc(entry.card.id)}')" aria-label="Quitar una copia">−</button>
         <span class="dcr-qty">${entry.qty}</span>
-        <button class="dcr-btn" onclick="addCardToDeck(currentDeck.find(e=>e.card.id==='${entry.card.id}').card, juegoActual)">+</button>
+        <button class="dcr-btn" onclick="addCardToDeck(currentDeck.find(e=>e.card.id==='${esc(entry.card.id)}').card, juegoActual)" aria-label="Añadir una copia">+</button>
       </div>
     `;
     container.appendChild(row);
@@ -236,11 +236,11 @@ function renderDeckLibrary() {
     item.innerHTML = `
       <div class="sdi-icon">${rules.icon}</div>
       <div class="sdi-info">
-        <p class="sdi-name">${deck.nombre}</p>
-        <p class="sdi-meta">${deck.total} cartas • ${deck.value}€ • ${rules.label}</p>
+        <p class="sdi-name">${esc(deck.nombre)}</p>
+        <p class="sdi-meta">${deck.total} cartas • ${esc(deck.value)}€ • ${rules.label}</p>
       </div>
       <div class="sdi-actions">
-        <button class="sdi-btn danger" onclick="event.stopPropagation(); deleteDeck(${idx})">🗑</button>
+        <button class="sdi-btn danger" onclick="event.stopPropagation(); deleteDeck(${idx})" aria-label="Borrar mazo">🗑</button>
       </div>
     `;
     el.appendChild(item);
