@@ -143,7 +143,7 @@ async function refreshCollectionPrices() {
   try {
     const r = await refreshCardPrices(collection.map(e => e.card), setLabel);
     await persistAllCollection();
-    showDeckToast(r.failed ? `Actualizadas ${r.ok}; ${r.failed} sin respuesta` : `${r.ok} precios actualizados ✓`, r.failed ? "warn" : "success");
+    showDeckToast(r.failed ? `Actualizadas ${r.ok}; ${r.failed} sin respuesta` : `${r.ok} precios actualizados`, r.failed ? "warn" : "success");
   } catch (e) {
     console.error(e);
     showDeckToast("No se pudieron actualizar los precios", "warn");
@@ -158,7 +158,7 @@ async function addCurrentCardToCollection() {
   if (!card) return;
   await collectionAdd(card);
   pintarPoseidaModal(card);
-  showDeckToast(`${card.nombre} añadida a la colección ✓`, "success");
+  showDeckToast(`${card.nombre} añadida a la colección`, "success");
 }
 
 /* ───────────── Histórico de precios ───────────── */
@@ -298,7 +298,7 @@ function updateCollectionButton() {
 
 function copyCollectionLink() {
   const url = location.href.split("#")[0].split("?")[0] + "#coleccion";
-  navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado ✓", "success"));
+  navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"));
 }
 
 function setCollectionFilter(key, value) {
@@ -348,12 +348,12 @@ function renderCollection() {
     <div class="an-card"><h3>Valor en el tiempo</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
     <div class="col-prices ${viejo ? "stale" : ""}">
       <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${value.usd > 0 ? " · hay cartas en $ (no convertidas)" : ""}</span>
-      ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">↻ Actualizar precios</button>` : ""}
+      ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">${HEROICONS.arrowPath} Actualizar precios</button>` : ""}
     </div>
     <div class="pill-switcher">${pills}</div>
     <input type="search" class="deck-name-input" id="collection-search" placeholder="Filtrar por nombre..." value="${esc(collectionFilter.text)}"
       oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
-    <button class="dab-btn" onclick="copyCollectionLink()">🔗 Copiar enlace público</button>
+    <button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Copiar enlace público</button>
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "Sin resultados." : (editable ? "Aún no tienes cartas. Búscalas en el Escáner y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
     <div class="results-grid" style="display:grid">
       ${list.map(e => {
@@ -367,8 +367,8 @@ function renderCollection() {
             <p class="card-meta">${esc(c.set || "Desconocido")}</p>
             <p class="card-price">${precioHtml(c)}</p>
             ${editable ? `<div class="dcr-controls">
-              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${esc(c.id)}')">−</button>
-              <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">+</button>
+              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${esc(c.id)}')">${HEROICONS.minus}</button>
+              <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">${HEROICONS.plus}</button>
             </div>` : ""}
           </div>
         </article>`;

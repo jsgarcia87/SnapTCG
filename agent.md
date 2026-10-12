@@ -37,6 +37,7 @@ SnapTCG/
 │   ├── style.css      # Base: tokens, componentes (tarjetas, escáner, editor de mazos, análisis, colección, precios, gráficas)
 │   └── design.css     # Capa v3 (se carga DESPUÉS): layout responsive, navegación, Inicio, detalle de carta, accesibilidad
 ├── js/
+│   ├── icons.js       # Catálogo centralizado de iconos SVG (Heroicons v2, zero-build)
 │   ├── charts.js      # Gráficas de línea en SVG (sin librerías) y selector de rango
 │   ├── prices.js      # Red resiliente (timeout + reintentos), caché localStorage, formato de precios y refresco
 │   ├── api.js         # Integración y normalización de APIs externas (TCGdex/Pokémon TCG API y Scryfall)
@@ -67,6 +68,7 @@ SnapTCG/
    - Modales emergentes: `#card-detail-modal` (ficha de carta y precios) y `#modal-overlay` (exportador de listas de mazo).
    - Carga ordenada de scripts al pie:
      ```html
+     <script src="js/icons.js"></script>
      <script src="js/config.js"></script>
      <script src="js/prices.js"></script>
      <script src="js/charts.js"></script>
@@ -79,7 +81,12 @@ SnapTCG/
      <script src="js/app.js"></script>
      ```
 
-2. **`js/prices.js`** (se carga antes que `api.js`):
+2. **`js/icons.js`** (se carga primero):
+   - Catálogo `HEROICONS` con iconos SVG vectoriales basados en [Heroicons v2](https://heroicons.com/).
+   - Cero emojis en la interfaz: `bolt`, `sparkles`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`.
+   - Clases de soporte CSS: `.heroicon` (18px), `.heroicon-sm` (14px), `.heroicon-lg` (24px), `.btn-icon`, `.trend-icon`.
+
+3. **`js/prices.js`** (se carga antes que `api.js`):
    - `fetchJSON(url, {retries, timeout, okStatuses})`: fetch con timeout y reintentos con backoff (429/5xx/red). Lanza errores con `code` (`network`, `http`, `parse`).
    - Caché: `cacheGet/cacheSet` (clave `snaptcg_cache_v1`, máx. 40 entradas). TTL: búsquedas 12 h, precios por carta 6 h. Sin conexión se sirve la caché caducada (`card.enCache`).
    - `applyPokemonPricing` / `applyScryfallPricing`: rellenan `precio`, `precioFoil`, `moneda`, `fuente`, `actualizado` (fecha de la fuente), `consultado` (cuándo se pidió) y `tendencia {d7, d30}`. Pokémon: precio = `avg` de Cardmarket; tendencia = media de hoy (`avg1`) vs `avg7`/`avg30` (misma métrica; `trend` de Cardmarket no se mezcla). Sin Cardmarket, cae a TCGplayer (USD).
@@ -228,6 +235,11 @@ El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.
   - Sombras: `--shadow-blur: 24px`, `--shadow-color: #000000`, `--shadow-opacity: 0.08`, `--shadow-offset-y: 1px`.
 - **Estructura del Shell:** Ancho adaptativo (`max-width: 500px` en móvil, responsive hasta 1360px en escritorio con navegación lateral y diálogo de dos columnas), respetando la barra de navegación fija y safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
 
+### Iconografía (Heroicons v2):
+- **Cero Emojis:** Todos los iconos de la UI provienen de [Heroicons v2](https://heroicons.com/) definidos en `js/icons.js` como SVGs vectoriales inline.
+- **Acceso:** Vía `HEROICONS.<nombreIcono>` (ej. `HEROICONS.bolt`, `HEROICONS.magnifyingGlass`, `HEROICONS.camera`).
+- **Resiliencia en Node.js:** En archivos compartidos con scripts de servidor (como `js/prices.js`), siempre se comprueba `typeof HEROICONS !== "undefined"`.
+
 ---
 
 ## 🧭 6. Reglas Críticas para Agentes al Modificar el Código
@@ -250,6 +262,8 @@ Cuando un agente trabaje en este proyecto, debe acatar estrictamente las siguien
    - La interfaz de usuario, placeholders, toasts y mensajes de error están en **Español** (`es`). Mantén la coherencia idiomática en las cadenas visibles.
 6. **Integridad del OCR**:
    - Al ajustar el escáner, ten presente que procesar cada frame consume CPU en dispositivos móviles. Mantener `SCAN_INTERVAL_MS` entre 1200ms y 2000ms y no eliminar el recorte previo del 25% superior en el canvas antes de pasar la imagen a Tesseract.
+7. **Iconografía Profesional y Sin Emojis**:
+   - **NO** usar emojis en la UI (botones, cabeceras, badges, acciones, mensajes o estados vacíos). Usar siempre los iconos SVG de `HEROICONS` en `js/icons.js` estilizados con `.heroicon`, `.heroicon-sm`, etc.
 
 ---
 

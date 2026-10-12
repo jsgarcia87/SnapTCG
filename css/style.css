@@ -379,8 +379,71 @@ body::before {
 }
 
 .placeholder-icon {
-  font-size: 48px;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon svg {
+  width: 52px;
+  height: 52px;
+  color: var(--accent-color);
+}
+
+/* Heroicons SVG Support */
+.heroicon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.heroicon-lg {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.heroicon-sm {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.trend-icon {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  vertical-align: -1.5px;
+  margin-right: 3px;
+}
+
+.sdi-icon svg {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  color: var(--accent-color);
+}
+
+.ctrl-btn-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .placeholder-text {

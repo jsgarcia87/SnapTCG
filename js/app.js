@@ -383,7 +383,7 @@ function actualizarVistaHistorial() {
 function exportarLista() {
   if (sesionCartas.length === 0) return;
   const txt = sesionCartas.map(c => `${c.nombre} (${c.set}) — ${c.precio != null ? formatMoney(c.precio, c.moneda) : "sin precio"}`).join("\n");
-  const ok = () => showDeckToast("Lista copiada al portapapeles ✓", "success");
+  const ok = () => showDeckToast("Lista copiada al portapapeles", "success");
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(ok, () => showDeckToast("No se pudo copiar la lista", "warn"));
   else showDeckToast("Tu navegador no permite copiar", "warn");
 }

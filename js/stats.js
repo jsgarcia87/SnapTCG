@@ -248,7 +248,7 @@ function renderDeckAnalysis() {
       html += `<tr><td>≥ ${t} tierras en el turno ${t} <small>(jugando primero)</small></td><td>${probCell(hyperAtLeast(N, K, 7 + t - 1, t))}</td></tr>`;
     }
     html += `</table>
-      <button class="dab-btn" id="btn-simulate" onclick="runDeckSimulation()">🎲 Simular 10.000 partidas</button>
+      <button class="dab-btn" id="btn-simulate" onclick="runDeckSimulation()">${HEROICONS.play} Simular 10.000 partidas</button>
       <div id="sim-result">${analysisSim && analysisSim.key === `${N}-${K}` ? simResultHtml(analysisSim) : ""}</div>`;
   } else {
     const Kb = a.basics, Ke = a.energies;
@@ -293,7 +293,7 @@ function renderDeckAnalysis() {
     ${a.valor.usd > 0 ? `<div class="an-muted">Hay cartas en dólares (TCGplayer): no se convierten a euros.</div>` : ""}
     ${a.top.map(t => barRow(t.nombre + (t.qty > 1 ? ` x${t.qty}` : ""), t.precio, a.top[0].precio, formatMoney(t.precio, t.moneda))).join("")}
     <div class="an-muted">Precios${antiguo ? ` de ${antiguo}` : " sin fecha"}</div>
-    <button class="dab-btn" id="btn-refresh-deck" onclick="refreshDeckPrices()">↻ Actualizar precios</button>
+    <button class="dab-btn" id="btn-refresh-deck" onclick="refreshDeckPrices()">${typeof HEROICONS !== "undefined" ? HEROICONS.arrowPath : ""} Actualizar precios</button>
   </div>`;
 
   body.innerHTML = html;
@@ -322,7 +322,7 @@ async function refreshDeckPrices() {
   if (btn) { btn.disabled = true; btn.textContent = "Actualizando…"; }
   try {
     const r = await refreshCardPrices(currentDeck.map(e => e.card));
-    showDeckToast(r.failed ? `Precios actualizados (${r.failed} sin respuesta)` : "Precios actualizados ✓", r.failed ? "warn" : "success");
+    showDeckToast(r.failed ? `Precios actualizados (${r.failed} sin respuesta)` : "Precios actualizados", r.failed ? "warn" : "success");
   } catch { showDeckToast("No se pudieron actualizar los precios", "warn"); }
   renderDeckStats();
 }

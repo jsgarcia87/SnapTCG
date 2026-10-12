@@ -101,7 +101,10 @@ function pctChange(now, ref) {
 function trendBadge(pct) {
   if (pct == null || Math.abs(pct) < 1) return "";
   const up = pct > 0;
-  return `<span class="trend ${up ? "trend-up" : "trend-down"}">${up ? "▲" : "▼"} ${Math.abs(pct).toFixed(0)}%</span>`;
+  const icon = typeof HEROICONS !== "undefined"
+    ? (up ? HEROICONS.arrowTrendingUp : HEROICONS.arrowTrendingDown)
+    : (up ? "▲" : "▼");
+  return `<span class="trend ${up ? "trend-up" : "trend-down"}">${icon} ${Math.abs(pct).toFixed(0)}%</span>`;
 }
 
 /** Fecha de referencia del precio de una carta: la de la fuente o, si no hay, cuándo la consultamos. */

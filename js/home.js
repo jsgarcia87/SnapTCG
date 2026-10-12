@@ -11,9 +11,9 @@ function irANuevoMazo() { switchTab("deck"); newDeck(); showDeckTab("editor"); }
 function abrirMazo(idx) { switchTab("deck"); loadDeck(idx); }
 
 const ICON = {
-  scan: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
-  search: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-  deck: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="15" rx="2"/><path d="M8 3h10a3 3 0 0 1 3 3v12"/></svg>'
+  scan: HEROICONS.camera,
+  search: HEROICONS.magnifyingGlass,
+  deck: HEROICONS.plusCircle
 };
 
 function quickActions() {
@@ -60,7 +60,7 @@ function recentDecksHtml() {
   return `<section class="home-section"><h2 class="section-title">Tus mazos</h2>
     <div class="deck-list-home">${items.map(({ d, i }) => `
       <button class="saved-deck-item" onclick="abrirMazo(${i})">
-        <span class="sdi-icon" aria-hidden="true">${d.juego === "magic" ? "✦" : "⚡"}</span>
+        <span class="sdi-icon" aria-hidden="true">${d.juego === "magic" ? HEROICONS.sparkles : HEROICONS.bolt}</span>
         <span class="sdi-info"><span class="sdi-name">${esc(d.nombre)}</span>
         <span class="sdi-meta">${d.total} cartas · ${esc(d.value)}€</span></span></button>`).join("")}
     </div></section>`;

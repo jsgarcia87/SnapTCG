@@ -7,11 +7,11 @@
 
 const DECK_RULES = {
   pokemon: {
-    standard: { min: 60, max: 60, maxCopies: 4, label: "Pokémon Standard", icon: "⚡" }
+    standard: { min: 60, max: 60, maxCopies: 4, label: "Pokémon Standard", icon: HEROICONS.bolt }
   },
   magic: {
-    standard:  { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: "✦" },
-    commander: { min: 100, max: 100, maxCopies: 1, label: "Magic Commander", icon: "👑" }
+    standard:  { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: HEROICONS.sparkles },
+    commander: { min: 100, max: 100, maxCopies: 1, label: "Magic Commander", icon: HEROICONS.trophy }
   }
 };
 
@@ -240,7 +240,7 @@ function renderDeckLibrary() {
         <p class="sdi-meta">${deck.total} cartas • ${esc(deck.value)}€ • ${rules.label}</p>
       </div>
       <div class="sdi-actions">
-        <button class="sdi-btn danger" onclick="event.stopPropagation(); deleteDeck(${idx})" aria-label="Borrar mazo">🗑</button>
+        <button class="sdi-btn danger" onclick="event.stopPropagation(); deleteDeck(${idx})" aria-label="Borrar mazo">${HEROICONS.trash}</button>
       </div>
     `;
     el.appendChild(item);
