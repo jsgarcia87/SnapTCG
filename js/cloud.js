@@ -51,7 +51,7 @@ async function initCloud() {
   }
   await onAuthChanged();
   // Tras el enlace mágico Supabase devuelve los tokens en el fragmento (#access_token=...)
-  if (location.hash === "#coleccion" || location.hash.includes("access_token")) switchTab("collection");
+  if (location.hash.includes("access_token")) switchTab("collection");
 }
 
 async function onAuthChanged() {
@@ -59,6 +59,15 @@ async function onAuthChanged() {
   await loadCollection();
   renderCollection();
   updateCollectionButton();
+  if (typeof renderHome === "function") renderHome();
+  setSyncStatus();
+}
+
+function setSyncStatus() {
+  const el = document.getElementById("sync-status");
+  if (!el) return;
+  el.textContent = !cloudConfigured() ? "Modo demo · datos en este navegador"
+    : sbSession ? "Sesión iniciada · colección publicada" : "Colección pública · solo lectura";
 }
 
 /* ───────────── Colección: datos ───────────── */
@@ -148,6 +157,7 @@ async function addCurrentCardToCollection() {
   const card = window._currentCard;
   if (!card) return;
   await collectionAdd(card);
+  pintarPoseidaModal(card);
   showDeckToast(`${card.nombre} añadida a la colección ✓`, "success");
 }
 
@@ -176,25 +186,37 @@ async function loadValueHistory(days = 365) {
   return data.map(r => ({ day: r.day, eur: Number(r.eur), usd: Number(r.usd), cards: r.cards }));
 }
 
+/** Abre el detalle de una carta guardada en la colección (sin registrarla en el historial de búsqueda). */
+function abrirCartaGuardada(id) {
+  const e = collection.find(x => x.card.id === id);
+  if (e) abrirDetalle(e.card, false);
+}
+
 let valueRange = 90;
 let valueRows = null;
 
 function setValueRange(days) { valueRange = days; paintValueChart(); }
 
+/** Serie del valor de la colección en una sola moneda (EUR salvo que solo haya USD). */
+function valueSeries(rows, days) {
+  const useUsd = rows.length > 0 && rows.every(r => !(r.eur > 0)) && rows.some(r => r.usd > 0);
+  const all = rows.map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur }));
+  const since = sinceDay(days);
+  return { moneda: useUsd ? "usd" : "eur", all, pts: all.filter(p => p.day >= since) };
+}
+
 function paintValueChart() {
   const box = document.getElementById("value-chart");
   if (!box || !valueRows) return;
-  const useUsd = valueRows.every(r => !(r.eur > 0)) && valueRows.some(r => r.usd > 0);
-  const moneda = useUsd ? "usd" : "eur";
-  const since = sinceDay(valueRange);
-  const pts = valueRows.filter(r => r.day >= since).map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur }));
+  const { moneda, pts, all } = valueSeries(valueRows, valueRange);
+  const useUsd = moneda === "usd";
   if (valueRows.length < 2 || pts.length < 2) {
     box.innerHTML = `<div class="an-muted">${cloudReady()
       ? "El histórico se registra cada día (tarea diaria a las 10:30 UTC). Vuelve mañana para ver la evolución."
       : "Cada día que abras la app se guarda el valor de tu colección. Vuelve mañana para ver la evolución."}</div>`;
     return;
   }
-  const t = trendFromHistory(valueRows.map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur })));
+  const t = trendFromHistory(all);
   box.innerHTML = `${rangePills(valueRange, [30, 90, 365], "setValueRange")}
     ${lineChart(pts, { moneda, label: "Valor de la colección" })}
     <div class="an-muted">Hoy <strong>${esc(formatMoney(pts[pts.length - 1].v, moneda))}</strong>
@@ -336,7 +358,8 @@ function renderCollection() {
     <div class="results-grid" style="display:grid">
       ${list.map(e => {
         const c = e.card;
-        return `<article class="card-item">
+        return `<article class="card-item" tabindex="0" role="button" aria-label="Ver ${esc(c.nombre)}"
+          onclick="abrirCartaGuardada('${esc(c.id)}')" onkeydown="if(event.key==='Enter') abrirCartaGuardada('${esc(c.id)}')">
           <div class="possession-badge">x${e.qty}</div>
           <img src="${esc(c.imagenThumb || c.imagen || "")}" alt="${esc(c.nombre)}" class="card-thumb" loading="lazy">
           <div class="card-info">
@@ -344,8 +367,8 @@ function renderCollection() {
             <p class="card-meta">${esc(c.set || "Desconocido")}</p>
             <p class="card-price">${precioHtml(c)}</p>
             ${editable ? `<div class="dcr-controls">
-              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="collectionRemove('${esc(c.id)}')">−</button>
-              <button class="dcr-btn" aria-label="Añadir una copia" onclick="collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">+</button>
+              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${esc(c.id)}')">−</button>
+              <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">+</button>
             </div>` : ""}
           </div>
         </article>`;

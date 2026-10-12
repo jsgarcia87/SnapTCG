@@ -312,6 +312,7 @@ function showDeckTab(tab) {
 
 function showDeckToast(msg, type) {
   const toast = document.createElement("div");
+  toast.setAttribute("role", "status");
   toast.style.cssText = `
     position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
     background: ${type === 'success' ? '#4ade80' : '#f5c842'};
@@ -339,7 +340,7 @@ document.head.appendChild(style);
 function addCurrentCardToDeck() {
   if (window._currentCard) {
     addCardToDeck(window._currentCard, juegoActual);
-    closeModal();
+    pintarPoseidaModal(window._currentCard);
   }
 }
 

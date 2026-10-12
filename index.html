@@ -2,16 +2,16 @@
   Project: CardDex
   SnapTCG Premium Design System 
   Author: Sangar Studio
-  Version: 2.0.0
+  Version: 3.0.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="2.0.0">
+  <meta name="version" content="3.0.0">
   <title>CardDex — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -22,6 +22,7 @@
   
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/design.css">
   
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -30,41 +31,44 @@
 
   <div class="app-shell">
     
-    <!-- Header: Game Selection & Identity -->
+    <a class="skip-link" href="#app-content">Saltar al contenido</a>
+
+    <!-- Header: identidad y estado -->
     <header class="app-header">
       <div class="header-brand">
         <h1 class="logo" id="logo">CardDex</h1>
-        <p class="subtitle" id="subtitle">Pokémon TCG · Gestión Premium</p>
-      </div>
-      
-      <div class="game-toggle" role="group" aria-label="Seleccionar Juego">
-        <button class="gt-btn active-pokemon" id="btn-pokemon" onclick="setGame('pokemon')" aria-pressed="true">
-          <span aria-hidden="true">⚡</span> Pokémon
-        </button>
-        <button class="gt-btn" id="btn-magic" onclick="setGame('magic')" aria-pressed="false">
-          <span aria-hidden="true">✦</span> Magic
-        </button>
+        <p class="subtitle" id="sync-status">Colección y mazos TCG</p>
       </div>
     </header>
 
-    <!-- Search Section -->
-    <section class="search-container" aria-label="Buscador de cartas">
-      <div class="search-bar">
-        <input type="text" id="search-input" class="search-input" 
-               placeholder="Busca una carta..." 
-               aria-label="Nombre de la carta"
-               onkeypress="if(event.key==='Enter') ejecutarBusqueda()">
-        <button class="search-btn" onclick="ejecutarBusqueda()" aria-label="Ejecutar búsqueda">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </button>
-      </div>
-    </section>
 
     <!-- Main Content Area -->
-    <main class="app-content">
+    <main class="app-content" id="app-content" tabindex="-1">
       
-      <!-- Tab: Scanner & Discovery -->
-      <section id="tab-scanner" class="tab-section active" aria-labelledby="main-tab-scanner">
+      <!-- Tab: Inicio -->
+      <section id="tab-home" class="tab-section active" aria-labelledby="main-tab-home">
+        <div id="home-body" class="home"></div>
+      </section>
+
+      <!-- Tab: Buscar (buscador, escáner y resultados) -->
+      <section id="tab-scanner" class="tab-section" aria-labelledby="main-tab-scanner">
+        <div class="search-panel">
+          <div class="game-toggle" role="group" aria-label="Juego">
+            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><span aria-hidden="true">⚡</span> Pokémon</button>
+            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><span aria-hidden="true">✦</span> Magic</button>
+          </div>
+          <div class="search-bar">
+            <input type="text" id="search-input" class="search-input" placeholder="Busca una carta..." aria-label="Nombre de la carta" enterkeyhint="search"
+                   onkeypress="if(event.key==='Enter') ejecutarBusqueda()">
+            <button class="search-btn" onclick="ejecutarBusqueda()" aria-label="Buscar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <button class="search-btn scan-btn" onclick="iniciarEscaner()" aria-label="Escanear con la cámara">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+          </div>
+        </div>
+
         
         <div id="scanner-view-container">
           <!-- Continuous Scanner -->
@@ -147,8 +151,12 @@
         </div>
 
         <div id="deck-editor-section" style="display:flex; flex-direction:column; gap:20px;">
+          <div class="game-toggle" role="group" aria-label="Juego del mazo">
+            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><span aria-hidden="true">⚡</span> Pokémon</button>
+            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><span aria-hidden="true">✦</span> Magic</button>
+          </div>
           <div class="deck-name-row" style="flex-direction:column; gap:10px;">
-            <input type="text" class="deck-name-input" id="deck-name-input" placeholder="Nombre de tu mazo...">
+            <input type="text" class="deck-name-input" id="deck-name-input" placeholder="Nombre de tu mazo..." aria-label="Nombre del mazo">
             <select id="deck-format-selector" class="gt-btn" style="width:100%; justify-content:flex-start; border:1px solid var(--border-color);" onchange="updateFormat()">
               <option value="standard">Formato: Estándar (60 cartas)</option>
               <option value="commander">Formato: Commander / EDH (100 cartas)</option>
@@ -207,61 +215,62 @@
       
     </main>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="bottom-nav" role="navigation">
-      <button class="nav-btn active" id="main-tab-scanner" onclick="switchTab('scanner')">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span class="nav-label">Escáner</span>
+
+    <!-- Navegación principal: barra inferior en móvil, lateral en escritorio -->
+    <nav class="main-nav" role="navigation" aria-label="Principal">
+      <button class="nav-btn active" id="main-tab-home" onclick="switchTab('home')" aria-current="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span class="nav-label">Inicio</span>
+      </button>
+      <button class="nav-btn" id="main-tab-scanner" onclick="switchTab('scanner')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span class="nav-label">Buscar</span>
       </button>
       <button class="nav-btn" id="main-tab-deck" onclick="switchTab('deck')">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="15" rx="2"/><path d="M8 3h10a3 3 0 0 1 3 3v12"/></svg>
         <span class="nav-label">Mazos</span>
       </button>
       <button class="nav-btn" id="main-tab-collection" onclick="switchTab('collection')">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
         <span class="nav-label">Colección</span>
       </button>
     </nav>
 
-    <!-- Card Detail Modal (Custom bottom sheet) -->
-    <div class="modal-overlay" id="card-detail-modal" onclick="if(event.target===this) closeModal()">
-      <div class="modal-sheet">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <h2 class="modal-title" id="price-card-name">Nombre de Carta</h2>
-            <p class="modal-subtitle" id="price-secondary">Set / Edición</p>
-          </div>
-          <button class="close-modal" onclick="closeModal()" aria-label="Cerrar detalle">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+    <!-- Detalle de carta: hoja inferior en móvil, diálogo de dos columnas en escritorio -->
+    <div class="modal-overlay" id="card-detail-modal" onclick="if(event.target===this) closeModal()" role="dialog" aria-modal="true" aria-labelledby="price-card-name">
+      <div class="modal-sheet modal-detail">
+        <button class="close-modal" id="btn-close-detail" onclick="closeModal()" aria-label="Cerrar detalle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <div class="detail-visual modal-card-visual">
+          <img id="card-image" src="" alt="Vista previa de la carta">
         </div>
-        
-        <div class="modal-body">
-          <div class="modal-card-visual">
-            <img id="card-image" src="" alt="Vista previa de la carta">
+
+        <div class="detail-info">
+          <div class="detail-head">
+            <h2 class="modal-title" id="price-card-name">Nombre de carta</h2>
+            <p class="modal-subtitle" id="price-secondary">Edición</p>
+            <div class="detail-chips" id="card-chips"></div>
           </div>
-          
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <p style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.1em;">Precio Actual</p>
-              <p class="modal-title" id="price-main" style="color:var(--accent-color)">0.00 €</p>
-              <div class="price-trend" id="price-trend"></div>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <button class="btn-primary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">
-                Añadir al mazo
-              </button>
-              <button class="btn-secondary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()">
-                Añadir a colección
-              </button>
-            </div>
+
+          <div class="detail-price">
+            <p class="detail-label">Precio actual</p>
+            <p class="detail-price-main" id="price-main">…</p>
+            <div class="price-trend" id="price-trend"></div>
           </div>
+
+          <p class="detail-owned" id="card-owned" aria-live="polite"></p>
+
+          <div class="detail-actions">
+            <button class="btn-primary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()">Añadir a colección</button>
+            <button class="btn-secondary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">Añadir al mazo</button>
+          </div>
+
           <div id="price-chart" class="price-chart" aria-live="polite"></div>
         </div>
       </div>
     </div>
-
-  </div>
 
   <!-- Modal Export (Generic) -->
   <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeModal()">
@@ -285,6 +294,7 @@
   <script src="js/deckbuilder.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/cloud.js"></script>
+  <script src="js/home.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

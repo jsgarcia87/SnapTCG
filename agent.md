@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 📌 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 2.0.0
+- **Versión Actual:** 3.0.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
@@ -34,7 +34,8 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 SnapTCG/
 ├── index.html         # Shell principal de la app, navegación, modales y carga de scripts
 ├── css/
-│   └── style.css      # Sistema de diseño, tokens de color dinámicos, media queries y animaciones
+│   ├── style.css      # Base: tokens, componentes (tarjetas, escáner, editor de mazos, análisis, colección, precios, gráficas)
+│   └── design.css     # Capa v3 (se carga DESPUÉS): layout responsive, navegación, Inicio, detalle de carta, accesibilidad
 ├── js/
 │   ├── charts.js      # Gráficas de línea en SVG (sin librerías) y selector de rango
 │   ├── prices.js      # Red resiliente (timeout + reintentos), caché localStorage, formato de precios y refresco
@@ -42,6 +43,7 @@ SnapTCG/
 │   ├── scanner.js     # Gestión de WebRTC (getUserMedia), preprocesamiento Canvas y ciclo OCR continuo
 │   ├── deckbuilder.js # Motor de reglas de mazos (Standard, Commander), métricas y persistencia
 │   ├── config.js      # URL/anon key de Supabase y PUBLIC_OWNER_ID (vacío = modo demo local)
+│   ├── home.js        # Pantalla de Inicio: valor de la colección, tendencia, movimientos, mazos recientes y onboarding
 │   ├── cloud.js       # Colección de cartas, login (magic link) y sincronización de mazos con Supabase
 │   ├── stats.js       # Estadísticas del mazo, probabilidades hipergeométricas y simulación Monte Carlo
 │   └── app.js         # Orquestación de estado general, tematización dinámica, navegación y UI
@@ -73,6 +75,7 @@ SnapTCG/
      <script src="js/deckbuilder.js"></script>
      <script src="js/stats.js"></script>
      <script src="js/cloud.js"></script>
+     <script src="js/home.js"></script>
      <script src="js/app.js"></script>
      ```
 
@@ -133,10 +136,16 @@ SnapTCG/
    - `renderCollection` escapa todo con `esc()` (datos de APIs externas). `#coleccion` en la URL abre directamente la pestaña.
    - La *anon key* es pública; la seguridad la dan las políticas RLS de `supabase/schema.sql`. Nunca incluir la `service_role key`.
 
-7. **`js/app.js`**:
+7. **`js/home.js`** (pestaña **Inicio**, `#tab-home`, destino por defecto):
+   - `renderHome()`: se pinta solo si la pestaña está activa; `onAuthChanged()` la refresca al cargar la colección. Muestra `hero-card` (valor total con `formatValue`, tendencia 7 d/30 d y `sparkline` desde `loadValueHistory`), accesos rápidos (`irAEscanear`, `irABuscar`, `irANuevoMazo`), «Lo que más se mueve» (top 3 subidas y bajadas por `tendencia.d7`) y los 3 últimos mazos.
+   - Estado vacío = onboarding de 3 pasos; en modo visitante (solo lectura) no se ofrece añadir.
+
+8. **`js/app.js`**:
    - Variables de estado globales: `juegoActual` (`"pokemon"` | `"magic"`), `ultimosResultados`, `sesionCartas`.
    - `setGame(juego)` y `updateAppTheme()`: Alterna tema visual modificando variables CSS (`--accent-color`, `--accent-rgb`, clases de `body` `.mode-pokemon` o `.mode-magic`).
-   - `switchTab(tab)`: Controla la navegación inferior (`'scanner'`, `'deck'`, `'collection'`); `initCloud()` se llama en `DOMContentLoaded`.
+   - `switchTab(tab)`: Controla la navegación (`'home'`, `'scanner'` = Buscar, `'deck'`, `'collection'`), actualiza `aria-current` y el hash (`#buscar`, `#mazos`, `#coleccion`; `#inicio` o vacío = Inicio). `initCloud()` se llama en `DOMContentLoaded`.
+   - `setGame(juego)`: hay **dos** selectores de juego sincronizados (`.game-toggle [data-game]`, en Buscar y en el editor de mazos); el juego se recuerda en `localStorage` (`snaptcg_game`).
+   - `abrirDetalle(carta, registrar)`: abre el detalle (hoja inferior en móvil, diálogo de dos columnas en ≥ 900 px); `seleccionarCarta(i)` y `abrirCartaGuardada(id)` la usan. Gestiona foco (se devuelve al cerrar), `Escape` y bloqueo del scroll (`body.modal-open`). Muestra chips, precio con contexto, «Tienes ×N» (`pintarPoseidaModal`) y la gráfica.
    - `renderizarLista(resultados)`: Pinta tarjetas en la cuadrícula de resultados y muestra el badge `possession-badge` (`xN`) si la carta ya está en el mazo.
    - `ejecutarBusqueda()`: Punto de entrada principal de la búsqueda (manual o desde el OCR); llama a `buscarCartas` y renderiza.
    - `seleccionarCarta(index)` y `añadirAHistorial(carta)`: Despliega el bottom sheet de detalle y actualiza el historial de escaneos de la sesión.
@@ -265,6 +274,7 @@ Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmark
 - **Dos monedas**: Cardmarket (EUR) y, en su defecto, TCGplayer (USD). No se convierten; los totales las muestran por separado.
 - **Orden de resultados de TCGdex**: llega arbitrario (no cronológico), no hay fecha de lanzamiento en la lista.
 - **Precio de TCGdex**: `trend` y `avg` de Cardmarket pueden diferir mucho en cartas poco vendidas; se usa `avg`.
+- **Dos hojas de estilo**: `design.css` sobrescribe partes de `style.css` (p. ej. `.bottom-nav` quedó sin uso, `.search-container` y varios estilos del modal antiguo). Pendiente consolidarlas en una sola.
 - **Sin tests automatizados**: la validación es manual en navegador.
 - **`.DS_Store` commiteado**: ya está en `.gitignore`, pero el archivo sigue en el repositorio; elimínalo con `git rm --cached .DS_Store`.
 - **Nube sin probar contra Supabase real**: la lógica se probó con un cliente simulado; falta una prueba de extremo a extremo con un proyecto real.

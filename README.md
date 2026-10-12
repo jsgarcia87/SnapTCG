@@ -24,6 +24,12 @@
     - Barra de progreso dinámica que indica si el mazo es legal para torneo.
 - **Gestión de Biblioteca**: Guarda múltiples mazos localmente y edítalos cuando quieras.
 
+### Diseño y navegación (v3)
+- **Inicio**: valor de tu colección con su evolución, lo que más se mueve y accesos rápidos; guía de primeros pasos si aún no hay cartas.
+- **Buscar**: buscador, escáner y selector de juego en el mismo sitio. **Mazos** y **Colección** con el juego como filtro.
+- **Detalle de carta**: precio con fuente y fecha, tendencia, gráfica y «Tienes ×N»; panel de dos columnas en escritorio.
+- **Responsive y accesible**: barra inferior en móvil y lateral en escritorio; zoom permitido, contraste AA, navegación por teclado y movimiento reducido.
+
 ### 3. Consultas en Tiempo Real
 - **Precios con contexto**: cada precio indica su fuente (Cardmarket / TCGplayer) y cuándo se actualizó. En Pokémon se muestra la tendencia frente a las medias de 7 y 30 días.
 - **Fuentes**: **TCGdex** (Pokémon, con respaldo en Pokémon TCG API) y **Scryfall** (Magic). Caché local, reintentos automáticos y botón «Actualizar precios» en Colección y en el análisis de mazos.

@@ -1,7 +1,7 @@
 /**
  * app.js — Main application logic
  * Author: Sangar Studio
- * Version: 2.0.0
+ * Version: 3.0.0
  * Improved feedback, accessibility support, and dynamic theming
  */
 
@@ -30,19 +30,19 @@ function updateAppTheme() {
 function setGame(juego) {
   juegoActual = juego;
   updateAppTheme();
-  
+  try { localStorage.setItem("snaptcg_game", juego); } catch { /* opcional */ }
+
   const esMagic = juego === "magic";
-  document.getElementById("btn-pokemon").classList.toggle("active-pokemon", !esMagic);
-  document.getElementById("btn-magic").classList.toggle("active-magic", esMagic);
-  document.getElementById("btn-pokemon").setAttribute("aria-pressed", !esMagic);
-  document.getElementById("btn-magic").setAttribute("aria-pressed", esMagic);
-  
-  document.getElementById("subtitle").textContent = esMagic
-    ? "Magic: The Gathering · Gestión Premium"
-    : "Pokémon TCG · Gestión Premium";
-  
-  document.getElementById("search-input").placeholder = esMagic 
-    ? "Ej: Black Lotus, Jace..." 
+  // Hay un selector de juego en Buscar y otro en el editor de mazos: se mantienen sincronizados
+  document.querySelectorAll(".game-toggle [data-game]").forEach(btn => {
+    const activo = btn.dataset.game === juego;
+    btn.classList.toggle("active-pokemon", activo && !esMagic);
+    btn.classList.toggle("active-magic", activo && esMagic);
+    btn.setAttribute("aria-pressed", activo);
+  });
+
+  document.getElementById("search-input").placeholder = esMagic
+    ? "Ej: Black Lotus, Jace..."
     : "Ej: Pikachu, Charizard...";
 
   detenerEscaner();
@@ -52,17 +52,24 @@ function setGame(juego) {
 // ─────────────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────────────
-function switchTab(tab) {
-  ['scanner', 'deck', 'collection'].forEach(t => {
-    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('main-tab-' + t).classList.toggle('active', t === tab);
-  });
+const TAB_HASH = { home: "", scanner: "#buscar", deck: "#mazos", collection: "#coleccion" };
+const HASH_TAB = { "#buscar": "scanner", "#mazos": "deck", "#coleccion": "collection", "#inicio": "home" };
 
-  if (tab === 'deck') {
-    renderDeckStats();
-    renderDeckList();
-  }
-  if (tab === 'collection') renderCollection();
+function switchTab(tab) {
+  ["home", "scanner", "deck", "collection"].forEach(t => {
+    document.getElementById("tab-" + t).classList.toggle("active", t === tab);
+    const btn = document.getElementById("main-tab-" + t);
+    btn.classList.toggle("active", t === tab);
+    if (t === tab) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
+  });
+  if (tab !== "scanner") detenerEscaner();
+
+  if (tab === "home") renderHome();
+  if (tab === "deck") { renderDeckStats(); renderDeckList(); }
+  if (tab === "collection") renderCollection();
+
+  try { history.replaceState(null, "", location.pathname + location.search + TAB_HASH[tab]); } catch { /* file:// */ }
+  window.scrollTo({ top: 0 });
 }
 
 // ─────────────────────────────────────────────
@@ -246,14 +253,26 @@ async function reintentarPrecioModal() {
   pintarPrecioModal(carta);
 }
 
-function seleccionarCarta(index) {
-  const carta = ultimosResultados[index];
-  window._currentCard = carta;
+let focoPrevio = null;
 
-  const modal = document.getElementById("card-detail-modal");
+function seleccionarCarta(index) {
+  abrirDetalle(ultimosResultados[index], true);
+}
+
+/** Abre el detalle de una carta. `registrar`: añadirla al historial de la sesión (solo si viene de una búsqueda). */
+function abrirDetalle(carta, registrar = false) {
+  if (!carta) return;
+  if (carta.tipo !== juegoActual) setGame(carta.tipo);   // las reglas de mazo dependen del juego
+  window._currentCard = carta;
+  focoPrevio = document.activeElement;
+
   document.getElementById("card-image").src = carta.imagen;
+  document.getElementById("card-image").alt = `Carta ${carta.nombre}`;
   document.getElementById("price-card-name").textContent = carta.nombre;
+  pintarChipsModal(carta);
   pintarPrecioModal(carta);
+  pintarPoseidaModal(carta);
+  updateCollectionButton();
 
   if (carta.preciosCargados === false && carta.tipo === "pokemon") {
     hidratarPrecioPokemon(carta)
@@ -261,14 +280,41 @@ function seleccionarCarta(index) {
       .then(() => { if (window._currentCard === carta) pintarPrecioModal(carta); });
   }
 
-  modal.classList.add("active");
-  añadirAHistorial(carta);
+  document.getElementById("card-detail-modal").classList.add("active");
+  document.body.classList.add("modal-open");
+  document.getElementById("btn-close-detail").focus();
+  if (registrar) añadirAHistorial(carta);
+}
+
+/** Ficha técnica en chips: rareza, código de edición y tipo. */
+function pintarChipsModal(carta) {
+  const chips = [];
+  if (carta.rarity) chips.push(carta.rarity);
+  if (carta.setCode) chips.push(carta.setCode.toUpperCase());
+  if (carta.tipo === "magic" && carta.typeLine) chips.push(carta.typeLine);
+  if (carta.tipo === "pokemon") { if (carta.supertype) chips.push(carta.supertype); (carta.subtypes || []).forEach(t => chips.push(t)); }
+  document.getElementById("card-chips").innerHTML = chips.map(c => `<span class="chip">${esc(c)}</span>`).join("");
+}
+
+/** «Tienes ×N en tu colección · ×M en el mazo»: contexto de posesión. */
+function pintarPoseidaModal(carta) {
+  const enColeccion = (typeof collection !== "undefined" ? collection : []).find(e => e.card.id === carta.id)?.qty || 0;
+  const enMazo = typeof getCardCountInDeck === "function" ? getCardCountInDeck(carta.id) : 0;
+  const partes = [];
+  if (enColeccion) partes.push(`<strong>×${enColeccion}</strong> en tu colección`);
+  if (enMazo) partes.push(`<strong>×${enMazo}</strong> en el mazo actual`);
+  document.getElementById("card-owned").innerHTML = partes.length ? "Tienes " + partes.join(" · ") : "Aún no la tienes en tu colección";
 }
 
 function closeModal() {
   document.getElementById("card-detail-modal").classList.remove("active");
   document.getElementById("modal-overlay").classList.remove("active");
+  document.body.classList.remove("modal-open");
+  if (focoPrevio && document.body.contains(focoPrevio)) focoPrevio.focus();
+  focoPrevio = null;
 }
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
 function volverALista() {
   document.getElementById("btn-back").style.display = "none";
@@ -320,8 +366,10 @@ function actualizarVistaHistorial() {
 
 function exportarLista() {
   if (sesionCartas.length === 0) return;
-  console.table(sesionCartas.map(c => ({ Nombre: c.nombre, Set: c.set, Precio: c.precio })));
-  alert("Lista exportada a la consola (F12)");
+  const txt = sesionCartas.map(c => `${c.nombre} (${c.set}) — ${c.precio != null ? formatMoney(c.precio, c.moneda) : "sin precio"}`).join("\n");
+  const ok = () => showDeckToast("Lista copiada al portapapeles ✓", "success");
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(ok, () => showDeckToast("No se pudo copiar la lista", "warn"));
+  else showDeckToast("Tu navegador no permite copiar", "warn");
 }
 
 // ─────────────────────────────────────────────
@@ -346,8 +394,10 @@ async function ejecutarBusqueda() {
 //  INIT
 // ─────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  updateAppTheme();
-  switchTab("scanner");
+  let juego = "pokemon";
+  try { juego = localStorage.getItem("snaptcg_game") === "magic" ? "magic" : "pokemon"; } catch { /* opcional */ }
+  setGame(juego);
+  switchTab(HASH_TAB[location.hash] || "home");
   actualizarVistaHistorial();
   initCloud();
 });

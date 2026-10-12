@@ -57,3 +57,18 @@ function rangePills(current, options, fn) {
   return `<div class="range-pills" role="group" aria-label="Rango de fechas">${options.map(d =>
     `<button class="range-pill ${d === current ? "active" : ""}" aria-pressed="${d === current}" onclick="${fn}(${d})">${d === 365 ? "1 año" : d + " d"}</button>`).join("")}</div>`;
 }
+
+/** Mini gráfica sin ejes para tarjetas de resumen. */
+function sparkline(points, { width = 240, height = 64, label = "Evolución" } = {}) {
+  if (!points || points.length < 2) return "";
+  const vals = points.map(p => p.v);
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { min *= 0.95; max = max * 1.05 || 1; }
+  const t0 = Date.parse(points[0].day), t1 = Date.parse(points[points.length - 1].day);
+  const x = p => (t1 === t0 ? width : ((Date.parse(p.day) - t0) / (t1 - t0)) * width);
+  const y = v => 4 + (height - 8) - ((v - min) / (max - min)) * (height - 8);
+  const line = points.map((p, i) => `${i ? "L" : "M"}${x(p).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
+    <path class="chart-area" d="${line} L${width},${height} L0,${height} Z"/><path class="chart-line" d="${line}"/></svg>`;
+}
+
