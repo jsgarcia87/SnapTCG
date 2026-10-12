@@ -4,43 +4,182 @@
 */
 
 :root {
-  /* Core Colors - High Contrast & Harmonious */
-  --bg-color: #080a0f;
-  --surface-color: #12151c;
-  --surface-hover: #1a1f29;
-  --surface-active: #222936;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-bright: rgba(255, 255, 255, 0.15);
+  --card: #0f0f0f;
+  --ring: #2fe92b;
+  --input: #1b1b1d;
+  --muted: #1b1b1d;
+  --accent: #1b1b1d;
+  --border: #26272d;
+  --radius: 0.25rem;
+  --chart-1: #2fe92b;
+  --chart-2: #ff9821;
+  --chart-3: #f57733;
+  --chart-4: #ff5102;
+  --chart-5: #6b7367;
+  --popover: #0f0f0f;
+  --primary: #2fe92b;
+  --sidebar: #000000;
+  --spacing: 0.25rem;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --secondary: #2a2a2c;
+  --background: #000000;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --foreground: #ffffff;
+  --destructive: #ff5102;
+  --shadow-blur: 24px;
+  --shadow-color: #000000;
+  --sidebar-ring: #2fe92b;
+  --shadow-spread: 0px;
+  --letter-spacing: 0em;
+  --shadow-opacity: 0.08;
+  --sidebar-accent: #1b1b1d;
+  --sidebar-border: #26272d;
+  --card-foreground: #ffffff;
+  --shadow-offset-x: 0;
+  --shadow-offset-y: 1px;
+  --sidebar-primary: #2fe92b;
+  --muted-foreground: #bbcbb2;
+  --accent-foreground: #ffffff;
+  --popover-foreground: #ffffff;
+  --primary-foreground: #0f0f0f;
+  --sidebar-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-primary-foreground: #0f0f0f;
+
+  /* Mapeo de tokens a variables de la aplicación */
+  --bg-color: var(--background);
+  --surface-color: var(--card);
+  --surface-hover: var(--secondary);
+  --surface-active: var(--border);
+  --border-color: var(--border);
+  --border-bright: rgba(255, 255, 255, 0.16);
   
-  --text-primary: #ffffff;
-  --text-secondary: #a0a6b5;
-  --text-muted: #6b7280;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--chart-5);
   
   /* Game Themes */
-  --pk-accent: #f5c842;
-  --pk-accent-rgb: 245, 200, 66;
+  --pk-accent: var(--primary);
+  --pk-accent-rgb: 47, 233, 43;
   --mtg-accent: #a78bfa;
   --mtg-accent-rgb: 167, 139, 250;
   
-  /* Dynamic Accent (Changed by JS) */
+  /* Dynamic Accent (Cambiado por JS / tema de juego) */
   --accent-color: var(--pk-accent);
   --accent-rgb: var(--pk-accent-rgb);
-  --accent-glow: rgba(var(--accent-rgb), 0.15);
+  --accent-glow: rgba(var(--accent-rgb), 0.18);
   
   /* Layout Constants */
   --nav-height: 72px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --radius-lg: 24px;
   --radius-md: 16px;
-  --radius-sm: 10px;
+  --radius-sm: 8px;
   
   /* Typography */
-  --font-main: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-main: var(--font-sans);
   --font-display: 'Cinzel', serif;
   
   /* Transitions */
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark {
+  --card: #0f0f0f;
+  --ring: #2fe92b;
+  --input: #1b1b1d;
+  --muted: #1b1b1d;
+  --accent: #1b1b1d;
+  --border: #26272d;
+  --radius: 0.25rem;
+  --chart-1: #2fe92b;
+  --chart-2: #ff9821;
+  --chart-3: #f57733;
+  --chart-4: #ff5102;
+  --chart-5: #6b7367;
+  --popover: #0f0f0f;
+  --primary: #2fe92b;
+  --sidebar: #000000;
+  --spacing: 0.25rem;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --secondary: #2a2a2c;
+  --background: #000000;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --foreground: #ffffff;
+  --destructive: #ff5102;
+  --shadow-blur: 24px;
+  --shadow-color: #000000;
+  --sidebar-ring: #2fe92b;
+  --shadow-spread: 0px;
+  --letter-spacing: 0em;
+  --shadow-opacity: 0.08;
+  --sidebar-accent: #1b1b1d;
+  --sidebar-border: #26272d;
+  --card-foreground: #ffffff;
+  --shadow-offset-x: 0;
+  --shadow-offset-y: 1px;
+  --sidebar-primary: #2fe92b;
+  --muted-foreground: #bbcbb2;
+  --accent-foreground: #ffffff;
+  --popover-foreground: #ffffff;
+  --primary-foreground: #0f0f0f;
+  --sidebar-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-primary-foreground: #0f0f0f;
+}
+
+@theme inline {
+  --color-card: var(--card);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-radius: var(--radius);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-sidebar: var(--sidebar);
+  --color-spacing: var(--spacing);
+  --color-font-mono: var(--font-mono);
+  --color-font-sans: var(--font-sans);
+  --color-secondary: var(--secondary);
+  --color-background: var(--background);
+  --color-font-serif: var(--font-serif);
+  --color-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-shadow-blur: var(--shadow-blur);
+  --color-shadow-color: var(--shadow-color);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-shadow-spread: var(--shadow-spread);
+  --color-letter-spacing: var(--letter-spacing);
+  --color-shadow-opacity: var(--shadow-opacity);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-card-foreground: var(--card-foreground);
+  --color-shadow-offset-x: var(--shadow-offset-x);
+  --color-shadow-offset-y: var(--shadow-offset-y);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
 }
 
 * {
@@ -75,7 +214,7 @@ body::before {
 
 /* Accessibility: Focus States */
 :focus-visible {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid var(--ring);
   outline-offset: 4px;
 }
 
@@ -188,7 +327,7 @@ body::before {
 
 .search-btn {
   background: var(--accent-color);
-  color: #000;
+  color: var(--primary-foreground);
   border: none;
   width: 44px;
   height: 44px;
@@ -642,7 +781,7 @@ button:active, .btn:active {
 /* Variante Primaria (Acción Principal) */
 .btn-primary, .dab-btn.primary {
   background: var(--accent-color);
-  color: #000;
+  color: var(--primary-foreground);
   box-shadow: 0 4px 15px var(--accent-glow);
 }
 
@@ -666,14 +805,14 @@ button:active, .btn:active {
 
 /* Variante Peligro (Eliminar/Reset) */
 .btn-danger, .dab-btn.danger, .sdi-btn.danger {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  background: rgba(255, 81, 2, 0.12);
+  color: var(--destructive);
+  border: 1px solid rgba(255, 81, 2, 0.25);
 }
 
 .btn-danger:hover, .dab-btn.danger:hover {
-  background: #f87171;
-  color: #000;
+  background: var(--destructive);
+  color: var(--destructive-foreground);
 }
 
 /* Ajustes específicos para componentes */
@@ -709,7 +848,7 @@ button:active, .btn:active {
   width: 48px;
   padding: 0;
   background: var(--accent-color);
-  color: #000;
+  color: var(--primary-foreground);
   border: none;
 }
 
@@ -840,7 +979,7 @@ button:active, .btn:active {
 .dcr-qty { min-width: 18px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
 .dcr-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 20px; font-weight: 800; cursor: pointer; }
 .dcr-btn:hover { background: rgba(255,255,255,0.12); }
-.dcr-btn.remove { color: #f87171; }
+.dcr-btn.remove { color: var(--destructive); }
 
 /* Biblioteca de mazos guardados */
 .deck-library { display: flex; flex-direction: column; gap: 10px; }

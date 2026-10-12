@@ -6,17 +6,22 @@
 */
 
 :root {
-  /* Contraste AA sobre --surface-color (#12151c): ≥ 4.5:1 */
-  --text-secondary: #b6bccb;
-  --text-muted: #8f96a6;
-  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
+  /* Contraste AA y tokens alineados con el sistema de diseño */
+  --text-secondary: var(--muted-foreground, #bbcbb2);
+  --text-muted: var(--chart-5, #6b7367);
+  --space-1: var(--spacing, 0.25rem);
+  --space-2: calc(var(--spacing, 0.25rem) * 2);
+  --space-3: calc(var(--spacing, 0.25rem) * 3);
+  --space-4: calc(var(--spacing, 0.25rem) * 4);
+  --space-5: calc(var(--spacing, 0.25rem) * 6);
+  --space-6: calc(var(--spacing, 0.25rem) * 8);
   --content-max: 1100px;
 }
 
 /* ───────────── Accesibilidad ───────────── */
 .skip-link {
   position: absolute; left: 16px; top: -64px; z-index: 300;
-  background: var(--accent-color); color: #000; font-weight: 800;
+  background: var(--accent-color); color: var(--primary-foreground, #0f0f0f); font-weight: 800;
   padding: 12px 18px; border-radius: var(--radius-sm); transition: top var(--transition-fast);
 }
 .skip-link:focus { top: 12px; }
@@ -49,7 +54,7 @@ body.modal-open { overflow: hidden; }
 
 /* Cuadrículas fluidas de cartas */
 .results-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); }
-.card-item:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.card-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .card-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
 
 /* ───────────── Navegación ───────────── */
@@ -57,7 +62,7 @@ body.modal-open { overflow: hidden; }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
   height: calc(var(--nav-height) + var(--safe-area-bottom));
   display: grid; grid-template-columns: repeat(4, 1fr);
-  background: rgba(18, 21, 28, 0.92); backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color); padding-bottom: var(--safe-area-bottom);
 }
 .main-nav .nav-btn { min-height: 56px; padding: 6px 2px; }

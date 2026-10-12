@@ -201,15 +201,32 @@ interface Deck {
 
 ## 🎨 5. Sistema de Diseño y Tokens CSS
 
-El sistema se apoya en variables CSS definidas en `:root` de [`css/style.css`](css/style.css):
+El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.dark` y `@theme inline` en [`css/style.css`](css/style.css) (con extensiones en [`css/design.css`](css/design.css)):
 
-- **Fondo base:** `--bg-color: #080a0f`
-- **Superficie de tarjetas:** `--surface-color: #12151c`, hover `--surface-hover: #1a1f29`
-- **Acentos dinámicos:**
-  - Pokémon: `--pk-accent: #f5c842` (RGB `245, 200, 66`)
-  - Magic: `--mtg-accent: #a78bfa` (RGB `167, 139, 250`)
-- **Tokens de estado dinámico:** `--accent-color` y `--accent-rgb` cambian en caliente mediante `updateAppTheme()`.
-- **Estructura del Shell:** Ancho máximo fijo en móviles y escritorio centrado (`max-width: 500px`), con padding inferior que respeta la navegación fija y la safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
+### Tokens Principales del Tema:
+- **Fondo base (`--background`):** `#000000` (OLED black, mapeado a `--bg-color`).
+- **Superficies y Tarjetas (`--card` / `--popover`):** `#0f0f0f` (mapeado a `--surface-color`).
+- **Secundario y Hover (`--secondary` / `--accent`):** `#2a2a2c` / `#1b1b1d` (mapeado a `--surface-hover`).
+- **Bordes (`--border`):** `#26272d` (mapeado a `--border-color`).
+- **Texto y Tipografía:**
+  - Primario (`--foreground`): `#ffffff` (mapeado a `--text-primary`).
+  - Secundario (`--muted-foreground`): `#bbcbb2` (mapeado a `--text-secondary`).
+  - Apagado (`--chart-5`): `#6b7367` (mapeado a `--text-muted`).
+  - Fuentes: `--font-sans` (`"Inter", ui-sans-serif, ...`), `--font-mono`, `--font-serif`, y `--font-display` (`'Cinzel', serif`).
+- **Color Primario y Acentos:**
+  - Primario de marca (`--primary` / `--ring` / `--sidebar-primary`): `#2fe92b` (verde neón eléctrico, RGB `47, 233, 43`, foreground `#0f0f0f`).
+  - Destructivo / Peligro (`--destructive`): `#ff5102` (foreground `#ffffff`).
+  - Acentos dinámicos de juego:
+    - Pokémon: `--pk-accent: var(--primary)` (RGB `47, 233, 43`).
+    - Magic: `--mtg-accent: #a78bfa` (RGB `167, 139, 250`).
+    - `--accent-color` y `--accent-rgb` cambian dinámicamente según el juego activo vía `updateAppTheme()`.
+- **Escala de Gráficos (`--chart-1` a `--chart-5`):**
+  - `--chart-1: #2fe92b`, `--chart-2: #ff9821`, `--chart-3: #f57733`, `--chart-4: #ff5102`, `--chart-5: #6b7367`.
+- **Geometría y Sombras:**
+  - Radio base (`--radius`): `0.25rem` (4px). Derivados: `--radius-sm` (8px), `--radius-md` (16px), `--radius-lg` (24px).
+  - Espaciado base (`--spacing`): `0.25rem` (4px) y escala `--space-1` a `--space-6`.
+  - Sombras: `--shadow-blur: 24px`, `--shadow-color: #000000`, `--shadow-opacity: 0.08`, `--shadow-offset-y: 1px`.
+- **Estructura del Shell:** Ancho adaptativo (`max-width: 500px` en móvil, responsive hasta 1360px en escritorio con navegación lateral y diálogo de dos columnas), respetando la barra de navegación fija y safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
 
 ---
 

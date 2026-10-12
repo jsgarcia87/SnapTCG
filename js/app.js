@@ -19,11 +19,11 @@ function updateAppTheme() {
   if (isMagic) {
     root.style.setProperty('--accent-color', 'var(--mtg-accent)');
     root.style.setProperty('--accent-rgb', 'var(--mtg-accent-rgb)');
-    document.body.className = "mode-magic";
+    document.body.className = "mode-magic dark";
   } else {
     root.style.setProperty('--accent-color', 'var(--pk-accent)');
     root.style.setProperty('--accent-rgb', 'var(--pk-accent-rgb)');
-    document.body.className = "mode-pokemon";
+    document.body.className = "mode-pokemon dark";
   }
 }
 
