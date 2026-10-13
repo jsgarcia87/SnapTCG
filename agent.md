@@ -7,9 +7,9 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 📌 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.2.0
+- **Versión Actual:** 3.3.0
 - **Autor / Estudio:** Sangar Studio
-- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
+- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y soporte multilingüe completo (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés, etc.) y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
@@ -18,12 +18,12 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 | Capa | Tecnología / Servicio | Descripción |
 |---|---|---|
-| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium OLED (`#000000`), estética inspirada en Collectr, marcos coleccionables con brillo holográfico (`.card-holo-sheen`) y shell móvil responsive (`max-width: 500px` hasta 1360px). |
+| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium OLED (`#000000`), estética inspirada en Collectr, marcos coleccionables con brillo holográfico (`.card-holo-sheen`), selector de idiomas (`.lang-picker`) y shell móvil responsive (`max-width: 500px` hasta 1360px). |
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
 | **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo `SINGLE_LINE` con whitelist de caracteres. |
 | **Tipografía** | Google Fonts | `Inter` (UI/textos principales), `DM Sans` (cuerpo alternativo) y `Cinzel` (títulos/display). |
-| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: consulta multilingüe (EN vía GraphQL, ES y JA vía REST) con variantes (`normal`, `holo`, `reverse`, `firstEdition`), número de coleccionista (`localId`) y desglose de precios (`pricing.cardmarket` y `pricing.tcgplayer`). |
-| **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa, listado de ediciones (`/cards/search?q=!&unique=prints`), acabados (`finishes: ['nonfoil', 'foil', 'etched']`), filtrado por idioma (`lang:${lang}`) y número de coleccionista. |
+| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: consulta multilingüe en inglés (`en`), español (`es`), japonés (`ja`), chino simplificado (`zh-cn`), chino tradicional (`zh-tw`), coreano (`ko`), francés (`fr`), alemán (`de`), italiano (`it`) y portugués (`pt`), con variantes (`normal`, `holo`, `reverse`, `firstEdition`), número de coleccionista (`localId`) y desglose de precios. |
+| **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa, listado de ediciones (`/cards/search?q=!&unique=prints`), acabados (`finishes`), filtrado por idioma (`(lang:zhs or lang:zht)`, `lang:zhs`, `lang:zht`, `lang:ko`, etc.) con fallback tolerante y número de coleccionista. |
 | **Persistencia** | Web Storage (`localStorage`) y Supabase | Colección y mazos sincronizables con RLS en Postgres o utilizables en modo demo local. |
 
 ---
@@ -109,8 +109,14 @@ SnapTCG/
    **Trabajo diario** (`scripts/update-prices.mjs`): lee `collection` y `decks` con la service key, consulta Scryfall y TCGdex, hace upsert en `price_history`, calcula la tendencia de Magic, actualiza `collection.card` con `PATCH` y guarda el valor por dueño.
 
    **`js/api.js`**:
-   - `buscarPokemon(nombre, lang)`: TCGdex con filtro de idioma (`all`, `en`, `es`, `ja`). Para inglés consulta GraphQL `/v2/graphql` (con `variants` y `localId`). Para español o japonés consulta `/v2/{lang}/cards` por REST. Respaldo en Pokémon TCG API.
-   - `buscarMagic(nombre, lang)`: Scryfall con filtro de idioma (`lang:${lang}`). Extrae acabados (`finishes`), `collector_number`, idioma y precios.
+   - **Catálogo y utilidades de idioma**:
+     - `SUPPORTED_LANGUAGES`: catálogo oficial de idiomas disponibles.
+     - `formatLanguageBadge(code)`: devuelve la etiqueta normalizada para badges (`ZH-CN`, `ZH-TW`, `JA`, `KO`, `EN`, etc.).
+     - `formatLanguageName(code)`: traduce códigos a nombres legibles en español (`Chino Simplificado`, `Chino Tradicional`, etc.).
+     - `matchCardLang(cardLang, filterLang)`: matching tolerante de variantes (ej. `zh` abarca `zh-cn`, `zh-tw`, `zhs`, `zht`).
+     - `getScryfallLangFilter(lang)`: genera la sintaxis de búsqueda para Scryfall (`(lang:zhs or lang:zht)`, `lang:zhs`, `lang:zht`, etc.).
+   - `buscarPokemon(nombre, lang)`: TCGdex con filtro de idioma (`all`, `en`, `es`, `ja`, `zh`, `zh-cn`, `zh-tw`, `ko`, `fr`, `de`, `it`, `pt`). Para inglés consulta GraphQL `/v2/graphql`. Para chino (`zh`) ejecuta consultas paralelas para `zh-cn` y `zh-tw`. Para el resto consulta `/v2/{lang}/cards` por REST.
+   - `buscarMagic(nombre, lang)`: Scryfall con filtro de idioma; si una carta no se imprimió en el idioma solicitado, aplica fallback elegante a todas las ediciones con aviso al usuario.
    - `buscarCartas(nombre, juego, lang)`: enrutador con caché por juego e idioma (`search:${juego}:${lang}:${nombre}`).
 
 3. **`js/scanner.js`**:
@@ -166,12 +172,14 @@ SnapTCG/
    - **Detalle de Carta Estilo Collectr**:
      - `pintarVariantesModal(carta)`: renderiza botones interactivos de variante (`.variant-pill`) con precio en tiempo real por cada acabado detectado.
      - `selectCardVariant(key)`: conmuta la variante activa (`normal`, `holo`, `reverse`, `firstEdition`) recalculando precio, gráfica y brillo holo.
+     - `pintarIdiomaModal(carta)`: selector interactivo de idioma (`.lang-picker` / `.lang-pill`) para cambiar y persistir el idioma de la carta (`EN`, `ES`, `JA`, `ZH-CN`, `ZH-TW`, `KO`, `FR`, `DE`, `IT`, `PT`).
+     - `selectCardLanguage(code)`: actualiza el idioma activo de la carta, su badge, chips y posesión.
      - `updateDetailHoloState(carta)`: activa o desactiva la capa de brillo `.holo-glare` según el acabado seleccionado.
      - `setCardCondition(cond)`: establece la condición activa (`NM`, `LP`, `MP`, `HP`).
    - `setGame(juego)` y `updateAppTheme()`: Alterna tema visual modificando variables CSS (`--accent-color`, `--accent-rgb`, clases de `body` `.mode-pokemon` o `.mode-magic`).
    - `switchTab(tab)`: Controla la navegación (`'home'`, `'scanner'` = Buscar, `'deck'`, `'collection'`), actualiza `aria-current` y el hash (`#buscar`, `#mazos`, `#coleccion`; `#inicio` o vacío = Inicio). `initCloud()` se llama en `DOMContentLoaded`.
    - `setGame(juego)`: sincroniza selectores de juego en Buscar y en el editor de mazos; recuerda el juego en `localStorage` (`snaptcg_game`).
-   - `abrirDetalle(carta, registrar)`: abre el modal (hoja inferior en móvil, diálogo de dos columnas en ≥ 900 px); inicializa variantes, condición, chips, estadísticas mín/med/máx y gráfica.
+   - `abrirDetalle(carta, registrar)`: abre el modal (hoja inferior en móvil, diálogo de dos columnas en ≥ 900 px); inicializa variantes, idioma, condición, chips, estadísticas mín/med/máx y gráfica.
    - `renderizarLista(resultados)`: Pinta tarjetas coleccionables en cuadrícula (aspect-ratio 63/88) con badges de acabado, idioma, brillo holo (`.card-holo-sheen`) y estado de posesión en mazo (`possession-badge`).
    - `ejecutarBusqueda()`: Punto de entrada principal de búsqueda (manual o desde OCR) pasando el filtro de idioma activo a `buscarCartas`.
    - `seleccionarCarta(index)` y `añadirAHistorial(carta)`: Despliega el modal y actualiza el historial de escaneos de la sesión.
@@ -284,6 +292,7 @@ El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.
 - **Detalle de Carta Coleccionable:**
   - Marco con reflejo dinámico (`.detail-card-wrapper` + `.holo-glare`).
   - Selector de Variante (`.variant-picker` / `.variant-pill`): muestra botones de acabado con precio en vivo por variante.
+  - Selector de Idioma (`.lang-picker` / `.lang-pill`): permite conmutar el idioma de la carta (`EN`, `ES`, `JA`, `ZH-CN`, `ZH-TW`, `KO`, etc.) en vivo.
   - Selector de Condición (`.condition-picker` / `.condition-pill`): NM, LP, MP, HP con subtexto descriptivo.
   - Cuadrícula de Mercado (`.market-stats-grid`): tarjetas con Mínimo, Media y Máximo de mercado.
 - **Hero Card de Portfolio (`.portfolio-hero-card`):**

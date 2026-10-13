@@ -147,6 +147,11 @@ function setSearchFilter(type, val) {
 function filterAndSortCards(cards) {
   let list = [...cards];
 
+  // Filtro de idioma
+  if (searchFilters.lang !== "all") {
+    list = list.filter(c => matchCardLang(c.lang, searchFilters.lang));
+  }
+
   // Filtro de acabado / estilo Holo
   if (searchFilters.finish !== "all") {
     list = list.filter(c => {
@@ -227,7 +232,8 @@ function renderizarLista(resultados) {
     const inDeckCount = getCardCountInDeck(carta.id);
     const isHolo = carta.variants?.holo || (carta.precioFoil != null && carta.precioFoil > 0);
     const isReverse = carta.variants?.reverse && !carta.variants?.holo;
-    const langCode = (carta.lang || "en").toUpperCase();
+    const langBadge = formatLanguageBadge(carta.lang);
+    const langName = formatLanguageName(carta.lang);
     
     let finishBadge = "";
     if (isHolo) {
@@ -246,7 +252,7 @@ function renderizarLista(resultados) {
       <div class="card-artwork-wrapper">
         ${inDeckCount > 0 ? `<div class="possession-badge">x${inDeckCount}</div>` : ''}
         <div class="card-badges-overlay">
-          <span class="badge-lang">${esc(langCode)}</span>
+          <span class="badge-lang" title="${esc(langName)}">${esc(langBadge)}</span>
           ${finishBadge}
         </div>
         <img src="${esc(carta.imagenThumb || carta.imagen)}" alt="${esc(carta.nombre)}" class="card-thumb" loading="lazy">
@@ -344,6 +350,54 @@ function setCardCondition(cond) {
   });
   if (window._currentCard) {
     window._currentCard.condition = cond;
+  }
+}
+
+function pintarIdiomaModal(carta) {
+  const container = document.getElementById("lang-picker");
+  if (!container) return;
+
+  const currentLang = (carta.lang || "en").toLowerCase();
+
+  const modalLangs = [
+    { code: "en", label: "EN", title: "Inglés" },
+    { code: "es", label: "ES", title: "Español" },
+    { code: "ja", label: "JA", title: "Japonés" },
+    { code: "zh-cn", label: "ZH-CN", title: "Chino Simplificado" },
+    { code: "zh-tw", label: "ZH-TW", title: "Chino Tradicional" },
+    { code: "ko", label: "KO", title: "Coreano" },
+    { code: "fr", label: "FR", title: "Francés" },
+    { code: "de", label: "DE", title: "Alemán" },
+    { code: "it", label: "IT", title: "Italiano" },
+    { code: "pt", label: "PT", title: "Portugués" },
+  ];
+
+  container.innerHTML = modalLangs.map(l => {
+    const active = matchCardLang(currentLang, l.code);
+    return `
+      <button type="button" class="lang-pill ${active ? 'active' : ''}" 
+              title="${l.title}"
+              onclick="selectCardLanguage('${l.code}')">
+        <span>${l.label}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function selectCardLanguage(code) {
+  const carta = window._currentCard;
+  if (!carta) return;
+  carta.lang = code;
+  const langEl = document.getElementById("detail-badge-lang");
+  if (langEl) {
+    langEl.textContent = formatLanguageBadge(code);
+    langEl.title = formatLanguageName(code);
+  }
+  pintarChipsModal(carta);
+  pintarIdiomaModal(carta);
+  pintarPoseidaModal(carta);
+  if (typeof showDeckToast === "function") {
+    showDeckToast(`Idioma: ${formatLanguageName(code)}`, "info");
   }
 }
 
@@ -455,10 +509,14 @@ function abrirDetalle(carta, registrar = false) {
   document.getElementById("price-card-name").textContent = carta.nombre;
 
   const langEl = document.getElementById("detail-badge-lang");
-  if (langEl) langEl.textContent = (carta.lang || "en").toUpperCase();
+  if (langEl) {
+    langEl.textContent = formatLanguageBadge(carta.lang);
+    langEl.title = formatLanguageName(carta.lang);
+  }
 
   setCardCondition(carta.condition || "NM");
   pintarChipsModal(carta);
+  pintarIdiomaModal(carta);
   pintarVariantesModal(carta);
   pintarPrecioModal(carta);
   pintarPoseidaModal(carta);
@@ -484,6 +542,7 @@ function abrirDetalle(carta, registrar = false) {
 /** Ficha técnica en chips: rareza, código de edición y tipo. */
 function pintarChipsModal(carta) {
   const chips = [];
+  if (carta.lang) chips.push(formatLanguageName(carta.lang));
   if (carta.rarity) chips.push(carta.rarity);
   if (carta.setCode) chips.push(carta.setCode.toUpperCase());
   if (carta.tipo === "magic" && carta.typeLine) chips.push(carta.typeLine);

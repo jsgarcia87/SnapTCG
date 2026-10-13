@@ -1391,6 +1391,56 @@ button:active, .btn:active {
   color: var(--accent-color);
 }
 
+/* Selector de idioma en modal */
+.lang-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.lang-picker {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 6px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.lang-picker::-webkit-scrollbar { display: none; }
+
+.lang-pill {
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.lang-pill:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lang-pill.active {
+  border-color: var(--ring);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.18);
+}
+
 /* Selector de estado (NM, LP, MP, HP) */
 .condition-picker {
   display: grid;

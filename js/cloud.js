@@ -107,11 +107,13 @@ async function collectionAdd(card, variant = null, condition = null) {
 
   const chosenVariant = variant || card.selectedVariant || "normal";
   const chosenCondition = condition || card.condition || "NM";
+  const chosenLang = card.lang || "en";
 
   const cardToSave = {
     ...card,
     selectedVariant: chosenVariant,
-    condition: chosenCondition
+    condition: chosenCondition,
+    lang: chosenLang
   };
 
   let entry = collection.find(e => e.card.id === card.id);
@@ -119,6 +121,7 @@ async function collectionAdd(card, variant = null, condition = null) {
     entry.qty++;
     entry.card.selectedVariant = chosenVariant;
     entry.card.condition = chosenCondition;
+    entry.card.lang = chosenLang;
   } else {
     entry = { card: cardToSave, qty: 1 };
     collection.push(entry);
@@ -174,9 +177,10 @@ async function addCurrentCardToCollection() {
   if (!card) return;
   const variant = card.selectedVariant || "normal";
   const cond = (typeof cardCondition !== "undefined" ? cardCondition : "NM");
+  const langName = typeof formatLanguageName === "function" ? formatLanguageName(card.lang || "en") : (card.lang || "en").toUpperCase();
   await collectionAdd(card, variant, cond);
   pintarPoseidaModal(card);
-  showDeckToast(`${card.nombre} (${formatVariantName(variant)} · ${cond}) añadida a tu colección`, "success");
+  showDeckToast(`${card.nombre} (${formatVariantName(variant)} · ${cond} · ${langName}) añadida a tu colección`, "success");
 }
 
 /* ───────────── Histórico de precios ───────────── */
@@ -365,7 +369,9 @@ function renderCollection() {
     })
     .filter(e => {
       if (collectionFilter.lang === "all") return true;
-      return (e.card.lang || "en").toLowerCase() === collectionFilter.lang.toLowerCase();
+      return typeof matchCardLang === "function" 
+        ? matchCardLang(e.card.lang, collectionFilter.lang)
+        : (e.card.lang || "en").toLowerCase() === collectionFilter.lang.toLowerCase();
     })
     .filter(e => !text || e.card.nombre.toLowerCase().includes(text));
 
@@ -386,8 +392,19 @@ function renderCollection() {
   const finishPills = [["all", "Todos"], ["holo", `${HEROICONS.sparkles} Holofoil`], ["normal", "Normal"], ["reverse", "Reverse"]]
     .map(([k, l]) => `<button class="filter-pill ${collectionFilter.finish === k ? "active" : ""}" onclick="setCollectionFilter('finish','${k}')">${l}</button>`).join("");
 
-  const langPills = [["all", "Todos"], ["en", "EN"], ["es", "ES"], ["ja", "JA"]]
-    .map(([k, l]) => `<button class="filter-pill ${collectionFilter.lang === k ? "active" : ""}" onclick="setCollectionFilter('lang','${k}')">${l}</button>`).join("");
+  const langPills = [
+    ["all", "Todos"],
+    ["en", "EN"],
+    ["es", "ES"],
+    ["ja", "JA"],
+    ["zh", "ZH (Chino)"],
+    ["zh-cn", "ZH-CN"],
+    ["zh-tw", "ZH-TW"],
+    ["ko", "KO"],
+    ["fr", "FR"],
+    ["de", "DE"],
+    ["it", "IT"]
+  ].map(([k, l]) => `<button class="filter-pill ${collectionFilter.lang === k ? "active" : ""}" onclick="setCollectionFilter('lang','${k}')">${l}</button>`).join("");
 
   root.innerHTML = `
     <div class="col-mode">${esc(mode)}</div>
@@ -458,7 +475,8 @@ function renderCollection() {
         const cond = c.condition || "NM";
         const isHolo = variant === "holo" || (c.precioFoil != null && c.precioFoil > 0);
         const isReverse = variant === "reverse";
-        const langCode = (c.lang || "en").toUpperCase();
+        const langBadge = typeof formatLanguageBadge === "function" ? formatLanguageBadge(c.lang) : (c.lang || "en").toUpperCase();
+        const langName = typeof formatLanguageName === "function" ? formatLanguageName(c.lang) : (c.lang || "en").toUpperCase();
 
         let finishBadge = "";
         if (isHolo) {
@@ -474,7 +492,7 @@ function renderCollection() {
           <div class="card-artwork-wrapper">
             <div class="possession-badge">x${e.qty}</div>
             <div class="card-badges-overlay">
-              <span class="badge-lang">${esc(langCode)}</span>
+              <span class="badge-lang" title="${esc(langName)}">${esc(langBadge)}</span>
               ${finishBadge}
               <span class="badge-condition">${esc(cond)}</span>
             </div>

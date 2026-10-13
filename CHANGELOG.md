@@ -4,6 +4,31 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.3.0] - 2026-10-13
+
+### Añadido
+- **Soporte de Nuevos Idiomas (Chino y Lenguas Internacionales)**:
+  - **Chino Completo**:
+    - `ZH`: Búsqueda unificada en chino (consulta en paralelo tanto Simplificado como Tradicional).
+    - `ZH-CN`: Chino Simplificado (cartas de China continental en TCGdex `/v2/zh-cn/` y Scryfall `lang:zhs`).
+    - `ZH-TW`: Chino Tradicional (cartas de Taiwán y Hong Kong en TCGdex `/v2/zh-tw/` y Scryfall `lang:zht`).
+  - **Idiomas Asiáticos y Europeos Adicionales**:
+    - Coreano (`KO`), Francés (`FR`), Alemán (`DE`), Italiano (`IT`) y Portugués (`PT`).
+  - **Selector de Idioma en la Ficha de Detalle** (`.lang-section` / `.lang-picker`):
+    - Permite al usuario conmutar el idioma de la carta directamente desde el modal (`EN`, `ES`, `JA`, `ZH-CN`, `ZH-TW`, `KO`, `FR`, `DE`, `IT`, `PT`).
+    - Actualiza en vivo el badge visual de la carta, los chips de información y persiste el idioma al guardarla en la colección.
+  - **Filtros Expandidos en Buscador y Colección**:
+    - Incorporación de las nuevas píldoras de idioma en la barra de búsqueda y en el portfolio de colección.
+    - Filtrado inteligente con `matchCardLang` (permite agrupar `ZH` o filtrar específicamente por sub-variante).
+  - **Funciones de Normalización en `js/api.js`**:
+    - `SUPPORTED_LANGUAGES`: catálogo estructurado de idiomas.
+    - `formatLanguageBadge`: genera etiquetas cortas normalizadas (`ZH-CN`, `ZH-TW`, etc.).
+    - `formatLanguageName`: nombres legibles en español con descripciones completas.
+    - `matchCardLang`: matching flexible entre variantes regionales.
+    - `getScryfallLangFilter`: genera filtros precisos de Scryfall con fallback automático y aviso toast si no existen impresiones en ese idioma.
+
+---
+
 ## [3.2.0] - 2026-10-13
 
 ### Añadido
