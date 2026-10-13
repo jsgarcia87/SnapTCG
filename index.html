@@ -144,6 +144,14 @@
                 </div>
               </div>
 
+              <!-- Selector Rápido de Idioma del Escáner -->
+              <div class="scanner-lang-bar" id="scanner-lang-bar">
+                <button type="button" class="scanner-lang-pill active" data-lang="auto" onclick="setScannerLanguage('auto')" title="Español e Inglés">Auto (EN/ES)</button>
+                <button type="button" class="scanner-lang-pill" data-lang="zh" onclick="setScannerLanguage('zh')" title="Chino Simplificado y Tradicional">中文 (ZH)</button>
+                <button type="button" class="scanner-lang-pill" data-lang="ja" onclick="setScannerLanguage('ja')" title="Japonés">日本語 (JA)</button>
+                <button type="button" class="scanner-lang-pill" data-lang="ko" onclick="setScannerLanguage('ko')" title="Coreano">한국어 (KO)</button>
+              </div>
+
               <!-- Retícula de Escaneo: Marco de Carta Proporción 63:88 -->
               <div class="scanner-overlay">
                 <div class="scanner-card-frame" id="scanner-card-frame">

@@ -130,6 +130,9 @@ function setSearchFilter(type, val) {
 
   // Si cambia el idioma y hay un texto de búsqueda, relanzar búsqueda
   if (type === "lang") {
+    if (typeof syncScannerLanguage === "function") {
+      syncScannerLanguage(val);
+    }
     const input = document.getElementById("search-input");
     if (input && input.value.trim()) {
       ejecutarBusqueda();

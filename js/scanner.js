@@ -1,8 +1,12 @@
 /**
- * scanner.js — Motor de Escaneo Profesional para Cartas TCG
+ * scanner.js — Motor de Escaneo Multilingüe Profesional para Cartas TCG
  * Arquitectura: Vanilla JS Zero-Build con Tesseract.js OCR
- * Características:
- *  - Preprocesamiento de imagen: Binarización Otsu y normalización de contraste
+ * Soporte internacional:
+ *  - Chino Simplificado y Tradicional (chi_sim + chi_tra + eng)
+ *  - Japonés (jpn + eng)
+ *  - Coreano (kor + eng)
+ *  - Español e Inglés (spa + eng)
+ *  - Preprocesamiento de imagen: Binarización adaptativa Otsu y normalización de contraste
  *  - Detección de desenfoque por movimiento (Varianza Laplaciana en tiempo real)
  *  - Proyección geométrica exacta de la región de interés (ROI)
  *  - Control de hardware: Linterna (Torch) y cambio de cámara
@@ -10,36 +14,166 @@
  *  - Carga y análisis de fotos desde galería de imágenes
  */
 
-let videoStream   = null;
-let scanInterval  = null;
-let ocrWorker     = null;
-let isScanning    = false;
-let lastRead      = '';
-let scanPaused    = false;
-let facingMode    = 'environment';
-let torchActive   = false;
-let hasTorch      = false;
+let videoStream       = null;
+let scanInterval      = null;
+let ocrWorker         = null;
+let ocrWorkerLang     = null;
+let isWorkerLoading   = false;
+let isScanning        = false;
+let lastRead          = '';
+let scanPaused        = false;
+let facingMode        = 'environment';
+let torchActive       = false;
+let hasTorch          = false;
+let scannerLanguage   = 'auto'; // 'auto' | 'zh' | 'ja' | 'ko' | 'es' | 'en'
 
-const SCAN_INTERVAL_MS = 1100; // Intervalo óptimo entre fotogramas estables
-const MIN_CONF_PASS1   = 60;   // Confianza mínima para pase binarizado Otsu
-const MIN_CONF_PASS2   = 48;   // Confianza mínima para pase de alto contraste
+const SCAN_INTERVAL_MS = 1100; // Intervalo entre fotogramas estables
+const MIN_CONF_PASS1   = 60;   // Confianza mínima para pase binarizado Otsu (latino)
+const MIN_CONF_PASS2   = 48;   // Confianza mínima para pase de contraste (latino)
+const MIN_CONF_CJK     = 38;   // Confianza mínima para ideogramas CJK (Chino/Japonés/Coreano)
 const MOTION_THRESHOLD = 130;  // Umbral de varianza Laplaciana (por debajo es movimiento/borroso)
 
+const LANG_MODEL_MAP = {
+  auto:    'eng+spa',
+  zh:      'chi_sim+chi_tra+eng',
+  'zh-cn': 'chi_sim+eng',
+  'zh-tw': 'chi_tra+eng',
+  ja:      'jpn+eng',
+  ko:      'kor+eng',
+  es:      'spa+eng',
+  en:      'eng',
+  fr:      'fra+eng',
+  de:      'deu+eng',
+  it:      'ita+eng',
+  pt:      'por+eng'
+};
+
 /**
- * Inicializa el worker de Tesseract con parámetros optimizados para títulos de cartas
+ * Obtiene el idioma de escáner actualmente efectivo
  */
-async function initOcrWorker() {
-  if (ocrWorker) return;
+function getActiveScannerLang() {
+  if (scannerLanguage && scannerLanguage !== 'auto') {
+    return scannerLanguage;
+  }
+  if (typeof searchFilters !== 'undefined' && searchFilters.lang && searchFilters.lang !== 'all') {
+    return searchFilters.lang;
+  }
+  return 'auto';
+}
+
+/**
+ * Inicializa el worker de Tesseract con el modelo lingüístico correspondiente
+ */
+async function initOcrWorker(forceLang = null) {
+  const langKey = forceLang || getActiveScannerLang();
+  const tessLang = LANG_MODEL_MAP[langKey] || LANG_MODEL_MAP['auto'];
+
+  if (ocrWorker && ocrWorkerLang === tessLang) return;
+
+  if (isWorkerLoading) return;
+  isWorkerLoading = true;
+
   try {
-    ocrWorker = await Tesseract.createWorker('eng', 1, {
-      logger: () => {}
+    if (ocrWorker) {
+      try { await ocrWorker.terminate(); } catch (e) {}
+      ocrWorker = null;
+    }
+
+    setScannerStatus("CARGANDO MOTOR OCR...", "processing");
+
+    ocrWorker = await Tesseract.createWorker(tessLang, 1, {
+      logger: (m) => {
+        if (m.status === 'loading language traineddata' && typeof m.progress === 'number') {
+          const pct = Math.round(m.progress * 100);
+          setScannerStatus(`DESCARGANDO MODELO (${pct}%)...`, "processing");
+        }
+      }
     });
-    await ocrWorker.setParameters({
-      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúñüÁÉÍÓÚÑÜ '-",
-    });
+
+    ocrWorkerLang = tessLang;
+
+    // Configuración según familia lingüística
+    const isCJK = tessLang.includes('chi') || tessLang.includes('jpn') || tessLang.includes('kor');
+    if (isCJK) {
+      // Para ideogramas y caracteres asiáticos: modo automático sin whitelist restrictiva
+      await ocrWorker.setParameters({
+        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+      });
+    } else {
+      // Para alfabetos latinos: modo línea única y whitelist optimizada
+      await ocrWorker.setParameters({
+        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
+        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúñüÁÉÍÓÚÑÜ '-",
+      });
+    }
+
+    setScannerStatus("BUSCANDO CARTA...", "active");
   } catch (err) {
-    console.warn('Error inicializando worker de Tesseract:', err);
+    console.error('Error inicializando worker de Tesseract:', err);
+    showScannerToast('Error al descargar el modelo de idioma para el escáner.', 'error');
+  } finally {
+    isWorkerLoading = false;
+  }
+}
+
+/**
+ * Cambia el idioma del motor OCR desde la barra de selección rápida del escáner
+ */
+async function setScannerLanguage(lang) {
+  scannerLanguage = lang;
+
+  // Actualizar píldoras visuales en la interfaz del escáner
+  document.querySelectorAll('.scanner-lang-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  const langNames = {
+    auto:    'Auto (EN/ES)',
+    zh:      'Chino (ZH)',
+    'zh-cn': 'Chino Simplificado',
+    'zh-tw': 'Chino Tradicional',
+    ja:      'Japonés (JA)',
+    ko:      'Coreano (KO)',
+    es:      'Español (ES)',
+    en:      'Inglés (EN)'
+  };
+  showScannerToast(`Modo OCR: ${langNames[lang] || lang.toUpperCase()}`, 'info');
+
+  // Si se selecciona chino y el filtro global está en 'all', sincronizar el filtro de búsqueda
+  if (lang === 'zh' && typeof searchFilters !== 'undefined' && searchFilters.lang === 'all') {
+    if (typeof setSearchFilter === 'function') setSearchFilter('lang', 'zh');
+  }
+
+  // Reinicializar el worker OCR con el nuevo modelo lingüístico
+  await initOcrWorker(lang);
+}
+
+/**
+ * Sincroniza el idioma del escáner cuando el usuario cambia el filtro en la barra principal
+ */
+function syncScannerLanguage(filterLang) {
+  let target = 'auto';
+  if (filterLang === 'zh' || filterLang === 'zh-cn' || filterLang === 'zh-tw') {
+    target = 'zh';
+  } else if (filterLang === 'ja') {
+    target = 'ja';
+  } else if (filterLang === 'ko') {
+    target = 'ko';
+  } else if (filterLang === 'es') {
+    target = 'es';
+  } else if (filterLang === 'en') {
+    target = 'en';
+  }
+
+  scannerLanguage = target;
+  document.querySelectorAll('.scanner-lang-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === target);
+  });
+
+  // Si el escáner está activo en pantalla, actualizar el worker inmediatamente
+  const wrap = document.getElementById('scanner-wrap');
+  if (wrap && wrap.style.display !== 'none') {
+    initOcrWorker(target);
   }
 }
 
@@ -51,8 +185,13 @@ async function iniciarEscaner() {
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('scanner-wrap').style.display = 'block';
 
+  // Sincronizar píldoras con el idioma activo
+  const activeLang = getActiveScannerLang();
+  document.querySelectorAll('.scanner-lang-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === activeLang || (activeLang === 'all' && btn.dataset.lang === 'auto'));
+  });
+
   try {
-    // Si ya había un stream activo, detenerlo limpiamente
     if (videoStream) {
       videoStream.getTracks().forEach(t => t.stop());
       videoStream = null;
@@ -179,15 +318,29 @@ function stopContinuousScan() {
 }
 
 /**
+ * Comprueba si una cadena contiene caracteres asiáticos (Chino, Japonés o Coreano)
+ */
+function hasCJK(text) {
+  return /[\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/.test(text);
+}
+
+/**
+ * Comprueba si una cadena contiene caracteres chinos (Hanzi)
+ */
+function hasChinese(text) {
+  return /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(text);
+}
+
+/**
  * Ciclo periódico de análisis de fotograma
  */
 async function autoScan() {
-  if (isScanning || scanPaused || !videoStream) return;
+  if (isScanning || scanPaused || !videoStream || isWorkerLoading) return;
 
   const video = document.getElementById('live-video');
   if (!video || video.readyState < 2) return;
 
-  // Extraer la región de interés (ROI del encabezado/título de la carta)
+  // Extraer la región de interés (ROI del título de la carta)
   const roiCanvas = extractHeaderRoi(video);
   if (!roiCanvas) return;
 
@@ -197,7 +350,7 @@ async function autoScan() {
 
   if (sharpness < MOTION_THRESHOLD) {
     setScannerStatus("MANTÉN LA CARTA QUIETA", "motion");
-    return; // Fotograma borroso o en movimiento; evitamos recalentar la CPU
+    return; // Fotograma en movimiento; omitir OCR para ahorrar batería y CPU
   }
 
   isScanning = true;
@@ -213,7 +366,9 @@ async function autoScan() {
     }
 
     const cleaned = cleanOcrText(text);
-    if (!cleaned || cleaned.length < 3) {
+    const minLen = hasCJK(cleaned) ? 2 : 3;
+
+    if (!cleaned || cleaned.length < minLen) {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
       return;
     }
@@ -244,8 +399,9 @@ async function capturarYProcesar() {
   try {
     const text = await recognizeRoiText(roiCanvas);
     const cleaned = cleanOcrText(text);
+    const minLen = hasCJK(cleaned) ? 2 : 3;
 
-    if (cleaned && cleaned.length >= 3) {
+    if (cleaned && cleaned.length >= minLen) {
       dispararExitoEscaneo(cleaned);
     } else {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
@@ -265,7 +421,7 @@ async function procesarImagenArchivo(file) {
   if (!file) return;
 
   setScannerStatus("PROCESANDO FOTO...", "processing");
-  showScannerToast("Analizando imagen de la galería...", "info");
+  showScannerToast("Analizando foto de la carta...", "info");
 
   const img = new Image();
   const objectUrl = URL.createObjectURL(file);
@@ -287,9 +443,10 @@ async function procesarImagenArchivo(file) {
 
       let text = await recognizeRoiText(canvas);
       let cleaned = cleanOcrText(text);
+      let minLen = hasCJK(cleaned) ? 2 : 3;
 
       // Si falla, probar con la imagen completa reescalada
-      if (!cleaned || cleaned.length < 3) {
+      if (!cleaned || cleaned.length < minLen) {
         const fullCanvas = document.createElement('canvas');
         const maxDim = 1200;
         const scale = Math.min(1, maxDim / Math.max(w, h));
@@ -300,9 +457,10 @@ async function procesarImagenArchivo(file) {
 
         text = await recognizeRoiText(fullCanvas);
         cleaned = cleanOcrText(text);
+        minLen = hasCJK(cleaned) ? 2 : 3;
       }
 
-      if (cleaned && cleaned.length >= 3) {
+      if (cleaned && cleaned.length >= minLen) {
         dispararExitoEscaneo(cleaned);
       } else {
         setScannerStatus("NO DETECTADO", "active");
@@ -329,6 +487,11 @@ function dispararExitoEscaneo(nombreCarta) {
   triggerHaptic();
 
   setScannerStatus(`¡CARTA LEÍDA: ${nombreCarta}!`, "success");
+
+  // Si se detectan caracteres chinos y el filtro estaba en 'all', sincronizar filtro 'zh'
+  if (hasChinese(nombreCarta) && typeof searchFilters !== 'undefined' && searchFilters.lang === 'all') {
+    if (typeof setSearchFilter === 'function') setSearchFilter('lang', 'zh');
+  }
 
   const scannerContainer = document.querySelector('.scanner-container');
   if (scannerContainer) {
@@ -523,6 +686,9 @@ function preprocessCanvas(canvas, mode = 'otsu') {
  */
 async function recognizeRoiText(rawCanvas) {
   if (!ocrWorker) await initOcrWorker();
+  if (!ocrWorker) return null;
+
+  const isCJK = ocrWorkerLang && (ocrWorkerLang.includes('chi') || ocrWorkerLang.includes('jpn') || ocrWorkerLang.includes('kor'));
 
   // Pase 1: Binarización Otsu (elimina brillos holográficos y reflejos)
   const pass1 = document.createElement('canvas');
@@ -532,9 +698,10 @@ async function recognizeRoiText(rawCanvas) {
   preprocessCanvas(pass1, 'otsu');
 
   let result = await ocrWorker.recognize(pass1);
-  let best = getBestLine(result.data);
+  let best = getBestLine(result.data, isCJK);
+  const minConf1 = isCJK ? MIN_CONF_CJK : MIN_CONF_PASS1;
 
-  if (best && best.confidence >= MIN_CONF_PASS1) {
+  if (best && best.confidence >= minConf1) {
     return best.text.trim();
   }
 
@@ -546,32 +713,41 @@ async function recognizeRoiText(rawCanvas) {
   preprocessCanvas(pass2, 'contrast');
 
   result = await ocrWorker.recognize(pass2);
-  best = getBestLine(result.data);
+  best = getBestLine(result.data, isCJK);
+  const minConf2 = isCJK ? (MIN_CONF_CJK - 8) : MIN_CONF_PASS2;
 
-  if (best && best.confidence >= MIN_CONF_PASS2) {
+  if (best && best.confidence >= minConf2) {
     return best.text.trim();
   }
 
   return best ? best.text.trim() : null;
 }
 
-function getBestLine(data) {
+function getBestLine(data, isCJK = false) {
   if (!data || !data.lines || data.lines.length === 0) return null;
+  const minLen = isCJK ? 2 : 3;
   return data.lines
-    .filter(l => l.text && l.text.trim().length >= 2)
+    .filter(l => l.text && l.text.trim().length >= minLen)
     .sort((a, b) => b.confidence - a.confidence)[0] || null;
 }
 
 /**
- * Limpieza inteligente de OCR: descarta HP, fases evolutivas y símbolos parásitos
+ * Limpieza inteligente de OCR: descarta HP, fases evolutivas y símbolos parásitos,
+ * preservando completamente ideogramas chinos (Hanzi), kana japoneses, hangul y caracteres latinos.
  */
 function cleanOcrText(raw) {
   if (!raw) return '';
   return raw
+    // Descartar tokens de HP (Pokémon en inglés, español, chino, japonés)
     .replace(/\b(\d{2,4}\s*HP|HP\s*\d{2,4})\b/gi, '')
+    .replace(/(血量|生命值)\s*\d{2,4}/gi, '')
+    // Descartar fases evolutivas y tipos (multilingüe)
     .replace(/\b(Basic|Fase\s*[12]|Stage\s*[12]|Creature|Trainer|Item|Supporter|Entrenador)\b/gi, '')
+    .replace(/(基础|基礎|1阶|2阶|1階|2階|宝可梦|寶可夢|训练家|訓練家|物品|支援者)/g, '')
+    .replace(/(たね|1進化|2進化|トレーナーズ|グッズ|サポート)/g, '')
     .replace(/[{}[\]()<>@#$%^&*+=~|\\_]/g, ' ')
-    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ '\-]/g, ' ')
+    // Permitir letras latinas, dígitos, acentos y todos los caracteres CJK (Chino, Japonés, Coreano)
+    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\s+\d+$/, '') // descarta números aislados finales como costes de maná

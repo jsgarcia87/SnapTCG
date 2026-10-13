@@ -4,6 +4,28 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.5.0] - 2026-10-13
+
+### Añadido
+- **Soporte Multilingüe Completo en el Escáner de Cámara (Chino, Japonés, Coreano)**:
+  - **Modelos Lingüísticos Especializados Tesseract.js**:
+    - **Chino (`chi_sim + chi_tra + eng`)**: Reconocimiento en paralelo de caracteres Hanzi Simplificados (China continental) y Tradicionales (Taiwán, Hong Kong) junto a sufijos latinos de cartas Pokémon ("ex", "V", "VMAX", "VSTAR", "GX").
+    - **Japonés (`jpn + eng`)**: Soporte para kanji y silabarios kana (Hiragana y Katakana).
+    - **Coreano (`kor + eng`)**: Soporte para caracteres hangul y jamo.
+    - Carga asíncrona optimizada de modelos `4.0.0_fast` con barra de progreso de descarga y caché permanente en IndexedDB.
+  - **Selector Rápido de Idioma en el Escáner (`.scanner-lang-bar`)**:
+    - Píldoras interactivas en pantalla (`Auto (EN/ES)`, `中文 (ZH)`, `日本語 (JA)`, `한국어 (KO)`).
+    - Sincronización bidireccional inmediata con los filtros de búsqueda Collectr (`syncScannerLanguage` / `setScannerLanguage`).
+  - **Sanitización y Limpieza de Caracteres CJK (`cleanOcrText`)**:
+    - Soporte de rangos Unicode de ideogramas (`\u4E00-\u9FFF`, `\u3400-\u4DBF`, `\u3040-\u30FF`, `\uAC00-\uD7AF`).
+    - Eliminación de prefijos/sufijos de HP y fases evolutivas en chino y japonés (`基础`, `1阶`, `たね`, `血量`, etc.).
+    - Umbral de longitud adaptado a ideogramas (permite nombres válidos de 2 caracteres como 耿鬼 o 快龙).
+  - **Búsqueda Automática Inteligente por Ideogramas en `js/api.js`**:
+    - Si el texto escaneado o introducido contiene caracteres chinos (`/[\u4E00-\u9FFF]/`), `buscarPokemon` consulta automáticamente en paralelo `zh-cn` y `zh-tw` incluso con el filtro general en "Todos" (`all`).
+    - En Magic: The Gathering, `buscarMagic` busca por `printed:"[nombre]"` si la resolución fuzzy en inglés no encuentra la carta.
+
+---
+
 ## [3.4.0] - 2026-10-13
 
 ### Añadido

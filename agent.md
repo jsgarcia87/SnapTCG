@@ -7,9 +7,9 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.4.0
+- **Versión Actual:** 3.5.0
 - **Autor / Estudio:** Sangar Studio
-- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y soporte multilingüe completo (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés, etc.) y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
+- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
@@ -121,14 +121,14 @@ SnapTCG/
 
 3. **`js/scanner.js`**:
    - `iniciarEscaner()` / `detenerEscaner()`: Gestiona `navigator.mediaDevices.getUserMedia` (`facingMode: { ideal: facingMode }`, resolución ideal 1920x1080 con fallback a 1280x720).
-   - `initOcrWorker()`: Inicializa el worker de Tesseract (`eng`, PSM `SINGLE_LINE`, whitelist con letras, acentos, dígitos y caracteres válidos).
+   - `initOcrWorker(forceLang)`: Carga bajo demanda modelos lingüísticos optimizados (`chi_sim+chi_tra+eng`, `jpn+eng`, `kor+eng`, `spa+eng`). Cacheado permanente en IndexedDB.
+   - `setScannerLanguage(lang)` / `syncScannerLanguage(filterLang)`: Control y sincronización bidireccional entre la cámara y la barra de filtros de idioma (`.scanner-lang-bar`).
    - `calculateSharpness(gray, w, h)`: Filtro Laplaciano 3x3 de nitidez que detecta movimiento o desenfoque. Si la varianza < `130`, avisa con estado ámbar *"MANTÉN LA CARTA QUIETA"* y salta el OCR para proteger la batería y evitar throttling.
    - `extractHeaderRoi(video)`: Proyección matemática exacta de la caja `.scanner-header-roi` sobre las coordenadas nativas del video stream considerando la escala y desfase de `object-fit: cover`.
    - `computeOtsuThreshold(gray)` y `preprocessCanvas(canvas, mode)`: Binarización adaptativa Otsu que elimina brillos, hologramas y sombras sobre fondos coloreados.
-   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase:
-     - Pase 1: Binarización Otsu con umbral de confianza ≥ 60.
-     - Pase 2: Alto contraste normalizado (fallback para fuentes sutiles) con confianza ≥ 48.
-   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`), fases evolutivas (`Basic`, `Stage 1`, etc.), símbolos de coste y caracteres de ruido antes de transferir el texto al buscador.
+   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase adaptativa según familia lingüística (umbral de confianza adaptado a ideogramas CJK).
+   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`, `血量`), fases evolutivas (`Basic`, `1阶`, `たね`, etc.), preservando completamente caracteres chinos Hanzi (`\u4E00-\u9FFF`), kana japoneses y hangul.
+   - `hasCJK(text)` / `hasChinese(text)`: Detectores de caracteres ideográficos para ajustar umbrales de longitud y conmutar automáticamente la búsqueda a chino.
    - `toggleLinterna()`: Conmuta la linterna/torch en dispositivos móviles mediante `track.applyConstraints({ advanced: [{ torch: state }] })`.
    - `cambiarCamara()`: Alterna entre cámara trasera y delantera.
    - `procesarImagenArchivo(file)`: Carga y analiza fotos de cartas desde la galería o disco.

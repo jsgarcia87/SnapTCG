@@ -197,9 +197,31 @@ async function buscarPokemon(nombre, lang = "all") {
     } else if (["es", "ja", "ko", "fr", "de", "it", "pt"].includes(l)) {
       cards = await pokemonTCGdexLang(nombre, l);
     } else {
-      // "all": primero en inglés por rapidez y exhaustividad
-      cards = await pokemonTCGdexEn(nombre);
-      if (cards.length === 0) cards = await pokemonTCGdexLang(nombre, "es");
+      // Modo "all": detectar si el término contiene caracteres CJK para buscar en el idioma correcto
+      if (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(nombre)) {
+        // Contiene ideogramas chinos: buscar en paralelo Simplificado (zh-cn) y Tradicional (zh-tw)
+        const [cnCards, twCards] = await Promise.all([
+          pokemonTCGdexLang(nombre, "zh-cn").catch(() => []),
+          pokemonTCGdexLang(nombre, "zh-tw").catch(() => [])
+        ]);
+        const map = new Map();
+        [...cnCards, ...twCards].forEach(c => map.set(c.id, c));
+        cards = Array.from(map.values());
+        // Fallback a japonés por si se trata de un nombre escrito en kanji
+        if (cards.length === 0) {
+          cards = await pokemonTCGdexLang(nombre, "ja").catch(() => []);
+        }
+      } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(nombre)) {
+        // Contiene silabarios kana: buscar directamente en japonés
+        cards = await pokemonTCGdexLang(nombre, "ja").catch(() => []);
+      } else if (/[\uAC00-\uD7AF]/.test(nombre)) {
+        // Contiene hangul: buscar directamente en coreano
+        cards = await pokemonTCGdexLang(nombre, "ko").catch(() => []);
+      } else {
+        // Caracteres latinos: primero en inglés por rapidez y exhaustividad, luego español
+        cards = await pokemonTCGdexEn(nombre);
+        if (cards.length === 0) cards = await pokemonTCGdexLang(nombre, "es");
+      }
     }
   } catch (err) {
     console.warn("TCGdex no disponible, usando respaldo:", err.message);
@@ -233,8 +255,18 @@ function getScryfallLangFilter(lang) {
  */
 async function buscarMagic(nombre, lang = "all") {
   // 1. Fuzzy para resolver el nombre oficial
-  const fuzzyData = await fetchJSON(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`,
+  let fuzzyData = await fetchJSON(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`,
     { okStatuses: [404], headers: { Accept: "application/json" } });
+
+  // Si fuzzy falla (p. ej. nombre impreso en chino o japonés), buscar por texto impreso o nombre traducido
+  if (fuzzyData.object === "error") {
+    const searchData = await fetchJSON(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(`(printed:"${nombre}" or name:"${nombre}")`)}`,
+      { okStatuses: [404], headers: { Accept: "application/json" } });
+    if (searchData.object !== "error" && Array.isArray(searchData.data) && searchData.data.length > 0) {
+      fuzzyData = searchData.data[0];
+    }
+  }
+
   if (fuzzyData.object === "error") { const e = new Error("Carta no encontrada en Magic."); e.code = "notfound"; throw e; }
 
   // 2. Ediciones del nombre oficial (filtradas por idioma si se especifica)
