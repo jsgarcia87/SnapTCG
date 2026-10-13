@@ -24,6 +24,11 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
     - Si el texto escaneado o introducido contiene caracteres chinos (`/[\u4E00-\u9FFF]/`), `buscarPokemon` consulta automáticamente en paralelo `zh-cn` y `zh-tw` incluso con el filtro general en "Todos" (`all`).
     - En Magic: The Gathering, `buscarMagic` busca por `printed:"[nombre]"` si la resolución fuzzy en inglés no encuentra la carta.
 
+### Corregido
+- **Error `updateCollectionButton is not defined`**:
+  - Eliminada doble declaración `let collectionFilter` en `js/cloud.js` que provocaba un fallo de sintaxis en el intérprete del navegador e impedía que `cloud.js` exportase sus funciones.
+  - Blindada la llamada en `abrirDetalle` con comprobación condicional segura `typeof updateCollectionButton === "function"`.
+
 ---
 
 ## [3.4.0] - 2026-10-13

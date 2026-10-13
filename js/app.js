@@ -523,7 +523,7 @@ function abrirDetalle(carta, registrar = false) {
   pintarVariantesModal(carta);
   pintarPrecioModal(carta);
   pintarPoseidaModal(carta);
-  updateCollectionButton();
+  if (typeof updateCollectionButton === "function") updateCollectionButton();
 
   if (carta.preciosCargados === false && carta.tipo === "pokemon") {
     hidratarPrecioPokemon(carta)

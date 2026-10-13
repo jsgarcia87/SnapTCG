@@ -13,7 +13,7 @@ const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/d
 let collection = [];          // [{ card, qty }]
 let sbClient = null;
 let sbSession = null;
-let collectionFilter = { game: "all", text: "" };
+let collectionFilter = { game: "all", finish: "all", lang: "all", sort: "value-desc", text: "" };
 
 const demoForced = () => new URLSearchParams(location.search).has("demo");
 const cloudConfigured = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY) && !demoForced();
@@ -322,8 +322,6 @@ function copyCollectionLink() {
   const url = location.href.split("#")[0].split("?")[0] + "#coleccion";
   navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"));
 }
-
-let collectionFilter = { game: "all", finish: "all", lang: "all", sort: "value-desc", text: "" };
 
 function setCollectionFilter(key, value) {
   collectionFilter[key] = value;
