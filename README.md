@@ -1,19 +1,19 @@
-# 🎴 CardDex — SnapTCG Premium
+# CardDex — SnapTCG Premium
 
 **CardDex** es una herramienta profesional de gestión para jugadores de TCG (Trading Card Games). Permite escanear cartas físicamente, consultar precios en tiempo real y construir mazos competitivos de **Pokémon TCG** y **Magic: The Gathering** con validación de reglas avanzada.
 
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-2.0.0-gold)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.4.0-gold)
 ![Tech](https://img.shields.io/badge/Tech-Vanilla_JS-blue)
 ![OCR](https://img.shields.io/badge/OCR-Tesseract.js-green)
 
 ---
 
-## 🚀 Funcionalidades Principales
+## Funcionalidades Principales
 
 ### 1. Escáner Automático (Estilo Manabox)
-- **Escaneo Continuo**: No necesitas pulsar botones. La app analiza el flujo de video cada 1.5 segundos.
-- **Detección Inteligente**: Recorta automáticamente el área del nombre de la carta para maximizar la precisión del OCR.
-- **Feedback Visual**: Resplandor dinámico y badges de estado que indican cuando una carta ha sido leída con éxito.
+- **Escaneo Continuo**: No necesitas pulsar botones. La app analiza el flujo de video cada 1.1 segundos con filtrado de movimiento.
+- **Detección Inteligente**: Recorta automáticamente el área del nombre de la carta para maximizar la precisión del OCR con binarización adaptativa Otsu.
+- **Feedback Visual, Auditivo y Háptico**: Resplandor dinámico, síntesis Web Audio API y vibración táctil al leer con éxito.
 
 ### 2. Constructor de Mazos Pro
 - **Validación de Formatos**:
@@ -37,7 +37,7 @@
 
 ---
 
-## 🎨 Diseño y UX
+## Diseño y UX
 - **Estética Neo-Brutalista Premium**: Diseño oscuro con efectos de "Glassmorphism" y contrastes optimizados.
 - **Tematización Dinámica**: La interfaz cambia de color de acento según el juego seleccionado (Oro para Pokémon, Violeta para Magic).
 - **Navegación Móvil**: Barra de navegación inferior optimizada para uso con el pulgar.
@@ -45,7 +45,7 @@
 
 ---
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 - **Frontend**: HTML5, CSS3 (Variables, Flexbox, Grid).
 - **Lógica**: JavaScript Vanilla (ES6+).
 - **OCR**: [Tesseract.js](https://tesseract.projectnaptha.com/).
@@ -55,7 +55,7 @@
 
 ---
 
-## 📦 Estructura del Proyecto
+## Estructura del Proyecto
 ```bash
 SnapTCG/
 ├── index.html         # Estructura semántica y accesible
@@ -71,7 +71,7 @@ SnapTCG/
 
 ---
 
-## 💡 Cómo usar
+## Cómo usar
 1. Abre `index.html` en cualquier navegador moderno.
 2. Selecciona tu juego preferido (Pokémon o Magic).
 3. Usa el **Buscador** o el **Escáner en Vivo** para encontrar cartas.
@@ -80,11 +80,11 @@ SnapTCG/
 
 ---
 
-Desarrollado con ❤️ para la comunidad de TCG.
+Desarrollado para la comunidad de TCG.
 
 ---
 
-## 🌐 Demo pública y colección en la nube
+## Demo pública y colección en la nube
 
 ### Demo (GitHub Pages)
 La app es estática (sin build), así que se publica tal cual:

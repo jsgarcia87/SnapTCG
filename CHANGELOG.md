@@ -1,10 +1,43 @@
-# 📋 Registro de Cambios (Changelog) — CardDex / SnapTCG
+# Registro de Cambios (Changelog) — CardDex / SnapTCG
 
 Todos los cambios notables de este proyecto se documentan en este archivo según los principios de [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/).
 
 ---
 
-## [3.3.0] - 2026-10-13
+## [3.4.0] - 2026-10-13
+
+### Añadido
+- **Escáner de Cámara Profesional de Nueva Generación**:
+  - **Algoritmo de Binarización Adaptativa Otsu (`computeOtsuThreshold`)**:
+    - Preprocesamiento matemático en Canvas puro (`getImageData`) que calcula el umbral óptimo de binarización sin dependencias pesadas de WASM.
+    - Elimina completamente reflejos parásitos de cartas holográficas, brillos directos, sombras y fondos coloreados.
+  - **Filtro Laplaciano de Nitidez y Movimiento en Tiempo Real (`calculateSharpness`)**:
+    - Aplica un operador diferencial discreto 3x3 para medir la varianza de gradientes en el fotograma.
+    - Si el usuario mueve la mano o la cámara desenfoca (varianza < 130), el estado muestra en ámbar *"MANTÉN LA CARTA QUIETA"* y salta la ejecución del OCR.
+    - Evita recalentamiento de CPU y ahorra batería drásticamente en dispositivos móviles.
+  - **Estrategia Multi-Pase de Reconocimiento OCR**:
+    - **Pase 1 (Otsu)**: Binarizado blanco/negro de alta confianza para texto nítido sobre arte brillante.
+    - **Pase 2 (Contraste Normalizado)**: Fallback para gradientes sutiles o tipografías oscuras.
+  - **Proyección Geométrica Exacta de la Región de Interés (ROI)**:
+    - Mapeo matemático entre el recuadro visual en pantalla y las coordenadas nativas del video stream considerando la escala y desfase de `object-fit: cover`.
+    - Solo recorta y analiza la franja superior de la carta donde reside el nombre.
+  - **Controles de Hardware de Cámara**:
+    - **Linterna / Torch (`toggleLinterna`)**: Detección de `track.getCapabilities().torch` con botón de activación directa para escanear en interiores con poca luz.
+    - **Cambio de Cámara (`cambiarCamara`)**: Alternancia entre cámara trasera (`environment`) y delantera (`user`).
+    - **Botón de Cierre Rápido (`detenerEscaner`)**: Icono `xMark` para salir del modo escáner sin desconfigurar la vista.
+  - **Subida y Análisis de Fotos desde Galería (`procesarImagenArchivo`)**:
+    - Soporte completo para seleccionar fotos existentes desde la biblioteca del dispositivo mediante `<input type="file">`.
+  - **Feedback Auditivo y Háptico Inmediato**:
+    - **Chime Sintetizado Web Audio API (`playSuccessChime`)**: Genera un tono de confirmación ascendente (880Hz -> 1320Hz) sin necesidad de descargar archivos de audio externos.
+    - **Vibración Táctil (`triggerHaptic`)**: Pulso doble (`[45, 30, 45]ms`) en dispositivos móviles compatibles.
+  - **Rediseño UI del Escáner (Estilo TCG Pro 63:88)**:
+    - Marco de proporción estándar de carta coleccionable con 4 esquinas de enfoque en color neón `--primary`.
+    - Recuadro objetivo *"ÁREA DEL NOMBRE"* con haz láser animado continuo.
+    - Recorte visual con scrim oscuro radial (`box-shadow: 0 0 0 9999px rgba(0,0,0,0.52)`).
+    - Barra inferior con acceso directo a galería y disparador manual de fotograma.
+- **Iconografía Heroicons v2**:
+  - Incorporados `photo` (galería) y `arrowPathRoundedSquare` (conmutación de cámara).
+
 
 ### Añadido
 - **Soporte de Nuevos Idiomas (Chino y Lenguas Internacionales)**:

@@ -1,20 +1,20 @@
-# 🤖 Guía del Agente — SnapTCG (CardDex)
+# Guía del Agente — SnapTCG (CardDex)
 
 Este documento sirve como manual de referencia técnico, arquitectónico y operativo para cualquier **Agente de Inteligencia Artificial** o desarrollador que trabaje, mantenga o expanda el repositorio **SnapTCG** (comercialmente **CardDex**).
 
 ---
 
-## 📌 1. Visión General del Proyecto
+## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.3.0
+- **Versión Actual:** 3.4.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y soporte multilingüe completo (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés, etc.) y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
 
-## 🛠️ 2. Stack Tecnológico y Dependencias
+## 2. Stack Tecnológico y Dependencias
 
 | Capa | Tecnología / Servicio | Descripción |
 |---|---|---|
@@ -28,7 +28,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 ---
 
-## 📂 3. Estructura de Archivos y Responsabilidades
+## 3. Estructura de Archivos y Responsabilidades
 
 ```bash
 SnapTCG/
@@ -120,11 +120,19 @@ SnapTCG/
    - `buscarCartas(nombre, juego, lang)`: enrutador con caché por juego e idioma (`search:${juego}:${lang}:${nombre}`).
 
 3. **`js/scanner.js`**:
-   - `iniciarEscaner()` / `detenerEscaner()`: Gestiona el flujo `navigator.mediaDevices.getUserMedia` (`facingMode: 'environment'`, resolución ideal 1280x720).
-   - `initOcrWorker()`: Inicializa el worker de Tesseract con parámetros optimizados (`tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE`).
-   - `startContinuousScan()` / `autoScan()`: Escanea automáticamente cada 1.5 s (`SCAN_INTERVAL_MS = 1500`).
-   - `captureAndOcr(video)`: Recorta el 25% superior del frame (área donde se ubica el título de la carta), aplica filtro en canvas (`grayscale(100%) contrast(200%) brightness(120%)`) y filtra por confianza mínima (`MIN_CONF = 65`).
-   - `cleanOcrText(raw)`: Sanitiza caracteres residuales antes de transferir el texto al buscador.
+   - `iniciarEscaner()` / `detenerEscaner()`: Gestiona `navigator.mediaDevices.getUserMedia` (`facingMode: { ideal: facingMode }`, resolución ideal 1920x1080 con fallback a 1280x720).
+   - `initOcrWorker()`: Inicializa el worker de Tesseract (`eng`, PSM `SINGLE_LINE`, whitelist con letras, acentos, dígitos y caracteres válidos).
+   - `calculateSharpness(gray, w, h)`: Filtro Laplaciano 3x3 de nitidez que detecta movimiento o desenfoque. Si la varianza < `130`, avisa con estado ámbar *"MANTÉN LA CARTA QUIETA"* y salta el OCR para proteger la batería y evitar throttling.
+   - `extractHeaderRoi(video)`: Proyección matemática exacta de la caja `.scanner-header-roi` sobre las coordenadas nativas del video stream considerando la escala y desfase de `object-fit: cover`.
+   - `computeOtsuThreshold(gray)` y `preprocessCanvas(canvas, mode)`: Binarización adaptativa Otsu que elimina brillos, hologramas y sombras sobre fondos coloreados.
+   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase:
+     - Pase 1: Binarización Otsu con umbral de confianza ≥ 60.
+     - Pase 2: Alto contraste normalizado (fallback para fuentes sutiles) con confianza ≥ 48.
+   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`), fases evolutivas (`Basic`, `Stage 1`, etc.), símbolos de coste y caracteres de ruido antes de transferir el texto al buscador.
+   - `toggleLinterna()`: Conmuta la linterna/torch en dispositivos móviles mediante `track.applyConstraints({ advanced: [{ torch: state }] })`.
+   - `cambiarCamara()`: Alterna entre cámara trasera y delantera.
+   - `procesarImagenArchivo(file)`: Carga y analiza fotos de cartas desde la galería o disco.
+   - `playSuccessChime()` & `triggerHaptic()`: Confirmación instantánea por síntesis Web Audio API (880Hz -> 1320Hz) y vibración háptica (`[45, 30, 45]ms`).
 
 4. **`js/deckbuilder.js`**:
    - Reglas de juego (`DECK_RULES`):
@@ -187,7 +195,7 @@ SnapTCG/
 
 ---
 
-## 📊 4. Modelos de Datos Unificados
+## 4. Modelos de Datos Unificados
 
 ### Objeto `CardResult` (Normalizado entre Pokémon y Magic):
 > La notación TypeScript es solo ilustrativa; el proyecto no usa TypeScript (en el código se documenta con JSDoc).
@@ -251,7 +259,7 @@ interface Deck {
 
 ---
 
-## 🎨 5. Sistema de Diseño y Tokens CSS
+## 5. Sistema de Diseño y Tokens CSS
 
 El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.dark` y `@theme inline` en [`css/style.css`](css/style.css) (con extensiones en [`css/design.css`](css/design.css)):
 
@@ -305,7 +313,7 @@ El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.
 
 ---
 
-## 🧭 6. Reglas Críticas para Agentes al Modificar el Código
+## 6. Reglas Críticas para Agentes al Modificar el Código
 
 Cuando un agente trabaje en este proyecto, debe acatar estrictamente las siguientes directrices:
 
@@ -324,13 +332,13 @@ Cuando un agente trabaje en este proyecto, debe acatar estrictamente las siguien
 5. **Idioma y Tono**:
    - La interfaz de usuario, placeholders, toasts y mensajes de error están en **Español** (`es`). Mantén la coherencia idiomática en las cadenas visibles.
 6. **Integridad del OCR**:
-   - Al ajustar el escáner, ten presente que procesar cada frame consume CPU en dispositivos móviles. Mantener `SCAN_INTERVAL_MS` entre 1200ms y 2000ms y no eliminar el recorte previo del 25% superior en el canvas antes de pasar la imagen a Tesseract.
+   - Al ajustar el escáner, ten presente que procesar cada frame consume CPU en dispositivos móviles. Mantener `SCAN_INTERVAL_MS` entre 1000ms y 1500ms y utilizar el filtro Laplaciano de movimiento y la proyección del ROI en el canvas antes de pasar la imagen a Tesseract.
 7. **Iconografía Profesional y Sin Emojis**:
    - **NO** usar emojis en la UI (botones, cabeceras, badges, acciones, mensajes o estados vacíos). Usar siempre los iconos SVG de `HEROICONS` en `js/icons.js` estilizados con `.heroicon`, `.heroicon-sm`, etc.
 
 ---
 
-## 🚀 7. Cómo Ejecutar y Probar Localmente
+## 7. Cómo Ejecutar y Probar Localmente
 
 Dado que es una aplicación estática con Web APIs (cámara y fetch):
 
@@ -348,7 +356,7 @@ open index.html
 
 ---
 
-## 🔮 8. Puntos de Extensión Futuros (Backlog Recomendado)
+## 8. Puntos de Extensión Futuros (Backlog Recomendado)
 
 Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmarket + histórico en `localStorage`), 2) Importador de mazos, 3) PWA, 4) más TCGs, 5) detección visual.
 
@@ -359,7 +367,7 @@ Orden de prioridad sugerido: 1) Tendencias de precio (`avg7`/`avg30` de Cardmark
 
 ---
 
-## ⚠️ 9. Limitaciones Conocidas
+## 9. Limitaciones Conocidas
 
 - **Mazos antiguos**: los mazos guardados antes de añadir `supertype`/`subtypes` a las cartas Pokémon muestran métricas PKM/TRA/ENE a 0 hasta volver a añadir las cartas (las energías básicas sí se reconocen por nombre).
 - **Histórico solo para cartas seguidas**: el trabajo diario registra únicamente cartas de la colección y los mazos; una carta que solo se busca no tiene gráfica. El histórico empieza el día que se activa el trabajo (no hay backfill).

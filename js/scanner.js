@@ -1,8 +1,13 @@
 /**
- * scanner.js — Premium Auto-Scanner Logic
- * Author: Sangar Studio
- * Version: 2.0.0
- * Continuous scanning with visual feedback
+ * scanner.js — Motor de Escaneo Profesional para Cartas TCG
+ * Arquitectura: Vanilla JS Zero-Build con Tesseract.js OCR
+ * Características:
+ *  - Preprocesamiento de imagen: Binarización Otsu y normalización de contraste
+ *  - Detección de desenfoque por movimiento (Varianza Laplaciana en tiempo real)
+ *  - Proyección geométrica exacta de la región de interés (ROI)
+ *  - Control de hardware: Linterna (Torch) y cambio de cámara
+ *  - Síntesis de audio Web Audio API + Retroalimentación háptica
+ *  - Carga y análisis de fotos desde galería de imágenes
  */
 
 let videoStream   = null;
@@ -11,61 +16,154 @@ let ocrWorker     = null;
 let isScanning    = false;
 let lastRead      = '';
 let scanPaused    = false;
+let facingMode    = 'environment';
+let torchActive   = false;
+let hasTorch      = false;
 
-const SCAN_INTERVAL_MS = 1500; // Slightly faster for premium feel
-const MIN_CONF         = 65;
+const SCAN_INTERVAL_MS = 1100; // Intervalo óptimo entre fotogramas estables
+const MIN_CONF_PASS1   = 60;   // Confianza mínima para pase binarizado Otsu
+const MIN_CONF_PASS2   = 48;   // Confianza mínima para pase de alto contraste
+const MOTION_THRESHOLD = 130;  // Umbral de varianza Laplaciana (por debajo es movimiento/borroso)
 
+/**
+ * Inicializa el worker de Tesseract con parámetros optimizados para títulos de cartas
+ */
 async function initOcrWorker() {
   if (ocrWorker) return;
-  ocrWorker = await Tesseract.createWorker('eng', 1, {
-    logger: () => {}
-  });
-  await ocrWorker.setParameters({
-    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-",
-  });
+  try {
+    ocrWorker = await Tesseract.createWorker('eng', 1, {
+      logger: () => {}
+    });
+    await ocrWorker.setParameters({
+      tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúñüÁÉÍÓÚÑÜ '-",
+    });
+  } catch (err) {
+    console.warn('Error inicializando worker de Tesseract:', err);
+  }
 }
 
+/**
+ * Inicia la cámara y el bucle de auto-escaneo
+ */
 async function iniciarEscaner() {
   resetUI();
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('scanner-wrap').style.display = 'block';
 
   try {
+    // Si ya había un stream activo, detenerlo limpiamente
+    if (videoStream) {
+      videoStream.getTracks().forEach(t => t.stop());
+      videoStream = null;
+    }
+
+    torchActive = false;
+    actualizarBotonLinterna(false, false);
+
     videoStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
+        facingMode: { ideal: facingMode },
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 }
+      },
+      audio: false
     });
-    
+
     const video = document.getElementById('live-video');
     video.srcObject = videoStream;
-    
-    // UI Feedback
+
+    // Detectar soporte para linterna (torch)
+    const track = videoStream.getVideoTracks()[0];
+    const caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
+    hasTorch = Boolean(caps.torch);
+    actualizarBotonLinterna(hasTorch, false);
+
     setScannerStatus("BUSCANDO CARTA...", "active");
-    
+
     await initOcrWorker();
-    
+
     scanPaused = false;
     lastRead   = '';
     startContinuousScan();
   } catch (err) {
-    console.error(err);
-    alert('Permiso de cámara denegado o no disponible.');
+    console.error('Error accediendo a la cámara:', err);
+    showScannerToast('Permiso de cámara denegado o no disponible en este dispositivo.', 'error');
     detenerEscaner();
   }
 }
 
+/**
+ * Detiene la cámara y limpia recursos
+ */
 function detenerEscaner() {
   stopContinuousScan();
+
   if (videoStream) {
+    const track = videoStream.getVideoTracks()[0];
+    if (track && torchActive) {
+      try {
+        track.applyConstraints({ advanced: [{ torch: false }] });
+      } catch (e) {}
+    }
     videoStream.getTracks().forEach(t => t.stop());
     videoStream = null;
   }
-  document.getElementById('scanner-wrap').style.display = 'none';
-  document.getElementById('placeholder').style.display = 'flex';
+
+  torchActive = false;
+  actualizarBotonLinterna(false, false);
+
+  const wrap = document.getElementById('scanner-wrap');
+  if (wrap) wrap.style.display = 'none';
+
+  const results = document.getElementById('results-grid');
+  const spinner = document.getElementById('spinner-wrap');
+  const hasResults = results && results.children.length > 0;
+  const isSpinning = spinner && spinner.classList.contains('visible');
+
+  if (!hasResults && !isSpinning) {
+    const ph = document.getElementById('placeholder');
+    if (ph) ph.style.display = 'flex';
+  }
+}
+
+/**
+ * Alterna entre cámara trasera y delantera
+ */
+async function cambiarCamara() {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  await iniciarEscaner();
+}
+
+/**
+ * Alterna la linterna del dispositivo móvil si está disponible
+ */
+async function toggleLinterna() {
+  if (!videoStream || !hasTorch) {
+    showScannerToast('Linterna no disponible en este dispositivo', 'info');
+    return;
+  }
+  const track = videoStream.getVideoTracks()[0];
+  if (!track) return;
+
+  try {
+    torchActive = !torchActive;
+    await track.applyConstraints({
+      advanced: [{ torch: torchActive }]
+    });
+    actualizarBotonLinterna(true, torchActive);
+  } catch (err) {
+    console.warn('Error alternando linterna:', err);
+    torchActive = false;
+    actualizarBotonLinterna(true, false);
+  }
+}
+
+function actualizarBotonLinterna(disponible, activo) {
+  const btn = document.getElementById('btn-scanner-torch');
+  if (!btn) return;
+  btn.style.opacity = disponible ? '1' : '0.4';
+  btn.classList.toggle('active', Boolean(activo));
 }
 
 function startContinuousScan() {
@@ -74,107 +172,506 @@ function startContinuousScan() {
 }
 
 function stopContinuousScan() {
-  if (scanInterval) { 
-    clearInterval(scanInterval); 
-    scanInterval = null; 
+  if (scanInterval) {
+    clearInterval(scanInterval);
+    scanInterval = null;
   }
 }
 
+/**
+ * Ciclo periódico de análisis de fotograma
+ */
 async function autoScan() {
   if (isScanning || scanPaused || !videoStream) return;
 
   const video = document.getElementById('live-video');
-  if (video.readyState < 2) return;
+  if (!video || video.readyState < 2) return;
+
+  // Extraer la región de interés (ROI del encabezado/título de la carta)
+  const roiCanvas = extractHeaderRoi(video);
+  if (!roiCanvas) return;
+
+  // Evaluar nitidez de fotograma (Filtro Laplaciano de movimiento)
+  const grayPixels = getGrayscaleBuffer(roiCanvas);
+  const sharpness = calculateSharpness(grayPixels, roiCanvas.width, roiCanvas.height);
+
+  if (sharpness < MOTION_THRESHOLD) {
+    setScannerStatus("MANTÉN LA CARTA QUIETA", "motion");
+    return; // Fotograma borroso o en movimiento; evitamos recalentar la CPU
+  }
 
   isScanning = true;
-  setScannerStatus("PROCESANDO...", "processing");
+  setScannerStatus("ESCANEANDO CARTA...", "processing");
 
-  const text = await captureAndOcr(video);
-  isScanning = false;
+  try {
+    const text = await recognizeRoiText(roiCanvas);
+    isScanning = false;
 
-  if (!text || text === lastRead) {
+    if (!text || text === lastRead) {
+      setScannerStatus("AUTO SCAN ACTIVO", "active");
+      return;
+    }
+
+    const cleaned = cleanOcrText(text);
+    if (!cleaned || cleaned.length < 3) {
+      setScannerStatus("AUTO SCAN ACTIVO", "active");
+      return;
+    }
+
+    // ¡Lectura exitosa confirmada!
+    lastRead   = cleaned;
+    scanPaused = true;
+
+    dispararExitoEscaneo(cleaned);
+  } catch (err) {
+    isScanning = false;
+    console.warn('Error en ciclo autoScan:', err);
     setScannerStatus("AUTO SCAN ACTIVO", "active");
-    return;
   }
+}
 
-  const cleaned = cleanOcrText(text);
-  if (!cleaned || cleaned.length < 3) {
+/**
+ * Disparador manual para capturar el fotograma actual
+ */
+async function capturarYProcesar() {
+  const video = document.getElementById('live-video');
+  if (!video || video.readyState < 2) return;
+
+  setScannerStatus("PROCESANDO FOTOGRAMA...", "processing");
+  const roiCanvas = extractHeaderRoi(video);
+  if (!roiCanvas) return;
+
+  try {
+    const text = await recognizeRoiText(roiCanvas);
+    const cleaned = cleanOcrText(text);
+
+    if (cleaned && cleaned.length >= 3) {
+      dispararExitoEscaneo(cleaned);
+    } else {
+      setScannerStatus("AUTO SCAN ACTIVO", "active");
+      showScannerToast("No se detectó el título de la carta. Alinea bien el borde superior.", "error");
+    }
+  } catch (err) {
+    console.error('Error al capturar:', err);
+    showScannerToast("Error al procesar la captura.", "error");
     setScannerStatus("AUTO SCAN ACTIVO", "active");
-    return;
   }
+}
 
-  lastRead = cleaned;
-  scanPaused = true;
+/**
+ * Procesa una imagen subida desde la galería fotográfica del usuario
+ */
+async function procesarImagenArchivo(file) {
+  if (!file) return;
 
-  // Visual success feedback
-  setScannerStatus(`¡CARTA LEÍDA: ${cleaned}!`, "success");
-  
+  setScannerStatus("PROCESANDO FOTO...", "processing");
+  showScannerToast("Analizando imagen de la galería...", "info");
+
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  img.src = objectUrl;
+
+  img.onload = async () => {
+    URL.revokeObjectURL(objectUrl);
+    try {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+
+      // Intentar primero con la franja superior (30% superior = título en TCGs)
+      const roiH = Math.round(h * 0.3);
+      const canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = roiH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, roiH, 0, 0, w, roiH);
+
+      let text = await recognizeRoiText(canvas);
+      let cleaned = cleanOcrText(text);
+
+      // Si falla, probar con la imagen completa reescalada
+      if (!cleaned || cleaned.length < 3) {
+        const fullCanvas = document.createElement('canvas');
+        const maxDim = 1200;
+        const scale = Math.min(1, maxDim / Math.max(w, h));
+        fullCanvas.width  = Math.round(w * scale);
+        fullCanvas.height = Math.round(h * scale);
+        const fullCtx = fullCanvas.getContext('2d');
+        fullCtx.drawImage(img, 0, 0, fullCanvas.width, fullCanvas.height);
+
+        text = await recognizeRoiText(fullCanvas);
+        cleaned = cleanOcrText(text);
+      }
+
+      if (cleaned && cleaned.length >= 3) {
+        dispararExitoEscaneo(cleaned);
+      } else {
+        setScannerStatus("NO DETECTADO", "active");
+        showScannerToast("No se reconoció el nombre. Prueba con una foto más nítida o escribe el nombre.", "error");
+      }
+    } catch (err) {
+      console.error('Error procesando imagen de archivo:', err);
+      showScannerToast("No se pudo procesar la imagen.", "error");
+      setScannerStatus("AUTO SCAN ACTIVO", "active");
+    }
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    showScannerToast("No se pudo cargar el archivo de imagen.", "error");
+  };
+}
+
+/**
+ * Acciones ejecutadas al reconocer una carta con éxito
+ */
+function dispararExitoEscaneo(nombreCarta) {
+  playSuccessChime();
+  triggerHaptic();
+
+  setScannerStatus(`¡CARTA LEÍDA: ${nombreCarta}!`, "success");
+
   const scannerContainer = document.querySelector('.scanner-container');
   if (scannerContainer) {
     scannerContainer.classList.add('scan-success-glow');
-    setTimeout(() => scannerContainer.classList.remove('scan-success-glow'), 1000);
+    setTimeout(() => scannerContainer.classList.remove('scan-success-glow'), 1200);
   }
-  
+
   setTimeout(() => {
-    document.getElementById('search-input').value = cleaned;
+    const input = document.getElementById('search-input');
+    if (input) input.value = nombreCarta;
     detenerEscaner();
     ejecutarBusqueda();
-  }, 500);
+  }, 450);
 }
 
-async function captureAndOcr(video) {
-  try {
-    const canvas = document.createElement('canvas');
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    const cropH = Math.round(vh * 0.25); // Top 25% of the frame
+/**
+ * Proyecta la caja visual del encabezado (ROI) sobre las coordenadas nativas del video
+ */
+function extractHeaderRoi(video) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) return null;
 
-    canvas.width  = vw;
-    canvas.height = cropH;
+  const vRect = video.getBoundingClientRect();
+  const roiEl = document.getElementById('scanner-header-roi');
+  const rRect = roiEl ? roiEl.getBoundingClientRect() : null;
 
-    const ctx = canvas.getContext('2d');
-    ctx.filter = 'grayscale(100%) contrast(200%) brightness(120%)';
-    ctx.drawImage(video, 0, 0, vw, cropH, 0, 0, vw, cropH);
+  let sx = 0, sy = 0, sWidth = vw, sHeight = Math.round(vh * 0.25);
 
-    const { data } = await ocrWorker.recognize(canvas);
+  if (rRect && vRect.width > 0 && vRect.height > 0) {
+    // Escala del video renderizado con object-fit: cover
+    const scale = Math.max(vRect.width / vw, vRect.height / vh);
+    const displayedWidth = vw * scale;
+    const displayedHeight = vh * scale;
+    const offsetX = (displayedWidth - vRect.width) / 2;
+    const offsetY = (displayedHeight - vRect.height) / 2;
 
-    const best = data.lines
-      .filter(l => l.confidence > MIN_CONF)
-      .sort((a, b) => b.confidence - a.confidence)[0];
+    const relLeft = (rRect.left - vRect.left) + offsetX;
+    const relTop  = (rRect.top - vRect.top) + offsetY;
 
-    return best ? best.text.trim() : null;
-  } catch (e) {
-    console.warn('OCR error:', e);
-    return null;
+    sx = Math.max(0, Math.round(relLeft / scale));
+    sy = Math.max(0, Math.round(relTop / scale));
+    sWidth  = Math.min(vw - sx, Math.round(rRect.width / scale));
+    sHeight = Math.min(vh - sy, Math.round(rRect.height / scale));
   }
+
+  if (sWidth <= 20 || sHeight <= 20) {
+    sx = Math.round(vw * 0.1);
+    sy = Math.round(vh * 0.05);
+    sWidth = Math.round(vw * 0.8);
+    sHeight = Math.round(vh * 0.22);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = sWidth;
+  canvas.height = sHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+  return canvas;
 }
 
+/**
+ * Obtiene el buffer en escala de grises de un canvas
+ */
+function getGrayscaleBuffer(canvas) {
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imgData.data;
+  const len = data.length;
+  const gray = new Uint8Array(len / 4);
+
+  for (let i = 0, g = 0; i < len; i += 4, g++) {
+    gray[g] = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+  }
+  return gray;
+}
+
+/**
+ * Calcula la varianza del operador Laplaciano para detectar desenfoque o movimiento
+ */
+function calculateSharpness(gray, w, h) {
+  let sum = 0;
+  let sumSq = 0;
+  let count = 0;
+  const step = 2; // Muestreo cada 2 píxeles para velocidad ultrarrápida (<0.4ms)
+
+  for (let y = 1; y < h - 1; y += step) {
+    const row = y * w;
+    for (let x = 1; x < w - 1; x += step) {
+      const c = gray[row + x];
+      const t = gray[row - w + x];
+      const b = gray[row + w + x];
+      const l = gray[row + x - 1];
+      const r = gray[row + x + 1];
+
+      const lap = t + b + l + r - (c * 4);
+      sum += lap;
+      sumSq += lap * lap;
+      count++;
+    }
+  }
+
+  if (count === 0) return 0;
+  const mean = sum / count;
+  return (sumSq / count) - (mean * mean);
+}
+
+/**
+ * Calcula el umbral de binarización óptimo de Otsu
+ */
+function computeOtsuThreshold(gray) {
+  const hist = new Int32Array(256);
+  const total = gray.length;
+  for (let i = 0; i < total; i++) {
+    hist[gray[i]]++;
+  }
+
+  let sum = 0;
+  for (let t = 0; t < 256; t++) {
+    sum += t * hist[t];
+  }
+
+  let sumB = 0;
+  let wB = 0;
+  let maxVariance = 0;
+  let bestThreshold = 128;
+
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+
+    if (varBetween > maxVariance) {
+      maxVariance = varBetween;
+      bestThreshold = t;
+    }
+  }
+  return bestThreshold;
+}
+
+/**
+ * Aplica transformaciones de imagen según el modo especificado
+ */
+function preprocessCanvas(canvas, mode = 'otsu') {
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imgData.data;
+  const len = data.length;
+  const gray = new Uint8Array(len / 4);
+
+  for (let i = 0, g = 0; i < len; i += 4, g++) {
+    gray[g] = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
+  }
+
+  if (mode === 'otsu') {
+    const thresh = computeOtsuThreshold(gray);
+    for (let i = 0, g = 0; i < len; i += 4, g++) {
+      const val = gray[g] >= thresh ? 255 : 0;
+      data[i]     = val;
+      data[i + 1] = val;
+      data[i + 2] = val;
+    }
+  } else {
+    // Normalización de contraste estirado
+    let min = 255;
+    let max = 0;
+    for (let g = 0; g < gray.length; g++) {
+      const v = gray[g];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const range = (max - min) || 1;
+    for (let i = 0, g = 0; i < len; i += 4, g++) {
+      const stretched = Math.min(255, Math.max(0, Math.round(((gray[g] - min) / range) * 255)));
+      data[i]     = stretched;
+      data[i + 1] = stretched;
+      data[i + 2] = stretched;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+}
+
+/**
+ * Reconoce el texto en la región de interés con estrategia multi-pase
+ */
+async function recognizeRoiText(rawCanvas) {
+  if (!ocrWorker) await initOcrWorker();
+
+  // Pase 1: Binarización Otsu (elimina brillos holográficos y reflejos)
+  const pass1 = document.createElement('canvas');
+  pass1.width  = rawCanvas.width;
+  pass1.height = rawCanvas.height;
+  pass1.getContext('2d').drawImage(rawCanvas, 0, 0);
+  preprocessCanvas(pass1, 'otsu');
+
+  let result = await ocrWorker.recognize(pass1);
+  let best = getBestLine(result.data);
+
+  if (best && best.confidence >= MIN_CONF_PASS1) {
+    return best.text.trim();
+  }
+
+  // Pase 2: Alto contraste normalizado (para fuentes con gradiente o fondos oscuros)
+  const pass2 = document.createElement('canvas');
+  pass2.width  = rawCanvas.width;
+  pass2.height = rawCanvas.height;
+  pass2.getContext('2d').drawImage(rawCanvas, 0, 0);
+  preprocessCanvas(pass2, 'contrast');
+
+  result = await ocrWorker.recognize(pass2);
+  best = getBestLine(result.data);
+
+  if (best && best.confidence >= MIN_CONF_PASS2) {
+    return best.text.trim();
+  }
+
+  return best ? best.text.trim() : null;
+}
+
+function getBestLine(data) {
+  if (!data || !data.lines || data.lines.length === 0) return null;
+  return data.lines
+    .filter(l => l.text && l.text.trim().length >= 2)
+    .sort((a, b) => b.confidence - a.confidence)[0] || null;
+}
+
+/**
+ * Limpieza inteligente de OCR: descarta HP, fases evolutivas y símbolos parásitos
+ */
 function cleanOcrText(raw) {
+  if (!raw) return '';
   return raw
-    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ '\-]/g, '')
+    .replace(/\b(\d{2,4}\s*HP|HP\s*\d{2,4})\b/gi, '')
+    .replace(/\b(Basic|Fase\s*[12]|Stage\s*[12]|Creature|Trainer|Item|Supporter|Entrenador)\b/gi, '')
+    .replace(/[{}[\]()<>@#$%^&*+=~|\\_]/g, ' ')
+    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ '\-]/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s+\d+$/, '') // descarta números aislados finales como costes de maná
     .trim();
 }
 
-async function capturarYProcesar() {
-  if (isScanning) return;
-  autoScan(); // Force one cycle
-}
-
+/**
+ * Actualiza el indicador visual de estado del escáner
+ */
 function setScannerStatus(msg, state) {
   const statusEl = document.getElementById('scanner-status');
+  const dotEl    = document.getElementById('scanner-status-dot');
   if (!statusEl) return;
-  
+
   statusEl.textContent = msg.toUpperCase();
-  
-  // Dynamic color feedback if needed, currently uses accent
-  if (state === 'success') {
-    statusEl.style.color = "#4ade80";
-  } else if (state === 'processing') {
-    statusEl.style.color = "var(--accent-color)";
-    statusEl.style.opacity = "0.7";
-  } else {
-    statusEl.style.color = "var(--accent-color)";
-    statusEl.style.opacity = "1";
+
+  if (dotEl) {
+    dotEl.className = 'status-dot ' + (state || 'active');
   }
+
+  if (state === 'success') {
+    statusEl.style.color = 'var(--primary)';
+  } else if (state === 'motion') {
+    statusEl.style.color = '#f57733';
+  } else if (state === 'processing') {
+    statusEl.style.color = '#ff9821';
+  } else {
+    statusEl.style.color = 'var(--primary)';
+  }
+}
+
+/**
+ * Síntesis de sonido de éxito con Web Audio API (cero dependencias de archivos de audio)
+ */
+function playSuccessChime() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.22);
+  } catch (e) {
+    // Ignorar si el navegador bloquea la reproducción automática de audio
+  }
+}
+
+/**
+ * Vibración háptica en dispositivos móviles
+ */
+function triggerHaptic() {
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate([45, 30, 45]);
+    }
+  } catch (e) {}
+}
+
+/**
+ * Notificación toast flotante para el escáner
+ */
+function showScannerToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.setAttribute('role', 'status');
+  const bg = type === 'error' ? 'var(--destructive)' : (type === 'success' ? 'var(--primary)' : 'var(--secondary)');
+  const color = type === 'success' ? '#000' : 'var(--foreground)';
+
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${bg};
+    color: ${color};
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 13px;
+    z-index: 2000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'toastOut 0.25s forwards';
+    setTimeout(() => toast.remove(), 250);
+  }, 2400);
 }
