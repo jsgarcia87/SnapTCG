@@ -82,7 +82,7 @@ function addCardToDeck(card, juego) {
 
   renderDeckList();
   renderDeckStats();
-  showDeckToast(`${card.nombre} añadido ✓`, "success");
+  showDeckToast(`${card.nombre} añadido`, "success");
 }
 
 function removeCardFromDeck(cardId, all = false) {

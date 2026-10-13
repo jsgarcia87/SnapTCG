@@ -7,9 +7,9 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 📌 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.0.0
+- **Versión Actual:** 3.2.0
 - **Autor / Estudio:** Sangar Studio
-- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
+- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo, consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
@@ -18,13 +18,13 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 | Capa | Tecnología / Servicio | Descripción |
 |---|---|---|
-| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium con Glassmorphism y shell móvil (`max-width: 500px`). |
+| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium OLED (`#000000`), estética inspirada en Collectr, marcos coleccionables con brillo holográfico (`.card-holo-sheen`) y shell móvil responsive (`max-width: 500px` hasta 1360px). |
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
 | **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo `SINGLE_LINE` con whitelist de caracteres. |
-| **Tipografía** | Google Fonts | `DM Sans` (cuerpo/UI) y `Cinzel` (títulos/display). |
-| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: lista por GraphQL (`/v2/graphql`, solo inglés) y fichas REST con precios (`pricing.cardmarket` con `avg`, `avg1`, `avg7`, `avg30`, y `tcgplayer`). Sin resultados en inglés se busca en español por REST. pokemontcg.io solo si TCGdex falla (es inestable: 502 y latencias de 20 s). |
-| **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa (`/cards/named?fuzzy=...`) y listado de todas las ediciones (`/cards/search?q=!&unique=prints`). |
-| **Persistencia** | Web Storage (`localStorage`) | Clave `snaptcg_decks` para la biblioteca de mazos del usuario. |
+| **Tipografía** | Google Fonts | `Inter` (UI/textos principales), `DM Sans` (cuerpo alternativo) y `Cinzel` (títulos/display). |
+| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: consulta multilingüe (EN vía GraphQL, ES y JA vía REST) con variantes (`normal`, `holo`, `reverse`, `firstEdition`), número de coleccionista (`localId`) y desglose de precios (`pricing.cardmarket` y `pricing.tcgplayer`). |
+| **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa, listado de ediciones (`/cards/search?q=!&unique=prints`), acabados (`finishes: ['nonfoil', 'foil', 'etched']`), filtrado por idioma (`lang:${lang}`) y número de coleccionista. |
+| **Persistencia** | Web Storage (`localStorage`) y Supabase | Colección y mazos sincronizables con RLS en Postgres o utilizables en modo demo local. |
 
 ---
 
@@ -32,22 +32,22 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 ```bash
 SnapTCG/
-├── index.html         # Shell principal de la app, navegación, modales y carga de scripts
+├── index.html         # Shell principal de la app, navegación, barra de filtros Collectr, modales y carga de scripts
 ├── css/
-│   ├── style.css      # Base: tokens, componentes (tarjetas, escáner, editor de mazos, análisis, colección, precios, gráficas)
+│   ├── style.css      # Base: tokens OLED, componentes Collectr (filtros, tarjetas 63/88, brillo holo, pickers, portfolio)
 │   └── design.css     # Capa v3 (se carga DESPUÉS): layout responsive, navegación, Inicio, detalle de carta, accesibilidad
 ├── js/
-│   ├── icons.js       # Catálogo centralizado de iconos SVG (Heroicons v2, zero-build)
+│   ├── icons.js       # Catálogo centralizado de iconos SVG (Heroicons v2, zero-build, cero emojis)
 │   ├── charts.js      # Gráficas de línea en SVG (sin librerías) y selector de rango
-│   ├── prices.js      # Red resiliente (timeout + reintentos), caché localStorage, formato de precios y refresco
-│   ├── api.js         # Integración y normalización de APIs externas (TCGdex/Pokémon TCG API y Scryfall)
+│   ├── prices.js      # Red resiliente, cálculo de variantes (holo/reverse/normal), market stats (mín/med/máx), caché y refresco
+│   ├── api.js         # Normalización multilingüe (EN, ES, JA), variantes y APIs externas (TCGdex/Scryfall)
 │   ├── scanner.js     # Gestión de WebRTC (getUserMedia), preprocesamiento Canvas y ciclo OCR continuo
 │   ├── deckbuilder.js # Motor de reglas de mazos (Standard, Commander), métricas y persistencia
 │   ├── config.js      # URL/anon key de Supabase y PUBLIC_OWNER_ID (vacío = modo demo local)
 │   ├── home.js        # Pantalla de Inicio: valor de la colección, tendencia, movimientos, mazos recientes y onboarding
-│   ├── cloud.js       # Colección de cartas, login (magic link) y sincronización de mazos con Supabase
+│   ├── cloud.js       # Colección de cartas, hero de portfolio Collectr con métricas, login y sincronización
 │   ├── stats.js       # Estadísticas del mazo, probabilidades hipergeométricas y simulación Monte Carlo
-│   └── app.js         # Orquestación de estado general, tematización dinámica, navegación y UI
+│   └── app.js         # Orquestación de estado, filtros Collectr (idioma, acabado, orden), modales y tematización
 ├── supabase/
 │   └── schema.sql     # Tablas collection, decks, price_history y collection_value_history con RLS
 ├── scripts/
@@ -56,7 +56,7 @@ SnapTCG/
 │   └── update-prices.yml  # Cron diario 10:30 UTC + ejecución manual; usa los secretos SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY
 ├── .gitignore
 ├── README.md          # Documentación orientada al usuario final
-├── .DS_Store          # Basura de macOS (commiteada por error; ver sección 9)
+├── CHANGELOG.md       # Registro histórico de versiones y cambios del producto
 └── agent.md           # Guía de contexto, arquitectura y reglas operativas para agentes IA
 ```
 
@@ -64,8 +64,9 @@ SnapTCG/
 
 1. **`index.html`**:
    - Define el contenedor `.app-shell`.
-   - Control de pestañas: `#tab-scanner` (escáner + buscador + historial) y `#tab-deck` (editor de mazos + biblioteca).
-   - Modales emergentes: `#card-detail-modal` (ficha de carta y precios) y `#modal-overlay` (exportador de listas de mazo).
+   - Barra de filtros Collectr (`.collectr-filter-bar`): selector de idioma (`Todos`, `EN`, `ES`, `JA`), acabado (`Todos`, `Holofoil`, `Normal`, `Reverse`) y ordenación (`search-sort-select`).
+   - Control de pestañas: `#tab-home` (Inicio), `#tab-scanner` (escáner + buscador + historial), `#tab-deck` (editor de mazos + biblioteca) y `#tab-collection` (portfolio de colección).
+   - Modal emergente enriquecido `#card-detail-modal`: marco coleccionable con brillo `.holo-glare`, selector de variante `.variant-picker`, selector de condición `.condition-picker`, estadísticas de mercado `.market-stats-grid` y gráfico histórico.
    - Carga ordenada de scripts al pie:
      ```html
      <script src="js/icons.js"></script>
@@ -83,27 +84,34 @@ SnapTCG/
 
 2. **`js/icons.js`** (se carga primero):
    - Catálogo `HEROICONS` con iconos SVG vectoriales basados en [Heroicons v2](https://heroicons.com/).
-   - Cero emojis en la interfaz: `bolt`, `sparkles`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`.
+   - **Cero emojis en la interfaz**: `bolt`, `sparkles`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`, `funnel`, `globeAlt`, `check`, `arrowsUpDown`.
    - Clases de soporte CSS: `.heroicon` (18px), `.heroicon-sm` (14px), `.heroicon-lg` (24px), `.btn-icon`, `.trend-icon`.
 
 3. **`js/prices.js`** (se carga antes que `api.js`):
    - `fetchJSON(url, {retries, timeout, okStatuses})`: fetch con timeout y reintentos con backoff (429/5xx/red). Lanza errores con `code` (`network`, `http`, `parse`).
    - Caché: `cacheGet/cacheSet` (clave `snaptcg_cache_v1`, máx. 40 entradas). TTL: búsquedas 12 h, precios por carta 6 h. Sin conexión se sirve la caché caducada (`card.enCache`).
-   - `applyPokemonPricing` / `applyScryfallPricing`: rellenan `precio`, `precioFoil`, `moneda`, `fuente`, `actualizado` (fecha de la fuente), `consultado` (cuándo se pidió) y `tendencia {d7, d30}`. Pokémon: precio = `avg` de Cardmarket; tendencia = media de hoy (`avg1`) vs `avg7`/`avg30` (misma métrica; `trend` de Cardmarket no se mezcla). Sin Cardmarket, cae a TCGplayer (USD).
+   - `applyPokemonPricing` / `applyScryfallPricing`:
+     - Rellenan precios principales (`precio`, `precioFoil`, `moneda`, `fuente`, `actualizado`, `consultado`, `tendencia`).
+     - Desglosan cotizaciones específicas por variante en `card.variantPrices`: `normal`, `holo`, `reverse`, `firstEdition`.
+     - Calculan estadísticas de mercado (`marketLow`, `marketMid`, `marketHigh`).
+   - Helpers de precios:
+     - `getCardActivePrice(card, variantKey)`: obtiene el precio de la variante seleccionada o activa.
+     - `getCardActiveTrend(card, variantKey)`: obtiene la tendencia correspondiente a la variante.
+     - `formatVariantName(key)`: traduce claves de variante a etiquetas en español (`Holofoil`, `Reverse Holo`, `1st Edition`, `Normal`).
    - `hidratarPrecios(cards, onUpdate)` (progresivo, concurrencia 6), `hidratarPrecioPokemon`, `refreshCardPrices(cards)` (Scryfall por lotes de 75 en `/cards/collection`; TCGdex por ficha).
    - Utilidades: `formatMoney`, `timeAgo`, `trendBadge`, `sumValue`/`formatValue` (EUR y USD se suman por separado, nunca se convierten).
-   - Histórico: `trendFromHistory(points)` (d7/d30 desde una serie diaria; la usan la app y el trabajo diario), y snapshots locales para el modo demo (`recordPriceSnapshot`, `recordValueSnapshot`, `localCardHistory`, `localValueHistory`; claves `snaptcg_history_v1` y `snaptcg_value_history_v1`).
+   - Histórico: `trendFromHistory(points)` (d7/d30 desde una serie diaria), y snapshots locales para el modo demo (`recordPriceSnapshot`, `recordValueSnapshot`, `localCardHistory`, `localValueHistory`).
 
    **`js/charts.js`**: `lineChart(points, {moneda, label})` devuelve un SVG accesible (`role="img"` + `aria-label` con el resumen; puntos con `<title>` como tooltip) y `rangePills(actual, opciones, fn)` el selector 30 d / 90 d / 1 año.
 
-   **Histórico en la nube** (`cloud.js`): `loadCardHistory(card)` lee `price_history` (lectura pública) o los snapshots locales; `loadValueHistory()` lee `collection_value_history` del dueño. En el detalle de carta (`app.js`: `cargarHistorialModal`) la gráfica aparece si hay ≥ 2 puntos, y para Magic la tendencia se calcula con ese histórico.
+   **Histórico en la nube** (`cloud.js`): `loadCardHistory(card)` lee `price_history` (lectura pública) o los snapshots locales; `loadValueHistory()` lee `collection_value_history` del dueño.
 
-   **Trabajo diario** (`scripts/update-prices.mjs`): lee `collection` y `decks` con la service key, consulta Scryfall (lotes de 75) y TCGdex (5 en paralelo), hace upsert en `price_history` (idempotente por `card_id, day`), calcula la tendencia de Magic, actualiza `collection.card` con `PATCH` (sin tocar `qty`) y guarda el valor por dueño. Falla (exit 1) si no obtiene ningún precio. Las claves `sb_secret_...` van solo en la cabecera `apikey`.
+   **Trabajo diario** (`scripts/update-prices.mjs`): lee `collection` y `decks` con la service key, consulta Scryfall y TCGdex, hace upsert en `price_history`, calcula la tendencia de Magic, actualiza `collection.card` con `PATCH` y guarda el valor por dueño.
 
    **`js/api.js`**:
-   - `buscarPokemon(nombre)`: TCGdex GraphQL (inglés) → TCGdex REST en español → Pokémon TCG API (respaldo, admite `POKEMON_API_KEY`). Los precios llegan después, por ficha (`preciosCargados: false` hasta entonces). Orden: coincidencias exactas primero, cartas sin imagen al final; máx. 60.
-   - `buscarMagic(nombre)`: Scryfall en dos pasos (fuzzy + prints). Su `actualizado` es la fecha de `bulk-data` (`default_cards`), ya que Scryfall refresca los precios una vez al día.
-   - `buscarCartas(nombre, juego)`: enrutador con caché y recurso a la caché caducada si hay fallo de red.
+   - `buscarPokemon(nombre, lang)`: TCGdex con filtro de idioma (`all`, `en`, `es`, `ja`). Para inglés consulta GraphQL `/v2/graphql` (con `variants` y `localId`). Para español o japonés consulta `/v2/{lang}/cards` por REST. Respaldo en Pokémon TCG API.
+   - `buscarMagic(nombre, lang)`: Scryfall con filtro de idioma (`lang:${lang}`). Extrae acabados (`finishes`), `collector_number`, idioma y precios.
+   - `buscarCartas(nombre, juego, lang)`: enrutador con caché por juego e idioma (`search:${juego}:${lang}:${nombre}`).
 
 3. **`js/scanner.js`**:
    - `iniciarEscaner()` / `detenerEscaner()`: Gestiona el flujo `navigator.mediaDevices.getUserMedia` (`facingMode: 'environment'`, resolución ideal 1280x720).
@@ -137,8 +145,11 @@ SnapTCG/
 
 6. **`js/cloud.js`** (pestaña **Colección**, `#tab-collection`):
    - Dos modos: **demo** (sin config o con `?demo`: `localStorage`, clave `snaptcg_collection`) y **nube** (`config.js` rellenado: `supabase-js` se carga por CDN bajo demanda).
+   - **Portfolio Hero Card estilo Collectr** (`.portfolio-hero-card`): visualiza valor total (EUR y USD), total de cartas, cartas únicas, conteo de acabados Holo/Foil y distribución por idiomas (`EN`, `ES`, `JA`).
+   - **Filtros de Colección**: filtros rápidos por juego (Todos, Pokémon, Magic), acabado (Todos, Holofoil, Normal, Reverse), idioma y ordenación (Mayor valor, Menor valor, Nombre, Cantidad).
+   - **Tarjetas de Colección Coleccionables**: marco con relación de aspecto 63/88, controles táctiles de cantidad (`+`/`-`), badge de condición (`NM`, `LP`, etc.) y acabado holo.
    - Modelo: el dueño inicia sesión (`signInWithOtp`, `shouldCreateUser: false`) y edita; los visitantes ven la colección de `PUBLIC_OWNER_ID` en solo lectura (`canEditCollection()`).
-   - Colección: `collectionAdd`, `collectionRemove`, `addCurrentCardToCollection`, `renderCollection`. Tabla `collection` (pública en lectura, escritura solo del dueño).
+   - Colección: `collectionAdd(card, variant, condition)`, `collectionRemove`, `addCurrentCardToCollection`, `renderCollection`. Tabla `collection` (pública en lectura, escritura solo del dueño; el objeto `card` persiste `selectedVariant` y `condition`).
    - Mazos: `cloudSyncDecks`, `cloudDeleteDeck`, `pullDecksFromCloud` (copia de seguridad privada, tabla `decks`). `deckbuilder.js` los llama tras guardar/borrar.
    - `renderCollection` escapa todo con `esc()` (datos de APIs externas). `#coleccion` en la URL abre directamente la pestaña.
    - La *anon key* es pública; la seguridad la dan las políticas RLS de `supabase/schema.sql`. Nunca incluir la `service_role key`.
@@ -148,14 +159,22 @@ SnapTCG/
    - Estado vacío = onboarding de 3 pasos; en modo visitante (solo lectura) no se ofrece añadir.
 
 8. **`js/app.js`**:
-   - Variables de estado globales: `juegoActual` (`"pokemon"` | `"magic"`), `ultimosResultados`, `sesionCartas`.
+   - Variables de estado globales: `juegoActual` (`"pokemon"` | `"magic"`), `rawSearchResults`, `searchFilters` (`{ lang: 'all', finish: 'all', sort: 'relevance' }`), `cardCondition` (`"NM"`), `ultimosResultados`, `sesionCartas`.
+   - **Filtros y Ordenación estilo Collectr**:
+     - `setSearchFilter(tipo, valor)`: actualiza filtros y refresca vista o dispara búsqueda multilingüe si cambia el idioma.
+     - `filterAndSortCards(cards)`: aplica filtros de acabado y ordenación (relevancia, precio descendente/ascendente, alfabético).
+   - **Detalle de Carta Estilo Collectr**:
+     - `pintarVariantesModal(carta)`: renderiza botones interactivos de variante (`.variant-pill`) con precio en tiempo real por cada acabado detectado.
+     - `selectCardVariant(key)`: conmuta la variante activa (`normal`, `holo`, `reverse`, `firstEdition`) recalculando precio, gráfica y brillo holo.
+     - `updateDetailHoloState(carta)`: activa o desactiva la capa de brillo `.holo-glare` según el acabado seleccionado.
+     - `setCardCondition(cond)`: establece la condición activa (`NM`, `LP`, `MP`, `HP`).
    - `setGame(juego)` y `updateAppTheme()`: Alterna tema visual modificando variables CSS (`--accent-color`, `--accent-rgb`, clases de `body` `.mode-pokemon` o `.mode-magic`).
    - `switchTab(tab)`: Controla la navegación (`'home'`, `'scanner'` = Buscar, `'deck'`, `'collection'`), actualiza `aria-current` y el hash (`#buscar`, `#mazos`, `#coleccion`; `#inicio` o vacío = Inicio). `initCloud()` se llama en `DOMContentLoaded`.
-   - `setGame(juego)`: hay **dos** selectores de juego sincronizados (`.game-toggle [data-game]`, en Buscar y en el editor de mazos); el juego se recuerda en `localStorage` (`snaptcg_game`).
-   - `abrirDetalle(carta, registrar)`: abre el detalle (hoja inferior en móvil, diálogo de dos columnas en ≥ 900 px); `seleccionarCarta(i)` y `abrirCartaGuardada(id)` la usan. Gestiona foco (se devuelve al cerrar), `Escape` y bloqueo del scroll (`body.modal-open`). Muestra chips, precio con contexto, «Tienes ×N» (`pintarPoseidaModal`) y la gráfica.
-   - `renderizarLista(resultados)`: Pinta tarjetas en la cuadrícula de resultados y muestra el badge `possession-badge` (`xN`) si la carta ya está en el mazo.
-   - `ejecutarBusqueda()`: Punto de entrada principal de la búsqueda (manual o desde el OCR); llama a `buscarCartas` y renderiza.
-   - `seleccionarCarta(index)` y `añadirAHistorial(carta)`: Despliega el bottom sheet de detalle y actualiza el historial de escaneos de la sesión.
+   - `setGame(juego)`: sincroniza selectores de juego en Buscar y en el editor de mazos; recuerda el juego en `localStorage` (`snaptcg_game`).
+   - `abrirDetalle(carta, registrar)`: abre el modal (hoja inferior en móvil, diálogo de dos columnas en ≥ 900 px); inicializa variantes, condición, chips, estadísticas mín/med/máx y gráfica.
+   - `renderizarLista(resultados)`: Pinta tarjetas coleccionables en cuadrícula (aspect-ratio 63/88) con badges de acabado, idioma, brillo holo (`.card-holo-sheen`) y estado de posesión en mazo (`possession-badge`).
+   - `ejecutarBusqueda()`: Punto de entrada principal de búsqueda (manual o desde OCR) pasando el filtro de idioma activo a `buscarCartas`.
+   - `seleccionarCarta(index)` y `añadirAHistorial(carta)`: Despliega el modal y actualiza el historial de escaneos de la sesión.
    - `closeModal()`, `volverALista()`, `exportarLista()`, `mostrarCargando(texto)`, `mostrarError(msg)`, `resetUI()`: Utilidades de UI y modales.
 
 ---
@@ -173,7 +192,9 @@ interface CardResult {
   nombre: string;           // Nombre oficial de la carta
   set: string;              // Nombre de la colección / edición
   setCode: string;          // Código corto del set
-  precio: number | null;    // Precio en EUR/USD (o null si no disponible)
+  localId?: string;         // Número de coleccionista en el set (ej. "25", "182/198")
+  lang?: string;            // Código de idioma ("en", "es", "ja")
+  precio: number | null;    // Precio base en EUR/USD (o null si no disponible)
   precioFoil?: number | null; // Precio versión foil
   moneda: "eur" | "usd";    // Moneda base del precio
   tipo: "pokemon" | "magic";// Juego de procedencia
@@ -182,6 +203,22 @@ interface CardResult {
   cmc?: number | null;      // (Magic) Coste de maná convertido
   supertype?: string;       // (Pokémon) Pokémon / Trainer / Energy
   subtypes?: string[];      // (Pokémon) ej. ["Basic"], ["Stage 1"]
+  
+  // Atributos de acabado, variantes y estado estilo Collectr:
+  variants?: {
+    normal?: boolean;
+    reverse?: boolean;
+    holo?: boolean;
+    firstEdition?: boolean;
+  };
+  finishes?: string[];      // (Magic) ["nonfoil", "foil", "etched"]
+  selectedVariant?: "normal" | "holo" | "reverse" | "firstEdition";
+  condition?: "NM" | "LP" | "MP" | "HP";
+  variantPrices?: Record<string, number | null>;
+  variantTrends?: Record<string, { d7: number | null; d30: number | null }>;
+  marketLow?: number | null;
+  marketMid?: number | null;
+  marketHigh?: number | null;
 }
 ```
 
@@ -234,6 +271,23 @@ El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.
   - Espaciado base (`--spacing`): `0.25rem` (4px) y escala `--space-1` a `--space-6`.
   - Sombras: `--shadow-blur: 24px`, `--shadow-color: #000000`, `--shadow-opacity: 0.08`, `--shadow-offset-y: 1px`.
 - **Estructura del Shell:** Ancho adaptativo (`max-width: 500px` en móvil, responsive hasta 1360px en escritorio con navegación lateral y diálogo de dos columnas), respetando la barra de navegación fija y safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
+
+### Componentes de UI Inspirados en Collectr:
+- **Barra de Filtros y Ordenación (`.collectr-filter-bar`):**
+  - Contenedor con scroll horizontal optimizado para móviles sin romper el layout.
+  - Píldoras interactivas (`.filter-pill`): estados activo con acento neón y fondo sutil.
+  - Desplegable de ordenación (`.filter-select`) para ordenar por relevancia, precio o nombre.
+- **Tarjetas Coleccionables en Cuadrícula (`.card-item`):**
+  - Contenedor de arte (`.card-artwork-wrapper`) con relación de aspecto coleccionable `63 / 88`.
+  - Capa de brillo holográfico (`.card-holo-sheen`) con gradiente angular animado para cartas foil/holo.
+  - Badges superpuestos: `.badge-lang` (idioma de la carta), `.badge-finish` (Holo, Reverse, 1st Ed) y `.possession-badge` (cantidad en mazo).
+- **Detalle de Carta Coleccionable:**
+  - Marco con reflejo dinámico (`.detail-card-wrapper` + `.holo-glare`).
+  - Selector de Variante (`.variant-picker` / `.variant-pill`): muestra botones de acabado con precio en vivo por variante.
+  - Selector de Condición (`.condition-picker` / `.condition-pill`): NM, LP, MP, HP con subtexto descriptivo.
+  - Cuadrícula de Mercado (`.market-stats-grid`): tarjetas con Mínimo, Media y Máximo de mercado.
+- **Hero Card de Portfolio (`.portfolio-hero-card`):**
+  - Resumen visual en la pestaña Colección con valor total en EUR y USD, total de cartas, cartas únicas, acabados holo y desglose de idiomas.
 
 ### Iconografía (Heroicons v2):
 - **Cero Emojis:** Todos los iconos de la UI provienen de [Heroicons v2](https://heroicons.com/) definidos en `js/icons.js` como SVGs vectoriales inline.

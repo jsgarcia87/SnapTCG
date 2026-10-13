@@ -136,10 +136,11 @@ function applyPokemonPricing(card, pricing) {
   const tp = pricing?.tcgplayer;
   card.consultado = new Date().toISOString();
   card.precio = null; card.precioFoil = null; card.tendencia = null; card.fuente = null; card.actualizado = null;
+  card.variantPrices = {};
+  card.variantTrends = {};
 
   if (cm && (cm.avg > 0 || cm.trend > 0)) {
-    // Precio = media de ventas (avg); la tendencia compara la media de hoy (avg1) con las de 7 y 30 días,
-    // siempre la misma métrica. "trend" de Cardmarket es otra métrica y no se mezcla.
+    // Precio = media de ventas (avg); la tendencia compara la media de hoy (avg1) con las de 7 y 30 días
     card.precio = cm.avg > 0 ? cm.avg : cm.trend;
     card.precioFoil = cm["avg-holo"] > 0 ? cm["avg-holo"] : (cm["trend-holo"] > 0 ? cm["trend-holo"] : null);
     card.moneda = "eur";
@@ -147,17 +148,60 @@ function applyPokemonPricing(card, pricing) {
     card.actualizado = cm.updated || null;
     const hoy = cm.avg1 > 0 ? cm.avg1 : cm.avg;
     card.tendencia = { d7: pctChange(hoy, cm.avg7), d30: pctChange(hoy, cm.avg30) };
+
+    const hoyHolo = cm["avg1-holo"] > 0 ? cm["avg1-holo"] : (cm["avg-holo"] || cm["trend-holo"]);
+    const trendHolo = { d7: pctChange(hoyHolo, cm["avg7-holo"]), d30: pctChange(hoyHolo, cm["avg30-holo"]) };
+
+    card.variantPrices = {
+      normal: card.precio,
+      holo: card.precioFoil,
+      reverse: cm["avg-holo"] > 0 ? cm["avg-holo"] : (cm["trend-holo"] > 0 ? cm["trend-holo"] : card.precio)
+    };
+    card.variantTrends = {
+      normal: card.tendencia,
+      holo: trendHolo,
+      reverse: trendHolo
+    };
+
+    card.marketLow = cm.low > 0 ? cm.low : (cm["low-holo"] > 0 ? cm["low-holo"] : null);
+    card.marketHigh = cm.trend > 0 ? cm.trend * 1.5 : (card.precio ? card.precio * 1.4 : null);
+    card.marketMid = card.precio;
   } else if (tp) {
     const variants = ["normal", "holofoil", "reverse-holofoil", "1st-edition", "1st-edition-holofoil"]
-      .map(k => tp[k]).filter(v => v && v.marketPrice > 0);
+      .map(k => ({ k, v: tp[k] })).filter(x => x.v && x.v.marketPrice > 0);
     if (variants.length) {
-      card.precio = variants[0].marketPrice;
+      card.precio = variants[0].v.marketPrice;
       card.precioFoil = tp.holofoil?.marketPrice > 0 ? tp.holofoil.marketPrice : null;
       card.moneda = "usd";
       card.fuente = "TCGplayer";
       card.actualizado = tp.updated || null;
+
+      card.variantPrices = {
+        normal: tp.normal?.marketPrice || null,
+        holo: tp.holofoil?.marketPrice || null,
+        reverse: tp["reverse-holofoil"]?.marketPrice || null,
+        firstEdition: tp["1st-edition"]?.marketPrice || tp["1st-edition-holofoil"]?.marketPrice || null
+      };
+
+      const baseV = variants[0].v;
+      card.marketLow = baseV.lowPrice || null;
+      card.marketMid = baseV.midPrice || baseV.marketPrice || null;
+      card.marketHigh = baseV.highPrice || null;
     }
   }
+
+  // Si la carta tiene variantes conocidas pero falta precio específico, fallback inteligente
+  if (card.variants) {
+    if (card.variants.normal && !card.variantPrices.normal && card.precio) card.variantPrices.normal = card.precio;
+    if (card.variants.holo && !card.variantPrices.holo && card.precioFoil) card.variantPrices.holo = card.precioFoil;
+    if (card.variants.reverse && !card.variantPrices.reverse && card.precioFoil) card.variantPrices.reverse = card.precioFoil;
+  }
+
+  if (!card.selectedVariant) {
+    card.selectedVariant = (card.variants?.normal !== false && card.variantPrices.normal) ? "normal"
+      : (card.variantPrices.holo ? "holo" : (card.variantPrices.reverse ? "reverse" : "normal"));
+  }
+
   card.preciosCargados = true;
   return card;
 }
@@ -169,6 +213,9 @@ function applyScryfallPricing(card, c, bulkUpdatedAt) {
   card.consultado = new Date().toISOString();
   card.actualizado = bulkUpdatedAt || null;
   card.tendencia = null;
+  card.variantPrices = {};
+  card.variantTrends = {};
+
   if (eur > 0) {
     card.precio = eur; card.moneda = "eur"; card.fuente = "Cardmarket (vía Scryfall)";
     card.precioFoil = parseFloat(p.eur_foil) > 0 ? parseFloat(p.eur_foil) : null;
@@ -178,8 +225,57 @@ function applyScryfallPricing(card, c, bulkUpdatedAt) {
   } else {
     card.precio = null; card.precioFoil = null; card.moneda = "eur"; card.fuente = null;
   }
+
+  card.variantPrices = {
+    normal: card.precio,
+    holo: card.precioFoil
+  };
+
+  card.marketLow = card.precio ? Number((card.precio * 0.75).toFixed(2)) : null;
+  card.marketMid = card.precio;
+  card.marketHigh = card.precioFoil ? card.precioFoil : (card.precio ? Number((card.precio * 1.5).toFixed(2)) : null);
+
+  const finishes = c.finishes || ["nonfoil"];
+  card.variants = {
+    normal: finishes.includes("nonfoil"),
+    holo: finishes.includes("foil") || finishes.includes("etched")
+  };
+  card.selectedVariant = finishes.includes("nonfoil") ? "normal" : "holo";
+
   card.preciosCargados = true;
   return card;
+}
+
+/** Devuelve el precio activo según la variante elegida o por defecto. */
+function getCardActivePrice(card, variantKey) {
+  if (!card) return null;
+  const v = variantKey || card.selectedVariant || "normal";
+  if (card.variantPrices && card.variantPrices[v] != null && card.variantPrices[v] > 0) {
+    return card.variantPrices[v];
+  }
+  if (v === "holo" && card.precioFoil > 0) return card.precioFoil;
+  if (v === "normal" && card.precio > 0) return card.precio;
+  return card.precio != null ? card.precio : card.precioFoil;
+}
+
+/** Devuelve la tendencia { d7, d30 } según la variante. */
+function getCardActiveTrend(card, variantKey) {
+  if (!card) return null;
+  const v = variantKey || card.selectedVariant || "normal";
+  if (card.variantTrends && card.variantTrends[v]) return card.variantTrends[v];
+  return card.tendencia || null;
+}
+
+/** Nombres en español para las variantes de acabado */
+const VARIANT_NAMES = {
+  normal: "Normal",
+  holo: "Holofoil",
+  reverse: "Reverse Holo",
+  firstEdition: "1st Edition"
+};
+
+function formatVariantName(key) {
+  return VARIANT_NAMES[key] || (key ? key.charAt(0).toUpperCase() + key.slice(1) : "Normal");
 }
 
 /** Fecha de la última actualización diaria de precios de Scryfall (caché 6 h). */

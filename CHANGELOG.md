@@ -4,6 +4,33 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.2.0] - 2026-10-13
+
+### Añadido
+- **Rediseño UI/UX Inspirado en Collectr (getcollectr.com)**:
+  - **Barra de Filtros y Ordenación estilo Collectr** (`.collectr-filter-bar`):
+    - Filtro de **Idioma**: `Todos`, `EN` (Inglés), `ES` (Español) y `JA` (Japonés).
+    - Filtro de **Acabado / Estilo Holo**: `Todos`, `Holofoil`, `Normal` y `Reverse`.
+    - Selector de **Ordenación**: Relevancia, Mayor precio, Menor precio y Nombre (A-Z).
+  - **Ficha de Detalle de Carta Enriquecida**:
+    - Marco de carta coleccionable con efecto de brillo holográfico dinámico (`.holo-glare`).
+    - **Selector interactivo de Variante / Acabado** (`.variant-picker`): Normal, Holofoil, Reverse Holo y 1st Edition con indicación de precio en tiempo real por variante.
+    - **Selector de Condición de la Carta** (`.condition-picker`): NM (Near Mint), LP (Light Play), MP (Moderate Play) y HP (Heavy Play).
+    - **Panel de Estadísticas de Mercado** (`.market-stats-grid`): Indicadores de precio Mínimo, Media y Máximo.
+  - **Portfolio y Colección Rediseñados**:
+    - **Hero Card de Portfolio** (`.portfolio-hero-card`) con métricas globales consolidadas: Valor total en EUR y USD, Total de cartas, Cartas únicas, Cantidad de Holo/Foil y Desglose por Idiomas.
+    - Filtros rápidos en la colección por Juego (Pokémon/Magic), Acabado e Idioma, con ordenación por Valor, Cantidad o Nombre.
+    - Tarjetas de colección con badges de condición, acabado, idioma y controles táctiles de cantidad (`+`/`-`).
+- **Soporte Multilingüe y Modelado de Variantes**:
+  - Normalización en `js/api.js` de variantes de TCGdex (`normal`, `holo`, `reverse`, `firstEdition`) y Scryfall (`nonfoil`, `foil`, `etched`).
+  - Búsqueda por idioma con claves de caché segregadas (`search:${juego}:${lang}:${nombre}`).
+  - Desglose y cálculo de precios por variante en `js/prices.js` (`variantPrices`, `variantTrends`, `getCardActivePrice`, `getCardActiveTrend`).
+- **Iconografía Heroicons v2**:
+  - Incorporación de nuevos iconos SVG vectoriales: `funnel` (embudo de filtros), `globeAlt` (idioma), `check` (confirmación) y `arrowsUpDown` (ordenación).
+  - Cero emojis en toda la aplicación, manteniendo consistencia visual profesional.
+
+---
+
 ## [3.1.0] - 2026-10-12
 
 ### Añadido

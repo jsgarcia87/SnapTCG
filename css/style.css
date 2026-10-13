@@ -540,26 +540,135 @@ body::before {
   background: var(--surface-color);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  padding: 12px;
+  padding: 10px;
   transition: all var(--transition-fast);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
 }
 
 .card-item:hover {
   border-color: var(--accent-color);
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   background: var(--surface-hover);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.card-artwork-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0a0c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-thumb {
   width: 100%;
-  aspect-ratio: 2.5/3.5;
-  object-fit: contain;
-  border-radius: 8px;
-  background: rgba(0,0,0,0.2);
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-badges-overlay {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.possession-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid var(--border-bright);
+  backdrop-filter: blur(4px);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.badge-lang {
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #cbd5e1;
+  letter-spacing: 0.04em;
+}
+
+.badge-finish {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.badge-finish.holo {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(59, 130, 246, 0.4));
+  border: 1px solid rgba(168, 85, 247, 0.7);
+  backdrop-filter: blur(4px);
+  color: #e9d5ff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
+}
+
+.badge-finish.reverse {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(139, 92, 246, 0.4));
+  border: 1px solid rgba(6, 182, 212, 0.7);
+  backdrop-filter: blur(4px);
+  color: #bae6fd;
+}
+
+.badge-finish.first-ed {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4));
+  border: 1px solid rgba(245, 158, 11, 0.7);
+  color: #fef08a;
+}
+
+.badge-condition {
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.card-holo-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.15) 35%, rgba(168, 85, 247, 0.25) 50%, rgba(59, 130, 246, 0.2) 65%, transparent 80%);
+  mix-blend-mode: color-dodge;
+  transition: opacity 0.25s;
+}
+
+.card-item:hover .card-holo-sheen {
+  opacity: 0.95;
 }
 
 .card-info {
@@ -584,10 +693,10 @@ body::before {
 
 .card-price {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--accent-color);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 /* Improved Navigation Bar */
@@ -1087,3 +1196,329 @@ button:active, .btn:active {
 .range-pills { display: flex; gap: 6px; }
 .range-pill { min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .range-pill.active { background: rgba(var(--accent-rgb), 0.14); color: var(--accent-color); border-color: transparent; }
+
+/* ───────────── Collectr UI: Barra de Filtros, Variantes y Portfolio ───────────── */
+.collectr-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.collectr-filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.filter-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 2px;
+}
+
+.filter-pill {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.filter-pill.active {
+  background: rgba(var(--accent-rgb), 0.14);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.18);
+}
+
+.filter-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  align-self: center;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.filter-select {
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Ficha de detalle: Arte y Shimmer Holo */
+.detail-card-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0a0a0c;
+}
+
+.detail-card-wrapper img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 40dvh;
+  object-fit: contain;
+}
+
+.holo-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: linear-gradient(125deg, transparent 0%, rgba(255, 255, 255, 0.15) 35%, rgba(168, 85, 247, 0.3) 50%, rgba(6, 182, 212, 0.25) 65%, transparent 100%);
+  mix-blend-mode: screen;
+}
+
+.holo-glare.active {
+  opacity: 1;
+  animation: holoModalGlare 4s ease-in-out infinite alternate;
+}
+
+@keyframes holoModalGlare {
+  0% { transform: translateY(-3%) scale(1); filter: hue-rotate(0deg); }
+  100% { transform: translateY(3%) scale(1.02); filter: hue-rotate(50deg); }
+}
+
+.detail-image-badges {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+/* Selector de acabados (Normal / Holo / Reverse Holo / 1st Ed) */
+.variant-section, .condition-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.variant-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.variant-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-main);
+}
+
+.variant-pill:hover {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.variant-pill.active {
+  border-color: var(--ring);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--text-primary);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
+}
+
+.variant-pill.foil-pill .v-label svg {
+  width: 14px;
+  height: 14px;
+  color: #c084fc;
+}
+
+.variant-pill .v-label {
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.variant-pill .v-price {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.variant-pill.active .v-price {
+  color: var(--accent-color);
+}
+
+/* Selector de estado (NM, LP, MP, HP) */
+.condition-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.condition-pill {
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+.condition-pill small {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.condition-pill.active {
+  border-color: var(--ring);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent-color);
+}
+
+/* Estadísticas de mercado Collectr */
+.market-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.market-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+
+.ms-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ms-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hero Portfolio Card en Colección */
+.portfolio-hero-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(var(--accent-rgb), 0.16), rgba(var(--accent-rgb), 0.02) 65%), var(--surface-color);
+  border: 1px solid var(--border-bright);
+  margin-bottom: 8px;
+}
+
+.phc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.phc-total {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2.2rem, 8vw, 3rem);
+  line-height: 1.05;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.phc-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.phc-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.phc-num {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.phc-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}

@@ -101,12 +101,28 @@ async function persistCollectionEntry(entry, removed) {
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
 }
 
-async function collectionAdd(card) {
+async function collectionAdd(card, variant = null, condition = null) {
   if (!canEditCollection()) return;
   if (!cloudReady()) recordPriceSnapshot(card);
+
+  const chosenVariant = variant || card.selectedVariant || "normal";
+  const chosenCondition = condition || card.condition || "NM";
+
+  const cardToSave = {
+    ...card,
+    selectedVariant: chosenVariant,
+    condition: chosenCondition
+  };
+
   let entry = collection.find(e => e.card.id === card.id);
-  if (entry) entry.qty++;
-  else { entry = { card, qty: 1 }; collection.push(entry); }
+  if (entry) {
+    entry.qty++;
+    entry.card.selectedVariant = chosenVariant;
+    entry.card.condition = chosenCondition;
+  } else {
+    entry = { card: cardToSave, qty: 1 };
+    collection.push(entry);
+  }
   await persistCollectionEntry(entry, false);
   renderCollection();
 }
@@ -156,9 +172,11 @@ async function refreshCollectionPrices() {
 async function addCurrentCardToCollection() {
   const card = window._currentCard;
   if (!card) return;
-  await collectionAdd(card);
+  const variant = card.selectedVariant || "normal";
+  const cond = (typeof cardCondition !== "undefined" ? cardCondition : "NM");
+  await collectionAdd(card, variant, cond);
   pintarPoseidaModal(card);
-  showDeckToast(`${card.nombre} añadida a la colección`, "success");
+  showDeckToast(`${card.nombre} (${formatVariantName(variant)} · ${cond}) añadida a tu colección`, "success");
 }
 
 /* ───────────── Histórico de precios ───────────── */
@@ -301,6 +319,8 @@ function copyCollectionLink() {
   navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"));
 }
 
+let collectionFilter = { game: "all", finish: "all", lang: "all", sort: "value-desc", text: "" };
+
 function setCollectionFilter(key, value) {
   collectionFilter[key] = value;
   renderCollection();
@@ -325,48 +345,147 @@ function renderCollection() {
 
   const total = collection.reduce((s, e) => s + e.qty, 0);
   const value = sumValue(collection);
+  const holosCount = collection.filter(e => e.card.selectedVariant === "holo" || e.card.selectedVariant === "reverse" || e.card.variants?.holo).reduce((s, e) => s + e.qty, 0);
+  const langsCount = new Set(collection.map(e => (e.card.lang || "en").toLowerCase())).size;
+
   const fechas = collection.map(e => priceDate(e.card)).filter(Boolean).map(f => new Date(f).getTime()).filter(t => !isNaN(t));
   const masAntiguo = fechas.length ? new Date(Math.min(...fechas)).toISOString() : null;
   const viejo = masAntiguo && Date.now() - new Date(masAntiguo).getTime() > 3 * 86400e3;
-  const text = collectionFilter.text.toLowerCase();
-  const list = collection
-    .filter(e => collectionFilter.game === "all" || e.card.tipo === collectionFilter.game)
-    .filter(e => !text || e.card.nombre.toLowerCase().includes(text))
-    .sort((a, b) => a.card.nombre.localeCompare(b.card.nombre));
+  const text = (collectionFilter.text || "").toLowerCase();
 
-  const pills = [["all", "Todas"], ["pokemon", "Pokémon"], ["magic", "Magic"]]
-    .map(([k, l]) => `<button class="pill-btn ${collectionFilter.game === k ? "active" : ""}" onclick="setCollectionFilter('game','${k}')">${l}</button>`).join("");
+  let list = collection
+    .filter(e => collectionFilter.game === "all" || e.card.tipo === collectionFilter.game)
+    .filter(e => {
+      if (collectionFilter.finish === "all") return true;
+      const v = e.card.selectedVariant;
+      if (collectionFilter.finish === "holo") return v === "holo" || e.card.variants?.holo;
+      if (collectionFilter.finish === "normal") return v === "normal" || e.card.variants?.normal !== false;
+      if (collectionFilter.finish === "reverse") return v === "reverse" || e.card.variants?.reverse;
+      return true;
+    })
+    .filter(e => {
+      if (collectionFilter.lang === "all") return true;
+      return (e.card.lang || "en").toLowerCase() === collectionFilter.lang.toLowerCase();
+    })
+    .filter(e => !text || e.card.nombre.toLowerCase().includes(text));
+
+  // Ordenación
+  if (collectionFilter.sort === "value-desc") {
+    list.sort((a, b) => ((getCardActivePrice(b.card) || 0) * b.qty) - ((getCardActivePrice(a.card) || 0) * a.qty));
+  } else if (collectionFilter.sort === "value-asc") {
+    list.sort((a, b) => ((getCardActivePrice(a.card) || 0) * a.qty) - ((getCardActivePrice(b.card) || 0) * b.qty));
+  } else if (collectionFilter.sort === "name-asc") {
+    list.sort((a, b) => a.card.nombre.localeCompare(b.card.nombre));
+  } else if (collectionFilter.sort === "qty-desc") {
+    list.sort((a, b) => b.qty - a.qty);
+  }
+
+  const gamePills = [["all", "Todas"], ["pokemon", "Pokémon"], ["magic", "Magic"]]
+    .map(([k, l]) => `<button class="filter-pill ${collectionFilter.game === k ? "active" : ""}" onclick="setCollectionFilter('game','${k}')">${l}</button>`).join("");
+
+  const finishPills = [["all", "Todos"], ["holo", `${HEROICONS.sparkles} Holofoil`], ["normal", "Normal"], ["reverse", "Reverse"]]
+    .map(([k, l]) => `<button class="filter-pill ${collectionFilter.finish === k ? "active" : ""}" onclick="setCollectionFilter('finish','${k}')">${l}</button>`).join("");
+
+  const langPills = [["all", "Todos"], ["en", "EN"], ["es", "ES"], ["ja", "JA"]]
+    .map(([k, l]) => `<button class="filter-pill ${collectionFilter.lang === k ? "active" : ""}" onclick="setCollectionFilter('lang','${k}')">${l}</button>`).join("");
 
   root.innerHTML = `
     <div class="col-mode">${esc(mode)}</div>
     ${auth}
-    <div class="deck-stats">
-      <div class="stat-chip"><span class="stat-val">${total}</span><span class="stat-lbl">Cartas</span></div>
-      <div class="stat-chip"><span class="stat-val">${collection.length}</span><span class="stat-lbl">Únicas</span></div>
-      <div class="stat-chip"><span class="stat-val">${esc(formatValue(value))}</span><span class="stat-lbl">Valor</span></div>
+    
+    <!-- Hero Portfolio Card estilo Collectr -->
+    <div class="portfolio-hero-card">
+      <div class="phc-header">
+        <span class="eyebrow">Mi Portfolio</span>
+        <h2 class="phc-total">${esc(formatValue(value))}</h2>
+      </div>
+      <div class="phc-stats-grid">
+        <div class="phc-stat"><span class="phc-num">${total}</span><span class="phc-lbl">Cartas</span></div>
+        <div class="phc-stat"><span class="phc-num">${collection.length}</span><span class="phc-lbl">Únicas</span></div>
+        <div class="phc-stat"><span class="phc-num">${holosCount}</span><span class="phc-lbl">Holos / Foils</span></div>
+        <div class="phc-stat"><span class="phc-num">${langsCount}</span><span class="phc-lbl">Idiomas</span></div>
+      </div>
     </div>
-    <div class="an-card"><h3>Valor en el tiempo</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
+
+    <div class="an-card"><h3>Evolución del Portfolio</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
+
     <div class="col-prices ${viejo ? "stale" : ""}">
       <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${value.usd > 0 ? " · hay cartas en $ (no convertidas)" : ""}</span>
       ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">${HEROICONS.arrowPath} Actualizar precios</button>` : ""}
     </div>
-    <div class="pill-switcher">${pills}</div>
-    <input type="search" class="deck-name-input" id="collection-search" placeholder="Filtrar por nombre..." value="${esc(collectionFilter.text)}"
-      oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
-    <button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Copiar enlace público</button>
-    ${list.length === 0 ? `<div class="an-empty">${collection.length ? "Sin resultados." : (editable ? "Aún no tienes cartas. Búscalas en el Escáner y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
+
+    <!-- Barra de Filtros Collectr dentro de la Colección -->
+    <div class="collectr-filter-bar" style="margin-top: 8px;">
+      <div class="filter-group">
+        <span class="filter-group-label">Juego:</span>
+        ${gamePills}
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">Estilo:</span>
+        ${finishPills}
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">Idioma:</span>
+        ${langPills}
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <span class="filter-group-label">Orden:</span>
+        <select class="filter-select" onchange="setCollectionFilter('sort', this.value)">
+          <option value="value-desc" ${collectionFilter.sort === "value-desc" ? "selected" : ""}>Mayor valor</option>
+          <option value="value-asc" ${collectionFilter.sort === "value-asc" ? "selected" : ""}>Menor valor</option>
+          <option value="name-asc" ${collectionFilter.sort === "name-asc" ? "selected" : ""}>Nombre (A-Z)</option>
+          <option value="qty-desc" ${collectionFilter.sort === "qty-desc" ? "selected" : ""}>Mayor cantidad</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="search-bar" style="margin: 12px 0 6px;">
+      <input type="search" class="search-input" id="collection-search" placeholder="Filtrar colección por nombre..." value="${esc(collectionFilter.text)}"
+        oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
+    </div>
+
+    <button class="dab-btn" onclick="copyCollectionLink()" style="margin-bottom:12px;">${HEROICONS.link} Compartir enlace público</button>
+
+    ${list.length === 0 ? `<div class="an-empty">${collection.length ? "No hay cartas que coincidan con los filtros aplicados." : (editable ? "Aún no tienes cartas en tu colección. Búscalas o escanéalas y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
+
     <div class="results-grid" style="display:grid">
       ${list.map(e => {
         const c = e.card;
-        return `<article class="card-item" tabindex="0" role="button" aria-label="Ver ${esc(c.nombre)}"
+        const variant = c.selectedVariant || "normal";
+        const cond = c.condition || "NM";
+        const isHolo = variant === "holo" || (c.precioFoil != null && c.precioFoil > 0);
+        const isReverse = variant === "reverse";
+        const langCode = (c.lang || "en").toUpperCase();
+
+        let finishBadge = "";
+        if (isHolo) {
+          finishBadge = `<span class="badge-finish holo">${HEROICONS.sparkles} Holo</span>`;
+        } else if (isReverse) {
+          finishBadge = `<span class="badge-finish reverse">Rev Holo</span>`;
+        } else if (variant === "firstEdition") {
+          finishBadge = `<span class="badge-finish first-ed">1st Ed</span>`;
+        }
+
+        return `<article class="card-item ${isHolo ? 'is-holo-card' : ''}" tabindex="0" role="button" aria-label="Ver ${esc(c.nombre)}"
           onclick="abrirCartaGuardada('${esc(c.id)}')" onkeydown="if(event.key==='Enter') abrirCartaGuardada('${esc(c.id)}')">
-          <div class="possession-badge">x${e.qty}</div>
-          <img src="${esc(c.imagenThumb || c.imagen || "")}" alt="${esc(c.nombre)}" class="card-thumb" loading="lazy">
+          <div class="card-artwork-wrapper">
+            <div class="possession-badge">x${e.qty}</div>
+            <div class="card-badges-overlay">
+              <span class="badge-lang">${esc(langCode)}</span>
+              ${finishBadge}
+              <span class="badge-condition">${esc(cond)}</span>
+            </div>
+            <img src="${esc(c.imagenThumb || c.imagen || "")}" alt="${esc(c.nombre)}" class="card-thumb" loading="lazy">
+            ${isHolo ? '<div class="card-holo-sheen" aria-hidden="true"></div>' : ''}
+          </div>
           <div class="card-info">
             <h3 class="card-name">${esc(c.nombre)}</h3>
-            <p class="card-meta">${esc(c.set || "Desconocido")}</p>
+            <p class="card-meta">${esc(c.set || "Desconocido")}${c.localId ? ' · #' + esc(c.localId) : ''}</p>
             <p class="card-price">${precioHtml(c)}</p>
-            ${editable ? `<div class="dcr-controls">
+            ${editable ? `<div class="dcr-controls" style="margin-top:4px;">
               <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${esc(c.id)}')">${HEROICONS.minus}</button>
               <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">${HEROICONS.plus}</button>
             </div>` : ""}
