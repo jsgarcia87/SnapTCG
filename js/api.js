@@ -114,10 +114,54 @@ function tcgdexToCard(c, lang = "en") {
 }
 
 /** Coincidencias exactas primero; el resto en el orden de la API. */
-function ordenarPorRelevancia(cards, nombre) {
+function ordenarPorRelevancia(cards, nombre, collectorNum = null) {
   const n = nombre.trim().toLowerCase();
-  const rank = c => (c.nombre.toLowerCase() === n ? 0 : 2) + (c.imagen === NO_IMAGE ? 1 : 0);
+  const rank = c => {
+    let score = (c.nombre.toLowerCase() === n ? 0 : 2) + (c.imagen === NO_IMAGE ? 1 : 0);
+    if (collectorNum && String(c.localId).toLowerCase() === String(collectorNum).toLowerCase()) {
+      score -= 2;
+    }
+    return score;
+  };
   return cards.map((c, i) => [rank(c), i, c]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
+}
+
+/** Extrae el número local de coleccionista si está presente en formato 025/165 o 25/102. */
+function extraerNumeroColeccionista(nombre) {
+  if (!nombre) return null;
+  const m = nombre.match(/(?:^|\s)(\d{1,3})\s*\/\s*\d{2,3}(?:\s|$)/);
+  if (m) {
+    return m[1].replace(/^0+/, "") || m[1];
+  }
+  return null;
+}
+
+/** Elimina sufijos de mecánicas (VSTAR, ex, etc.) y números para búsqueda por nombre base. */
+function normalizarNombrePokemon(nombre) {
+  if (!nombre) return "";
+  return nombre
+    .replace(/(?:^|\s)\d{1,3}\s*\/\s*\d{2,3}(?:\s|$)/g, " ")
+    .replace(/\s+(VSTAR|V-ASTRO|VMAX|V-MAX|V|ex|EX|GX|BREAK|Prime|LV\.X|Tag Team|TAG TEAM)\b/gi, "")
+    .replace(/(VSTAR|V-ASTRO|VMAX|ex|EX|GX)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Busca cartas Pokémon por número local de coleccionista (localId) en TCGdex. */
+async function pokemonTCGdexLocalId(localId, lang = "en") {
+  const targetLang = (lang === "all" || !lang) ? "en" : lang;
+  const brief = await fetchJSON(`${TCGDEX}/${targetLang}/cards?localId=${encodeURIComponent(localId)}`, { okStatuses: [404] });
+  if (!Array.isArray(brief) || brief.length === 0) return [];
+  const cards = [];
+  await runPool(brief.slice(0, 30), 6, async (b) => {
+    try {
+      const d = await fetchJSON(`${TCGDEX}/${targetLang}/cards/${encodeURIComponent(b.id)}`, { retries: 1 });
+      const card = tcgdexToCard(d, targetLang);
+      applyPokemonPricing(card, d.pricing);
+      cards.push(card);
+    } catch { /* se omite la carta que falle */ }
+  });
+  return cards;
 }
 
 /** Inglés: lista completa en una sola llamada GraphQL (precios después, por ficha). */
@@ -170,63 +214,108 @@ async function pokemonLegacy(nombre) {
 }
 
 /**
- * Busca cartas Pokémon por nombre con soporte de filtro de idioma.
+ * Busca cartas Pokémon por nombre con soporte de filtro de idioma y tolerancia a fallos.
  * @param {string} nombre
  * @param {string} lang "all" | "en" | "es" | "ja" | "zh" | "zh-cn" | "zh-tw" | "ko" | "fr" | "de" | "it" | "pt"
  * @returns {Promise<CardResult[]>}
  */
 async function buscarPokemon(nombre, lang = "all") {
-  let cards = [];
+  const cleanQuery = nombre.trim();
+  const collectorNum = extraerNumeroColeccionista(cleanQuery);
+  const baseName = normalizarNombrePokemon(cleanQuery);
   const l = (lang || "all").toLowerCase();
-  try {
-    if (l === "en") {
-      cards = await pokemonTCGdexEn(nombre);
-    } else if (l === "zh") {
-      // Chino: buscar en paralelo Simplificado (zh-cn) y Tradicional (zh-tw)
+
+  // Función interna para consultar un término en un idioma específico
+  async function consultarTermino(termino, idioma) {
+    if (!termino || termino.length < 2) return [];
+    if (idioma === "en") {
+      return await pokemonTCGdexEn(termino);
+    }
+    if (idioma === "zh") {
       const [cnCards, twCards] = await Promise.all([
-        pokemonTCGdexLang(nombre, "zh-cn").catch(() => []),
-        pokemonTCGdexLang(nombre, "zh-tw").catch(() => [])
+        pokemonTCGdexLang(termino, "zh-cn").catch(() => []),
+        pokemonTCGdexLang(termino, "zh-tw").catch(() => [])
       ]);
       const map = new Map();
       [...cnCards, ...twCards].forEach(c => map.set(c.id, c));
-      cards = Array.from(map.values());
-    } else if (l === "zh-cn" || l === "zhs") {
-      cards = await pokemonTCGdexLang(nombre, "zh-cn");
-    } else if (l === "zh-tw" || l === "zht") {
-      cards = await pokemonTCGdexLang(nombre, "zh-tw");
-    } else if (["es", "ja", "ko", "fr", "de", "it", "pt"].includes(l)) {
-      cards = await pokemonTCGdexLang(nombre, l);
-    } else {
-      // Modo "all": detectar si el término contiene caracteres CJK para buscar en el idioma correcto
-      if (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(nombre)) {
-        // Contiene ideogramas chinos: buscar en paralelo Simplificado (zh-cn) y Tradicional (zh-tw)
-        const [cnCards, twCards] = await Promise.all([
-          pokemonTCGdexLang(nombre, "zh-cn").catch(() => []),
-          pokemonTCGdexLang(nombre, "zh-tw").catch(() => [])
-        ]);
-        const map = new Map();
-        [...cnCards, ...twCards].forEach(c => map.set(c.id, c));
-        cards = Array.from(map.values());
-        // Fallback a japonés por si se trata de un nombre escrito en kanji
-        if (cards.length === 0) {
-          cards = await pokemonTCGdexLang(nombre, "ja").catch(() => []);
-        }
-      } else if (/[\u3040-\u309F\u30A0-\u30FF]/.test(nombre)) {
-        // Contiene silabarios kana: buscar directamente en japonés
-        cards = await pokemonTCGdexLang(nombre, "ja").catch(() => []);
-      } else if (/[\uAC00-\uD7AF]/.test(nombre)) {
-        // Contiene hangul: buscar directamente en coreano
-        cards = await pokemonTCGdexLang(nombre, "ko").catch(() => []);
-      } else {
-        // Caracteres latinos: primero en inglés por rapidez y exhaustividad, luego español
-        cards = await pokemonTCGdexEn(nombre);
-        if (cards.length === 0) cards = await pokemonTCGdexLang(nombre, "es");
+      return Array.from(map.values());
+    }
+    if (idioma === "zh-cn" || idioma === "zhs") {
+      return await pokemonTCGdexLang(termino, "zh-cn");
+    }
+    if (idioma === "zh-tw" || idioma === "zht") {
+      return await pokemonTCGdexLang(termino, "zh-tw");
+    }
+    if (["es", "ja", "ko", "fr", "de", "it", "pt"].includes(idioma)) {
+      return await pokemonTCGdexLang(termino, idioma);
+    }
+    // Modo "all": detección inteligente por familia de caracteres
+    if (/[\u4E00-\u9FFF\u3400-\u4DBF]/.test(termino)) {
+      const [cnCards, twCards] = await Promise.all([
+        pokemonTCGdexLang(termino, "zh-cn").catch(() => []),
+        pokemonTCGdexLang(termino, "zh-tw").catch(() => [])
+      ]);
+      const map = new Map();
+      [...cnCards, ...twCards].forEach(c => map.set(c.id, c));
+      let results = Array.from(map.values());
+      if (results.length === 0) {
+        results = await pokemonTCGdexLang(termino, "ja").catch(() => []);
+      }
+      return results;
+    }
+    if (/[\u3040-\u309F\u30A0-\u30FF]/.test(termino)) {
+      return await pokemonTCGdexLang(termino, "ja").catch(() => []);
+    }
+    if (/[\uAC00-\uD7AF]/.test(termino)) {
+      return await pokemonTCGdexLang(termino, "ko").catch(() => []);
+    }
+    // Alfabeto latino: primero en inglés, luego en español
+    let res = await pokemonTCGdexEn(termino).catch(() => []);
+    if (res.length === 0) {
+      res = await pokemonTCGdexLang(termino, "es").catch(() => []);
+    }
+    return res;
+  }
+
+  let cards = [];
+  try {
+    // 1. Búsqueda directa del término tal cual
+    cards = await consultarTermino(cleanQuery, l);
+
+    // 2. Si no hay resultados y el nombre tenía sufijos (p. ej. "Charizard VSTAR" -> "Charizard")
+    if (cards.length === 0 && baseName && baseName.toLowerCase() !== cleanQuery.toLowerCase()) {
+      cards = await consultarTermino(baseName, l);
+    }
+
+    // 3. Si se detectó número de coleccionista (p. ej. "025/165") y aún no hay cartas
+    if (cards.length === 0 && collectorNum) {
+      cards = await pokemonTCGdexLocalId(collectorNum, l !== "all" ? l : "en").catch(() => []);
+      if (cards.length === 0 && l !== "en") {
+        cards = await pokemonTCGdexLocalId(collectorNum, "en").catch(() => []);
+      }
+    }
+
+    // 4. Fallback internacional a inglés si se buscaba en un idioma específico sin resultados
+    if (cards.length === 0 && l !== "en" && l !== "all") {
+      cards = await consultarTermino(cleanQuery, "en").catch(() => []);
+      if (cards.length === 0 && baseName && baseName.toLowerCase() !== cleanQuery.toLowerCase()) {
+        cards = await consultarTermino(baseName, "en").catch(() => []);
       }
     }
   } catch (err) {
     console.warn("TCGdex no disponible, usando respaldo:", err.message);
-    cards = await pokemonLegacy(nombre);
   }
+
+  // 5. Respaldo final con pokemontcg.io si TCGdex no arrojó resultados
+  if (cards.length === 0) {
+    try {
+      cards = await pokemonLegacy(cleanQuery).catch(() => []);
+      if (cards.length === 0 && baseName && baseName.toLowerCase() !== cleanQuery.toLowerCase()) {
+        cards = await pokemonLegacy(baseName).catch(() => []);
+      }
+    } catch { /* omite error de respaldo */ }
+  }
+
   if (cards.length === 0) {
     const e = new Error(l !== "all" 
       ? `No se encontró ninguna carta en ${formatLanguageName(l)}.` 
@@ -234,7 +323,8 @@ async function buscarPokemon(nombre, lang = "all") {
     e.code = "notfound";
     throw e;
   }
-  return ordenarPorRelevancia(cards, nombre).slice(0, TCGDEX_LIMIT);
+
+  return ordenarPorRelevancia(cards, cleanQuery, collectorNum).slice(0, TCGDEX_LIMIT);
 }
 
 /** Obtiene la sintaxis Scryfall para filtrar por idioma. */
@@ -258,9 +348,27 @@ async function buscarMagic(nombre, lang = "all") {
   let fuzzyData = await fetchJSON(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(nombre)}`,
     { okStatuses: [404], headers: { Accept: "application/json" } });
 
-  // Si fuzzy falla (p. ej. nombre impreso en chino o japonés), buscar por texto impreso o nombre traducido
+  // Si fuzzy falla, intentar limpiando palabras de tipo o mecánicas
+  const cleanMtg = nombre.replace(/\b(Creature|Instant|Sorcery|Enchantment|Artifact|Planeswalker|Land|Legendary|Tribal|Battle)\b/gi, '').trim();
+  if (fuzzyData.object === "error" && cleanMtg && cleanMtg !== nombre) {
+    fuzzyData = await fetchJSON(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(cleanMtg)}`,
+      { okStatuses: [404], headers: { Accept: "application/json" } });
+  }
+
+  // Si fuzzy aún falla (p. ej. nombre impreso en chino o japonés), buscar por texto impreso o nombre traducido
   if (fuzzyData.object === "error") {
-    const searchData = await fetchJSON(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(`(printed:"${nombre}" or name:"${nombre}")`)}`,
+    const term = cleanMtg || nombre;
+    const searchData = await fetchJSON(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(`(printed:"${term}" or name:"${term}")`)}`,
+      { okStatuses: [404], headers: { Accept: "application/json" } });
+    if (searchData.object !== "error" && Array.isArray(searchData.data) && searchData.data.length > 0) {
+      fuzzyData = searchData.data[0];
+    }
+  }
+
+  // Búsqueda general como último recurso antes de lanzar error
+  if (fuzzyData.object === "error") {
+    const term = cleanMtg || nombre;
+    const searchData = await fetchJSON(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(term)}`,
       { okStatuses: [404], headers: { Accept: "application/json" } });
     if (searchData.object !== "error" && Array.isArray(searchData.data) && searchData.data.length > 0) {
       fuzzyData = searchData.data[0];

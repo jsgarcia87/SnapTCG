@@ -152,7 +152,12 @@ function filterAndSortCards(cards) {
 
   // Filtro de idioma
   if (searchFilters.lang !== "all") {
-    list = list.filter(c => matchCardLang(c.lang, searchFilters.lang));
+    const langFiltered = list.filter(c => matchCardLang(c.lang, searchFilters.lang));
+    // Si hay coincidencias con el idioma seleccionado, usar ese subconjunto.
+    // Si no las hay (p. ej. fallback internacional de la API), conservar las cartas devueltas.
+    if (langFiltered.length > 0) {
+      list = langFiltered;
+    }
   }
 
   // Filtro de acabado / estilo Holo
@@ -659,6 +664,9 @@ async function ejecutarBusqueda() {
     const filtrados = filterAndSortCards(resultados);
     renderizarLista(filtrados);
     if (resultados[0]?.enCache) showDeckToast("Sin conexión: resultados guardados", "warn");
+    if (searchFilters.lang !== "all" && resultados.length > 0 && resultados.every(c => !matchCardLang(c.lang, searchFilters.lang))) {
+      showDeckToast(`Cartas en ${formatLanguageName(searchFilters.lang)} no encontradas, mostrando en ${formatLanguageName(resultados[0].lang)}`, "info");
+    }
     hidratarPrecios(resultados, (c) => {
       actualizarPrecioEnLista(c);
       if (window._currentCard && window._currentCard.id === c.id) {

@@ -28,9 +28,9 @@ let hasTorch          = false;
 let scannerLanguage   = 'auto'; // 'auto' | 'zh' | 'ja' | 'ko' | 'es' | 'en'
 
 const SCAN_INTERVAL_MS = 1100; // Intervalo entre fotogramas estables
-const MIN_CONF_PASS1   = 60;   // Confianza mínima para pase binarizado Otsu (latino)
-const MIN_CONF_PASS2   = 48;   // Confianza mínima para pase de contraste (latino)
-const MIN_CONF_CJK     = 38;   // Confianza mínima para ideogramas CJK (Chino/Japonés/Coreano)
+const MIN_CONF_PASS1   = 38;   // Confianza mínima para pase binarizado Otsu (latino)
+const MIN_CONF_PASS2   = 30;   // Confianza mínima para pase de contraste (latino)
+const MIN_CONF_CJK     = 30;   // Confianza mínima para ideogramas CJK (Chino/Japonés/Coreano)
 const MOTION_THRESHOLD = 130;  // Umbral de varianza Laplaciana (por debajo es movimiento/borroso)
 
 const LANG_MODEL_MAP = {
@@ -397,9 +397,26 @@ async function capturarYProcesar() {
   if (!roiCanvas) return;
 
   try {
-    const text = await recognizeRoiText(roiCanvas);
-    const cleaned = cleanOcrText(text);
-    const minLen = hasCJK(cleaned) ? 2 : 3;
+    let text = await recognizeRoiText(roiCanvas);
+    let cleaned = cleanOcrText(text);
+    let minLen = hasCJK(cleaned) ? 2 : 3;
+
+    // Si la ROI estrecha no detecta texto, probar con la franja superior amplia (35% superior del cuadro)
+    if (!cleaned || cleaned.length < minLen) {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (vw && vh) {
+        const broadCanvas = document.createElement('canvas');
+        const broadH = Math.round(vh * 0.35);
+        broadCanvas.width  = vw;
+        broadCanvas.height = broadH;
+        const bCtx = broadCanvas.getContext('2d');
+        bCtx.drawImage(video, 0, 0, vw, broadH, 0, 0, vw, broadH);
+        text = await recognizeRoiText(broadCanvas);
+        cleaned = cleanOcrText(text);
+        minLen = hasCJK(cleaned) ? 2 : 3;
+      }
+    }
 
     if (cleaned && cleaned.length >= minLen) {
       dispararExitoEscaneo(cleaned);
@@ -532,17 +549,26 @@ function extractHeaderRoi(video) {
     const relLeft = (rRect.left - vRect.left) + offsetX;
     const relTop  = (rRect.top - vRect.top) + offsetY;
 
-    sx = Math.max(0, Math.round(relLeft / scale));
-    sy = Math.max(0, Math.round(relTop / scale));
-    sWidth  = Math.min(vw - sx, Math.round(rRect.width / scale));
-    sHeight = Math.min(vh - sy, Math.round(rRect.height / scale));
+    let rawSx = Math.round(relLeft / scale);
+    let rawSy = Math.round(relTop / scale);
+    let rawSw = Math.round(rRect.width / scale);
+    let rawSh = Math.round(rRect.height / scale);
+
+    // Margen de seguridad (+12% horizontal, +20% vertical) para evitar cortes si la carta está ladeada
+    const padX = Math.round(rawSw * 0.12);
+    const padY = Math.round(rawSh * 0.20);
+
+    sx = Math.max(0, rawSx - padX);
+    sy = Math.max(0, rawSy - padY);
+    sWidth  = Math.min(vw - sx, rawSw + (padX * 2));
+    sHeight = Math.min(vh - sy, rawSh + (padY * 2));
   }
 
   if (sWidth <= 20 || sHeight <= 20) {
-    sx = Math.round(vw * 0.1);
-    sy = Math.round(vh * 0.05);
-    sWidth = Math.round(vw * 0.8);
-    sHeight = Math.round(vh * 0.22);
+    sx = Math.round(vw * 0.08);
+    sy = Math.round(vh * 0.04);
+    sWidth = Math.round(vw * 0.84);
+    sHeight = Math.round(vh * 0.26);
   }
 
   const canvas = document.createElement('canvas');
@@ -702,7 +728,7 @@ async function recognizeRoiText(rawCanvas) {
   const minConf1 = isCJK ? MIN_CONF_CJK : MIN_CONF_PASS1;
 
   if (best && best.confidence >= minConf1) {
-    return best.text.trim();
+    return best.text;
   }
 
   // Pase 2: Alto contraste normalizado (para fuentes con gradiente o fondos oscuros)
@@ -714,40 +740,67 @@ async function recognizeRoiText(rawCanvas) {
 
   result = await ocrWorker.recognize(pass2);
   best = getBestLine(result.data, isCJK);
-  const minConf2 = isCJK ? (MIN_CONF_CJK - 8) : MIN_CONF_PASS2;
+  const minConf2 = isCJK ? Math.max(22, MIN_CONF_CJK - 6) : MIN_CONF_PASS2;
 
   if (best && best.confidence >= minConf2) {
-    return best.text.trim();
+    return best.text;
   }
 
-  return best ? best.text.trim() : null;
+  // Si se encontró un candidato con confianza moderada (>= 25%), pasarlo al buscador para verificar en la API
+  if (best && best.confidence >= 25) {
+    return best.text;
+  }
+
+  return best ? best.text : null;
 }
 
 function getBestLine(data, isCJK = false) {
   if (!data || !data.lines || data.lines.length === 0) return null;
   const minLen = isCJK ? 2 : 3;
-  return data.lines
-    .filter(l => l.text && l.text.trim().length >= minLen)
-    .sort((a, b) => b.confidence - a.confidence)[0] || null;
+
+  const candidates = [];
+  for (const l of data.lines) {
+    if (!l || !l.text) continue;
+    const cleaned = cleanOcrText(l.text);
+    if (cleaned.length >= minLen) {
+      // Puntuación: confianza base ponderada por longitud útil de texto
+      // Cartas reales suelen tener nombres de 4 a 25 caracteres.
+      // Símbolos parásitos o iniciales cortas no deben superar al nombre completo.
+      const lenBonus = Math.min(25, cleaned.length * 3);
+      const score = (l.confidence || 0) + lenBonus;
+      candidates.push({
+        rawText: l.text,
+        text: cleaned,
+        confidence: l.confidence || 0,
+        score
+      });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0];
 }
 
 /**
  * Limpieza inteligente de OCR: descarta HP, fases evolutivas y símbolos parásitos,
- * preservando completamente ideogramas chinos (Hanzi), kana japoneses, hangul y caracteres latinos.
+ * preservando completamente ideogramas chinos (Hanzi), kana japoneses, hangul, caracteres latinos y números de coleccionista.
  */
 function cleanOcrText(raw) {
   if (!raw) return '';
   return raw
     // Descartar tokens de HP (Pokémon en inglés, español, chino, japonés)
     .replace(/\b(\d{2,4}\s*HP|HP\s*\d{2,4})\b/gi, '')
-    .replace(/(血量|生命值)\s*\d{2,4}/gi, '')
-    // Descartar fases evolutivas y tipos (multilingüe)
-    .replace(/\b(Basic|Fase\s*[12]|Stage\s*[12]|Creature|Trainer|Item|Supporter|Entrenador)\b/gi, '')
-    .replace(/(基础|基礎|1阶|2阶|1階|2階|宝可梦|寶可夢|训练家|訓練家|物品|支援者)/g, '')
-    .replace(/(たね|1進化|2進化|トレーナーズ|グッズ|サポート)/g, '')
+    .replace(/(血量|生命值|HP)\s*\d{2,4}/gi, '')
+    .replace(/\d{2,4}\s*(血量|生命值|HP)/gi, '')
+    // Descartar fases evolutivas, entrenadores y tipos (multilingüe)
+    .replace(/\b(Basic|Fase\s*[12]|Stage\s*[12]|Creature|Trainer|Item|Supporter|Entrenador|Energía|Energy)\b/gi, '')
+    .replace(/(基础|基礎|1阶|2阶|1階|2階|宝可梦|寶可夢|训练家|訓練家|物品|支援者|能量)/g, '')
+    .replace(/(たね|1進化|2進化|トレーナーズ|グッズ|サポート|エネルギー)/g, '')
     .replace(/[{}[\]()<>@#$%^&*+=~|\\_]/g, ' ')
-    // Permitir letras latinas, dígitos, acentos y todos los caracteres CJK (Chino, Japonés, Coreano)
-    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '\-]/g, ' ')
+    // Permitir letras latinas, dígitos, acentos, barra inclinada (coleccionista) y todos los caracteres CJK
+    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '\-\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\s+\d+$/, '') // descarta números aislados finales como costes de maná

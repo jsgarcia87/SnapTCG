@@ -4,6 +4,36 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.6.0] - 2026-10-13
+
+### Añadido
+- **Escalera de Búsqueda Resiliente con Fallbacks Multi-Nivel en la API (`js/api.js`)**:
+  - **Detección y Búsqueda por Número de Coleccionista (`extraerNumeroColeccionista` / `pokemonTCGdexLocalId`)**:
+    - Reconoce patrones de número de carta tipo `025/165` o `25/102`.
+    - Si el nombre escaneado contiene número de coleccionista o falla la búsqueda por texto, consulta directamente por `localId` en TCGdex e hidrata precios con `runPool`.
+    - Da máxima prioridad en la ordenación (`ordenarPorRelevancia`) a las cartas cuyo número coincide exactamente con el escaneado.
+  - **Normalización y Extracción de Nombre Base (`normalizarNombrePokemon`)**:
+    - Si la búsqueda exacta falla (p. ej. "Charizard VSTAR" frente al nombre español de TCGdex "Charizard V-ASTRO"), elimina sufijos de mecánicas (`VSTAR`, `VMAX`, `V`, `ex`, `EX`, `GX`, `BREAK`, `Prime`, `LV.X`, `Tag Team`) y reintenta con el nombre base ("Charizard").
+  - **Fallback Internacional Translingüe**:
+    - Si la carta no se localiza en el idioma activo (p. ej. carta escaneada en inglés mientras el filtro está en español, o viceversa), el sistema recurre a la base de datos en inglés y preserva los resultados.
+    - Notificación informativa contextual (`showDeckToast`) indicando el idioma de respaldo.
+  - **Búsqueda Resiliente en Magic: The Gathering**:
+    - Limpieza de palabras de tipo de criatura/hechizo (`Creature`, `Sorcery`, `Instant`, `Legendary`, etc.) y búsqueda general tolerante a fallos en Scryfall.
+
+### Corregido
+- **Corrección de Prioridad de Línea de Título en OCR (`js/scanner.js`)**:
+  - `getBestLine` ahora ejecuta `cleanOcrText` en cada línea candidata antes de evaluarla, descartando textos de encabezado genéricos como "Basic", "Stage 1", "Fase 2", "1阶", etc.
+  - Puntuación de líneas ponderada por longitud útil de texto (`confidence + lenBonus`) para evitar que tokens o letras aisladas superen al nombre de la carta.
+- **Ajuste de Umbrales de Confianza OCR**:
+  - Reducidos los umbrales excesivamente restrictivos (`MIN_CONF_PASS1 = 38`, `MIN_CONF_PASS2 = 30`, `MIN_CONF_CJK = 30`) para permitir lecturas en cámaras móviles con iluminación moderada.
+- **Ampliación de Margen de la Región de Interés (ROI)**:
+  - Añadido margen de seguridad dinámico (+12% horizontal, +20% vertical) en `extractHeaderRoi` para evitar que el título de la carta quede cortado si la carta se inclina levemente.
+  - Fallback en captura manual (`capturarYProcesar`) a la franja superior del 35% del fotograma si la ROI estrecha no arroja texto.
+- **Prevención de Filtrado Accidental en Resultados de Fallback (`js/app.js`)**:
+  - `filterAndSortCards` ahora preserva las cartas devueltas por fallback lingüístico en lugar de descartarlas a lista vacía.
+
+---
+
 ## [3.5.0] - 2026-10-13
 
 ### Añadido

@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.5.0
+- **Versión Actual:** 3.6.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
@@ -115,7 +115,9 @@ SnapTCG/
      - `formatLanguageName(code)`: traduce códigos a nombres legibles en español (`Chino Simplificado`, `Chino Tradicional`, etc.).
      - `matchCardLang(cardLang, filterLang)`: matching tolerante de variantes (ej. `zh` abarca `zh-cn`, `zh-tw`, `zhs`, `zht`).
      - `getScryfallLangFilter(lang)`: genera la sintaxis de búsqueda para Scryfall (`(lang:zhs or lang:zht)`, `lang:zhs`, `lang:zht`, etc.).
-   - `buscarPokemon(nombre, lang)`: TCGdex con filtro de idioma (`all`, `en`, `es`, `ja`, `zh`, `zh-cn`, `zh-tw`, `ko`, `fr`, `de`, `it`, `pt`). Para inglés consulta GraphQL `/v2/graphql`. Para chino (`zh`) ejecuta consultas paralelas para `zh-cn` y `zh-tw`. Para el resto consulta `/v2/{lang}/cards` por REST.
+   - `extraerNumeroColeccionista(nombre)` / `normalizarNombrePokemon(nombre)`: Detecta patrones de coleccionista tipo `025/165` y aísla el nombre base eliminando sufijos de mecánicas (`VSTAR`, `VMAX`, `ex`, `GX`, `BREAK`, `Tag Team`).
+   - `pokemonTCGdexLocalId(localId, lang)`: Consulta directa por número local de coleccionista en TCGdex e hidratación de precios mediante `runPool`.
+   - `buscarPokemon(nombre, lang)`: Búsqueda resiliente con escalera de fallbacks multi-nivel (búsqueda exacta, nombre base sin sufijos, consulta por `localId`, fallback internacional a inglés y pokemontcg.io como último respaldo).
    - `buscarMagic(nombre, lang)`: Scryfall con filtro de idioma; si una carta no se imprimió en el idioma solicitado, aplica fallback elegante a todas las ediciones con aviso al usuario.
    - `buscarCartas(nombre, juego, lang)`: enrutador con caché por juego e idioma (`search:${juego}:${lang}:${nombre}`).
 
@@ -124,10 +126,12 @@ SnapTCG/
    - `initOcrWorker(forceLang)`: Carga bajo demanda modelos lingüísticos optimizados (`chi_sim+chi_tra+eng`, `jpn+eng`, `kor+eng`, `spa+eng`). Cacheado permanente en IndexedDB.
    - `setScannerLanguage(lang)` / `syncScannerLanguage(filterLang)`: Control y sincronización bidireccional entre la cámara y la barra de filtros de idioma (`.scanner-lang-bar`).
    - `calculateSharpness(gray, w, h)`: Filtro Laplaciano 3x3 de nitidez que detecta movimiento o desenfoque. Si la varianza < `130`, avisa con estado ámbar *"MANTÉN LA CARTA QUIETA"* y salta el OCR para proteger la batería y evitar throttling.
-   - `extractHeaderRoi(video)`: Proyección matemática exacta de la caja `.scanner-header-roi` sobre las coordenadas nativas del video stream considerando la escala y desfase de `object-fit: cover`.
+   - `extractHeaderRoi(video)`: Proyección matemática exacta de la caja `.scanner-header-roi` sobre las coordenadas nativas del video stream con margen de seguridad dinámico (+12% horizontal, +20% vertical) para evitar recortes si la carta está inclinada.
    - `computeOtsuThreshold(gray)` y `preprocessCanvas(canvas, mode)`: Binarización adaptativa Otsu que elimina brillos, hologramas y sombras sobre fondos coloreados.
-   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase adaptativa según familia lingüística (umbral de confianza adaptado a ideogramas CJK).
-   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`, `血量`), fases evolutivas (`Basic`, `1阶`, `たね`, etc.), preservando completamente caracteres chinos Hanzi (`\u4E00-\u9FFF`), kana japoneses y hangul.
+   - `getBestLine(data, isCJK)`: Pre-filtra y sanitiza cada línea con `cleanOcrText` antes de evaluarla (descartando "Basic", "Stage 1", "Fase 2", etc.) y puntúa por longitud útil de texto (`confidence + lenBonus`).
+   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase adaptativa con umbrales calibrados (`MIN_CONF_PASS1 = 38`, `MIN_CONF_PASS2 = 30`, `MIN_CONF_CJK = 30`) y admisión de candidatos moderados (>=25%) para verificación en API.
+   - `capturarYProcesar()`: Captura manual con fallback automático al tercio superior del fotograma (35% de altura) si la ROI estrecha no arroja texto.
+   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`, `血量`), fases evolutivas (`Basic`, `1阶`, `たね`, etc.), preservando caracteres chinos Hanzi (`\u4E00-\u9FFF`), kana japoneses, hangul, latinos y números de coleccionista.
    - `hasCJK(text)` / `hasChinese(text)`: Detectores de caracteres ideográficos para ajustar umbrales de longitud y conmutar automáticamente la búsqueda a chino.
    - `toggleLinterna()`: Conmuta la linterna/torch en dispositivos móviles mediante `track.applyConstraints({ advanced: [{ torch: state }] })`.
    - `cambiarCamara()`: Alterna entre cámara trasera y delantera.
