@@ -33,6 +33,11 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
     - **Fila 3 (Pie de Dashboard)**:
       - Banner Hero Escáner Oscuro (`#172231`): Retícula de visor de cámara HUD con pulso luminoso, descripción persuasiva y botón circular verde lima con flecha para escaneo inmediato.
       - Columna derecha «Últimas cartas añadidas»: Carrusel de actividad reciente con miniaturas y precios.
+  - **Armonización Estilística de Vistas Internas (Colección, Mazos, Escáner y Modal)**:
+    - **Pestaña Colección (`#tab-collection`)**: Portfolio Hero Card adaptado a Obsidian Oscuro (`#172231`) con tipografía de alto contraste, desglose de estadísticas en chips con borde sutil, tarjetas de análisis de evolución del portfolio con gráficos en verde lima (`#AFF33F`) y barra de filtros estilo Collectr.
+    - **Pestaña Editor de Mazos (`#tab-deck`)**: Selector de subpestañas (`.pill-switcher`) en blanco puro con píldora activa oscura, chips de estadísticas del mazo con cifras destacadas en 20px, barra de progreso con llenado lima, botones de acción primarios de alto impacto (`#AFF33F`), filas de cartas en mazo y tarjetas de mazos guardados con transiciones suaves.
+    - **Escáner Activo de Cámara (`#tab-scanner`)**: Visor de cámara en Obsidian `#172231`, esquinas de encuadre en verde lima eléctrico (`#AFF33F`), retícula ROI para título con línea láser animada, píldoras de idioma del escáner en obsidian con activación lima y botón de disparo manual de captura.
+    - **Modal de Detalle de Carta (`#card-detail-modal`)**: Selectores de variantes interactivas (`.variant-pill`) con cotizaciones actualizadas, selector de idioma (`.lang-pill`), selector de condición (`.condition-pill`) y cuadrícula de estadísticas de mercado (mínimo, media, máximo).
   - **Atajo Global de Teclado (`⌘K`)**:
     - Registrado listener global en `js/app.js` para enfocar de forma instantánea el campo de búsqueda rápida al pulsar `⌘K` en macOS o `Ctrl+K` en Windows/Linux.
 
