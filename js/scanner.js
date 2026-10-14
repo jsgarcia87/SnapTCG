@@ -31,7 +31,7 @@ const SCAN_INTERVAL_MS = 1100; // Intervalo entre fotogramas estables
 const MIN_CONF_PASS1   = 38;   // Confianza mínima para pase binarizado Otsu (latino)
 const MIN_CONF_PASS2   = 30;   // Confianza mínima para pase de contraste (latino)
 const MIN_CONF_CJK     = 30;   // Confianza mínima para ideogramas CJK (Chino/Japonés/Coreano)
-const MOTION_THRESHOLD = 130;  // Umbral de varianza Laplaciana (por debajo es movimiento/borroso)
+const MOTION_THRESHOLD = 65;   // Umbral calibrado de varianza Laplaciana (evita rechazos en cartas de contraste suave)
 
 const LANG_MODEL_MAP = {
   auto:    'eng+spa',
@@ -74,6 +74,16 @@ async function initOcrWorker(forceLang = null) {
   isWorkerLoading = true;
 
   try {
+    // Si la librería Tesseract aún no ha terminado de cargar por CDN, esperar brevemente
+    if (typeof Tesseract === "undefined") {
+      for (let wait = 0; wait < 15 && typeof Tesseract === "undefined"; wait++) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (typeof Tesseract === "undefined") {
+        throw new Error("Librería Tesseract no disponible. Comprueba tu conexión a internet.");
+      }
+    }
+
     if (ocrWorker) {
       try { await ocrWorker.terminate(); } catch (e) {}
       ocrWorker = null;
@@ -94,16 +104,17 @@ async function initOcrWorker(forceLang = null) {
 
     // Configuración según familia lingüística
     const isCJK = tessLang.includes('chi') || tessLang.includes('jpn') || tessLang.includes('kor');
+    const psmMode = (Tesseract.PSM && Tesseract.PSM.AUTO) || '3';
     if (isCJK) {
       // Para ideogramas y caracteres asiáticos: modo automático sin whitelist restrictiva
       await ocrWorker.setParameters({
-        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+        tessedit_pageseg_mode: psmMode,
       });
     } else {
-      // Para alfabetos latinos: modo línea única y whitelist optimizada
+      // Para alfabetos latinos: modo automático con whitelist completa (incluye &, /, :, ., !)
       await ocrWorker.setParameters({
-        tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE,
-        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúñüÁÉÍÓÚÑÜ '-",
+        tessedit_pageseg_mode: psmMode,
+        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789áéíóúñüÁÉÍÓÚÑÜ '&/:.,!-",
       });
     }
 
@@ -183,6 +194,9 @@ function syncScannerLanguage(filterLang) {
  * Inicia la cámara y el bucle de auto-escaneo
  */
 async function iniciarEscaner() {
+  if (typeof switchTab === 'function') {
+    switchTab('scanner');
+  }
   resetUI();
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('scanner-wrap').style.display = 'block';
@@ -213,6 +227,7 @@ async function iniciarEscaner() {
 
     const video = document.getElementById('live-video');
     video.srcObject = videoStream;
+    try { await video.play(); } catch (_) { /* play ya manejado por autoplay */ }
 
     // Detectar soporte para linterna (torch)
     const track = videoStream.getVideoTracks()[0];
@@ -449,8 +464,14 @@ async function procesarImagenArchivo(file) {
   img.onload = async () => {
     URL.revokeObjectURL(objectUrl);
     try {
-      const w = img.naturalWidth || img.width;
-      const h = img.naturalHeight || img.height;
+      let origW = img.naturalWidth || img.width;
+      let origH = img.naturalHeight || img.height;
+
+      // Normalizar fotos de resolución ultra-alta (12MP-48MP) a máx 1200px para velocidad y memoria
+      const maxDim = 1200;
+      const scale = Math.min(1, maxDim / Math.max(origW, origH));
+      const w = Math.round(origW * scale);
+      const h = Math.round(origH * scale);
 
       // Intentar primero con la franja superior (30% superior = título en TCGs)
       const roiH = Math.round(h * 0.3);
@@ -458,7 +479,7 @@ async function procesarImagenArchivo(file) {
       canvas.width  = w;
       canvas.height = roiH;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, w, roiH, 0, 0, w, roiH);
+      ctx.drawImage(img, 0, 0, origW, Math.round(origH * 0.3), 0, 0, w, roiH);
 
       let text = await recognizeRoiText(canvas);
       let cleaned = cleanOcrText(text);
@@ -674,7 +695,8 @@ function preprocessCanvas(canvas, mode = 'otsu') {
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imgData.data;
   const len = data.length;
-  const gray = new Uint8Array(len / 4);
+  const numPixels = len / 4;
+  const gray = new Uint8Array(numPixels);
 
   for (let i = 0, g = 0; i < len; i += 4, g++) {
     gray[g] = (data[i] * 77 + data[i + 1] * 150 + data[i + 2] * 29) >> 8;
@@ -682,8 +704,18 @@ function preprocessCanvas(canvas, mode = 'otsu') {
 
   if (mode === 'otsu') {
     const thresh = computeOtsuThreshold(gray);
+    // Comprobar polaridad del fondo: contar píxeles más oscuros que el umbral
+    let darkPixels = 0;
+    for (let g = 0; g < numPixels; g++) {
+      if (gray[g] < thresh) darkPixels++;
+    }
+    // Si la mayoría de píxeles son oscuros (>50%), el fondo de la carta es oscuro (Darkness, foil, full-art)
+    // Invertimos para que Tesseract reciba siempre texto negro sobre fondo blanco
+    const isDarkBackground = darkPixels > (numPixels / 2);
+
     for (let i = 0, g = 0; i < len; i += 4, g++) {
-      const val = gray[g] >= thresh ? 255 : 0;
+      const isText = isDarkBackground ? (gray[g] >= thresh) : (gray[g] < thresh);
+      const val = isText ? 0 : 255;
       data[i]     = val;
       data[i + 1] = val;
       data[i + 2] = val;
@@ -692,7 +724,7 @@ function preprocessCanvas(canvas, mode = 'otsu') {
     // Normalización de contraste estirado
     let min = 255;
     let max = 0;
-    for (let g = 0; g < gray.length; g++) {
+    for (let g = 0; g < numPixels; g++) {
       const v = gray[g];
       if (v < min) min = v;
       if (v > max) max = v;
@@ -718,42 +750,73 @@ async function recognizeRoiText(rawCanvas) {
 
   const isCJK = ocrWorkerLang && (ocrWorkerLang.includes('chi') || ocrWorkerLang.includes('jpn') || ocrWorkerLang.includes('kor'));
 
-  // Pase 1: Binarización Otsu (elimina brillos holográficos y reflejos)
-  const pass1 = document.createElement('canvas');
-  pass1.width  = rawCanvas.width;
-  pass1.height = rawCanvas.height;
-  pass1.getContext('2d').drawImage(rawCanvas, 0, 0);
-  preprocessCanvas(pass1, 'otsu');
-
-  let result = await ocrWorker.recognize(pass1);
-  let best = getBestLine(result.data, isCJK);
-  const minConf1 = isCJK ? MIN_CONF_CJK : MIN_CONF_PASS1;
-
-  if (best && best.confidence >= minConf1) {
-    return best.text;
+  // Escalar el canvas si es de baja resolución para alcanzar una altura óptima (al menos 150px) para la red neuronal
+  let workingCanvas = rawCanvas;
+  if (rawCanvas.height < 140) {
+    const scale = Math.min(2.5, Math.max(1.5, 160 / rawCanvas.height));
+    workingCanvas = document.createElement('canvas');
+    workingCanvas.width = Math.round(rawCanvas.width * scale);
+    workingCanvas.height = Math.round(rawCanvas.height * scale);
+    const wCtx = workingCanvas.getContext('2d');
+    wCtx.imageSmoothingEnabled = true;
+    wCtx.imageSmoothingQuality = 'high';
+    wCtx.drawImage(rawCanvas, 0, 0, workingCanvas.width, workingCanvas.height);
   }
 
-  // Pase 2: Alto contraste normalizado (para fuentes con gradiente o fondos oscuros)
+  let bestCandidate = null;
+
+  // Pase 1: Binarización Otsu con polaridad normalizada
+  const pass1 = document.createElement('canvas');
+  pass1.width  = workingCanvas.width;
+  pass1.height = workingCanvas.height;
+  pass1.getContext('2d').drawImage(workingCanvas, 0, 0);
+  preprocessCanvas(pass1, 'otsu');
+
+  try {
+    const result1 = await ocrWorker.recognize(pass1);
+    const best1 = getBestLine(result1.data, isCJK);
+    const minConf1 = isCJK ? MIN_CONF_CJK : MIN_CONF_PASS1;
+
+    if (best1) {
+      bestCandidate = best1;
+      if (best1.confidence >= minConf1) {
+        return best1.text;
+      }
+    }
+  } catch (e1) {
+    console.warn("Fallo en Pase 1 OCR:", e1);
+  }
+
+  // Pase 2: Alto contraste normalizado (para fuentes con gradiente o fondos complejos)
   const pass2 = document.createElement('canvas');
-  pass2.width  = rawCanvas.width;
-  pass2.height = rawCanvas.height;
-  pass2.getContext('2d').drawImage(rawCanvas, 0, 0);
+  pass2.width  = workingCanvas.width;
+  pass2.height = workingCanvas.height;
+  pass2.getContext('2d').drawImage(workingCanvas, 0, 0);
   preprocessCanvas(pass2, 'contrast');
 
-  result = await ocrWorker.recognize(pass2);
-  best = getBestLine(result.data, isCJK);
-  const minConf2 = isCJK ? Math.max(22, MIN_CONF_CJK - 6) : MIN_CONF_PASS2;
+  try {
+    const result2 = await ocrWorker.recognize(pass2);
+    const best2 = getBestLine(result2.data, isCJK);
+    const minConf2 = isCJK ? Math.max(22, MIN_CONF_CJK - 6) : MIN_CONF_PASS2;
 
-  if (best && best.confidence >= minConf2) {
-    return best.text;
+    if (best2) {
+      if (!bestCandidate || (best2.score > bestCandidate.score)) {
+        bestCandidate = best2;
+      }
+      if (best2.confidence >= minConf2) {
+        return best2.text;
+      }
+    }
+  } catch (e2) {
+    console.warn("Fallo en Pase 2 OCR:", e2);
   }
 
   // Si se encontró un candidato con confianza moderada (>= 25%), pasarlo al buscador para verificar en la API
-  if (best && best.confidence >= 25) {
-    return best.text;
+  if (bestCandidate && bestCandidate.confidence >= 25) {
+    return bestCandidate.text;
   }
 
-  return best ? best.text : null;
+  return bestCandidate ? bestCandidate.text : null;
 }
 
 function getBestLine(data, isCJK = false) {
@@ -796,13 +859,13 @@ function cleanOcrText(raw) {
     .replace(/\b(\d{2,4}\s*HP|HP\s*\d{2,4})\b/gi, '')
     .replace(/(血量|生命值|HP)\s*\d{2,4}/gi, '')
     .replace(/\d{2,4}\s*(血量|生命值|HP)/gi, '')
-    // Descartar fases evolutivas, entrenadores y tipos (multilingüe)
-    .replace(/\b(Basic|Fase\s*[12]|Stage\s*[12]|Creature|Trainer|Item|Supporter|Entrenador|Energía|Energy)\b/gi, '')
+    // Descartar fases evolutivas, entrenadores y tipos (multilingüe: EN, ES, FR, DE, IT, ZH, JA)
+    .replace(/\b(Basic|Básico|Basico|Basis|Base|Fase\s*[12]|Stage\s*[12]|Phase\s*[12]|Niveau\s*[12]|Creature|Trainer|Item|Supporter|Entrenador|Energía|Energy)\b/gi, '')
     .replace(/(基础|基礎|1阶|2阶|1階|2階|宝可梦|寶可夢|训练家|訓練家|物品|支援者|能量)/g, '')
     .replace(/(たね|1進化|2進化|トレーナーズ|グッズ|サポート|エネルギー)/g, '')
-    .replace(/[{}[\]()<>@#$%^&*+=~|\\_]/g, ' ')
-    // Permitir letras latinas, dígitos, acentos, barra inclinada (coleccionista) y todos los caracteres CJK
-    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '\-\/]/g, ' ')
+    .replace(/[{}[\]()<>@#$%^*+=~|\\_]/g, ' ')
+    // Permitir letras latinas, dígitos, acentos, barra inclinada (coleccionista), ampersand, dos puntos y todos los caracteres CJK
+    .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '&:\-\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\s+\d+$/, '') // descarta números aislados finales como costes de maná

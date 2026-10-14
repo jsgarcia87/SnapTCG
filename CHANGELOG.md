@@ -4,6 +4,30 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.9.0] - 2026-10-14
+
+### Corregido y Optimizado
+- **Revisión Integral y Optimización del Motor OCR (`js/scanner.js`)**:
+  - **Calibración del Filtro Laplaciano de Movimiento (`MOTION_THRESHOLD = 65`)**:
+    - Reducido el umbral de varianza de 130 a 65 para evitar rechazos falsos en cartas con fondos lisos, cartas holográficas o iluminación tenue donde la varianza del título oscilaba entre 70 y 120.
+  - **Segmentación Multi-Línea Adaptativa (`PSM.AUTO`)**:
+    - Reemplazado `PSM.SINGLE_LINE` por `(Tesseract.PSM && Tesseract.PSM.AUTO) || '3'` en el worker latino. Esto permite a Tesseract segmentar correctamente el encabezado en líneas independientes (evolución, nombre y HP) en lugar de colisionar todas las líneas horizontalmente.
+  - **Inversión Automática de Polaridad de Fondo para Cartas Oscuras y Full-Art**:
+    - `preprocessCanvas` analiza ahora la proporción de píxeles oscuros. Si el fondo es oscuro (>50% de píxeles), invierte la binarización para entregar a Tesseract siempre texto negro sobre fondo blanco puro, garantizando el reconocimiento en cartas de tipo Oscuridad, full-art y rarezas secretas.
+  - **Ampliación de Whitelist de Caracteres**:
+    - Incorporados los caracteres `&`, `/`, `:`, `.`, `,`, `!` al `tessedit_char_whitelist` para admitir cartas Tag Team (`Pikachu & Zekrom`), números de coleccionista (`025/165`), nombres con dos puntos (`Type: Null`), iniciales (`Mr. Mime`) y entrenadores exclamativos.
+  - **Persistencia de Candidatos Multi-Pase**:
+    - `recognizeRoiText` mantiene la mejor lectura acumulada entre el Pase 1 (Otsu) y el Pase 2 (contraste), evitando que un resultado moderado del primer pase se descarte si el segundo no arroja texto.
+  - **Escalado de Resolución para Recortes Bajos**:
+    - Si el recorte de la cámara tiene una altura inferior a 140px (fotogramas 720p o cámaras frontales), se reescala suavemente con interpolación bilineal hasta 160px para situar los caracteres en la altura de fuente óptima de Tesseract.
+  - **Limpieza de Tokens Evolutivos Internacionales (`cleanOcrText`)**:
+    - Añadidos términos en español (`Básico`, `Basico`), alemán (`Basis`), italiano/francés (`Base`, `Niveau`, `Phase`) al filtro de descarte para que las cartas básicas españolas se busquen por su nombre limpio y no como "Básico Pikachu".
+  - **Protección de Carga CDN de Tesseract y Normalización de Galería**:
+    - Bucle de espera asíncrono para verificar la disponibilidad de `window.Tesseract` antes de inicializar el worker.
+    - Escalado de fotos de alta resolución subidas desde galería (12MP–48MP) a un ancho máximo de 1200px para prevenir cuelgues de memoria WebAssembly.
+
+---
+
 ## [3.8.0] - 2026-10-14
 
 ### Añadido

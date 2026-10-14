@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.8.0
+- **Versión Actual:** 3.9.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (CardDex Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
@@ -122,20 +122,20 @@ SnapTCG/
    - `buscarCartas(nombre, juego, lang)`: enrutador con caché por juego e idioma (`search:${juego}:${lang}:${nombre}`).
 
 3. **`js/scanner.js`**:
-   - `iniciarEscaner()` / `detenerEscaner()`: Gestiona `navigator.mediaDevices.getUserMedia` (`facingMode: { ideal: facingMode }`, resolución ideal 1920x1080 con fallback a 1280x720).
-   - `initOcrWorker(forceLang)`: Carga bajo demanda modelos lingüísticos optimizados (`chi_sim+chi_tra+eng`, `jpn+eng`, `kor+eng`, `spa+eng`). Cacheado permanente en IndexedDB.
+   - `iniciarEscaner()` / `detenerEscaner()`: Gestiona `navigator.mediaDevices.getUserMedia` (`facingMode: { ideal: facingMode }`, resolución ideal 1920x1080 con fallback a 1280x720) y conmutación automática de pestaña activa a `#tab-scanner`.
+   - `initOcrWorker(forceLang)`: Carga bajo demanda modelos lingüísticos optimizados (`chi_sim+chi_tra+eng`, `jpn+eng`, `kor+eng`, `spa+eng`) con comprobación de seguridad de carga CDN de Tesseract y modo de segmentación `PSM.AUTO` para separar líneas de título y evoluciones.
    - `setScannerLanguage(lang)` / `syncScannerLanguage(filterLang)`: Control y sincronización bidireccional entre la cámara y la barra de filtros de idioma (`.scanner-lang-bar`).
-   - `calculateSharpness(gray, w, h)`: Filtro Laplaciano 3x3 de nitidez que detecta movimiento o desenfoque. Si la varianza < `130`, avisa con estado ámbar *"MANTÉN LA CARTA QUIETA"* y salta el OCR para proteger la batería y evitar throttling.
+   - `calculateSharpness(gray, w, h)`: Filtro Laplaciano 3x3 de nitidez calibrado (`MOTION_THRESHOLD = 65`) que detecta desenfoque por movimiento sin descartar cartas con fondos lisos o contraste suave.
    - `extractHeaderRoi(video)`: Proyección matemática exacta de la caja `.scanner-header-roi` sobre las coordenadas nativas del video stream con margen de seguridad dinámico (+12% horizontal, +20% vertical) para evitar recortes si la carta está inclinada.
-   - `computeOtsuThreshold(gray)` y `preprocessCanvas(canvas, mode)`: Binarización adaptativa Otsu que elimina brillos, hologramas y sombras sobre fondos coloreados.
-   - `getBestLine(data, isCJK)`: Pre-filtra y sanitiza cada línea con `cleanOcrText` antes de evaluarla (descartando "Basic", "Stage 1", "Fase 2", etc.) y puntúa por longitud útil de texto (`confidence + lenBonus`).
-   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase adaptativa con umbrales calibrados (`MIN_CONF_PASS1 = 38`, `MIN_CONF_PASS2 = 30`, `MIN_CONF_CJK = 30`) y admisión de candidatos moderados (>=25%) para verificación en API.
+   - `computeOtsuThreshold(gray)` y `preprocessCanvas(canvas, mode)`: Binarización adaptativa Otsu con auto-inversión de polaridad en fondos oscuros (cartas de tipo Oscuridad, full-art y rarezas secretas) para entregar siempre texto negro sobre fondo blanco a Tesseract.
+   - `getBestLine(data, isCJK)`: Pre-filtra y sanitiza cada línea con `cleanOcrText` antes de evaluarla (descartando "Basic", "Básico", "Stage 1", "Fase 2", etc.) y puntúa por longitud útil de texto (`confidence + lenBonus`).
+   - `recognizeRoiText(rawCanvas)`: Estrategia multi-pase adaptativa con reescalado a altura mínima de 160px para recortes pequeños, umbrales calibrados (`MIN_CONF_PASS1 = 38`, `MIN_CONF_PASS2 = 30`, `MIN_CONF_CJK = 30`) y persistencia del mejor candidato entre pases.
    - `capturarYProcesar()`: Captura manual con fallback automático al tercio superior del fotograma (35% de altura) si la ROI estrecha no arroja texto.
-   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`, `血量`), fases evolutivas (`Basic`, `1阶`, `たね`, etc.), preservando caracteres chinos Hanzi (`\u4E00-\u9FFF`), kana japoneses, hangul, latinos y números de coleccionista.
+   - `cleanOcrText(raw)`: Sanitiza tokens de HP (`120 HP`, `血量`), fases evolutivas internacionales (`Basic`, `Básico`, `Basis`, `1阶`, `たね`, etc.), preservando caracteres chinos Hanzi (`\u4E00-\u9FFF`), kana japoneses, hangul, latinos, ampersands (`&`), dos puntos (`:`) y números de coleccionista (`025/165`).
    - `hasCJK(text)` / `hasChinese(text)`: Detectores de caracteres ideográficos para ajustar umbrales de longitud y conmutar automáticamente la búsqueda a chino.
    - `toggleLinterna()`: Conmuta la linterna/torch en dispositivos móviles mediante `track.applyConstraints({ advanced: [{ torch: state }] })`.
    - `cambiarCamara()`: Alterna entre cámara trasera y delantera.
-   - `procesarImagenArchivo(file)`: Carga y analiza fotos de cartas desde la galería o disco.
+   - `procesarImagenArchivo(file)`: Carga y analiza fotos de cartas desde la galería o disco con normalización de resolución a máx 1200px.
    - `playSuccessChime()` & `triggerHaptic()`: Confirmación instantánea por síntesis Web Audio API (880Hz -> 1320Hz) y vibración háptica (`[45, 30, 45]ms`).
 
 4. **`js/deckbuilder.js`**:
