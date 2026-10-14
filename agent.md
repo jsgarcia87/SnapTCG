@@ -7,9 +7,9 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.7.0
+- **Versión Actual:** 3.8.0
 - **Autor / Estudio:** Sangar Studio
-- **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
+- **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (CardDex Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
@@ -18,7 +18,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 | Capa | Tecnología / Servicio | Descripción |
 |---|---|---|
-| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium OLED (`#000000`), estética inspirada en Collectr, marcos coleccionables con brillo holográfico (`.card-holo-sheen`), selector de idiomas (`.lang-picker`) y shell móvil responsive (`max-width: 500px` hasta 1360px). |
+| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible basada en el diseño oficial de Figma (CardDex Pro) y Collectr: lienzo limpio (`#F8FAFC`), tarjetas de alto contraste en Obsidian (`#172231`) y blanco (`#FFFFFF`), acento Verde Lima Eléctrico (`#AFF33F`), cabecera con atajo `⌘K`, navegación dual (sidebar lateral en escritorio / barra inferior en móvil), marcos coleccionables con brillo holográfico (`.card-holo-sheen`) y shell responsive hasta 1440px+. |
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
 | **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo adaptativo con modelos multilingües (chi_sim, chi_tra, jpn, kor, spa, eng). |
 | **Tipografía** | Google Fonts | `Inter` (UI/textos principales), `DM Sans` (cuerpo alternativo) y `Cinzel` (títulos/display). |
@@ -267,35 +267,59 @@ interface Deck {
 
 El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.dark` y `@theme inline` en [`css/style.css`](css/style.css) (con extensiones en [`css/design.css`](css/design.css)):
 
-### Tokens Principales del Tema:
-- **Fondo base (`--background`):** `#000000` (OLED black, mapeado a `--bg-color`).
-- **Superficies y Tarjetas (`--card` / `--popover`):** `#0f0f0f` (mapeado a `--surface-color`).
-- **Secundario y Hover (`--secondary` / `--accent`):** `#2a2a2c` / `#1b1b1d` (mapeado a `--surface-hover`).
-- **Bordes (`--border`):** `#26272d` (mapeado a `--border-color`).
+### Tokens Principales del Tema (Figma CardDex Pro & Collectr):
+- **Fondo base (`--background` / `--bg-color`):** `#F8FAFC` (lienzo blanco roto de alta legibilidad).
+- **Superficies y Tarjetas Estándar (`--card` / `--surface-color`):** `#FFFFFF` (blanco puro con bordes de 1px `#E2E8F0`).
+- **Superficies Hero / Contraste (`--surface-dark` / `--sidebar-bg`):** `#172231` (Obsidian oscuro / Midnight Slate, RGB `23, 34, 49`).
+- **Secundario y Hover (`--secondary` / `--accent`):** `#F1F5F9` / `#E2E8F0` (mapeado a `--surface-hover`).
+- **Bordes (`--border` / `--border-color`):** `#E2E8F0` (con `--border-dark: rgba(255, 255, 255, 0.1)` en tarjetas oscuras).
 - **Texto y Tipografía:**
-  - Primario (`--foreground`): `#ffffff` (mapeado a `--text-primary`).
-  - Secundario (`--muted-foreground`): `#bbcbb2` (mapeado a `--text-secondary`).
-  - Apagado (`--chart-5`): `#6b7367` (mapeado a `--text-muted`).
-  - Fuentes: `--font-sans` (`"Inter", ui-sans-serif, ...`), `--font-mono`, `--font-serif`, y `--font-display` (`'Cinzel', serif`).
+  - Primario (`--foreground` / `--text-primary`): `#0F172A` (Slate 900 oscuro para máxima legibilidad).
+  - Secundario (`--muted-foreground` / `--text-secondary`): `#64748B` (Slate 500 neutro).
+  - Apagado (`--text-muted`): `#94A3B8` (Slate 400).
+  - Texto sobre fondo oscuro (`--text-on-dark`): `#FFFFFF` y secundario `#94A3B8`.
+  - Fuentes: `--font-sans` (`"Inter", ui-sans-serif, -apple-system, sans-serif`), `--font-mono`, `--font-serif`, y `--font-display` (`'Cinzel', serif`).
 - **Color Primario y Acentos:**
-  - Primario de marca (`--primary` / `--ring` / `--sidebar-primary`): `#2fe92b` (verde neón eléctrico, RGB `47, 233, 43`, foreground `#0f0f0f`).
-  - Destructivo / Peligro (`--destructive`): `#ff5102` (foreground `#ffffff`).
+  - Primario de marca (`--primary` / `--ring` / `--sidebar-primary`): `#AFF33F` (Verde Lima Eléctrico de alta energía, RGB `175, 243, 63`, texto contrastante `#0F172A`).
+  - Destructivo / Peligro (`--destructive`): `#EF4444` (foreground `#FFFFFF`).
   - Acentos dinámicos de juego:
-    - Pokémon: `--pk-accent: var(--primary)` (RGB `47, 233, 43`).
-    - Magic: `--mtg-accent: #a78bfa` (RGB `167, 139, 250`).
+    - Pokémon: `--pk-accent: #AFF33F` (Verde Lima Eléctrico, RGB `175, 243, 63`).
+    - Magic: `--mtg-accent: #8B5CF6` (Púrpura Místico, RGB `139, 92, 246`).
     - `--accent-color` y `--accent-rgb` cambian dinámicamente según el juego activo vía `updateAppTheme()`.
-- **Escala de Gráficos (`--chart-1` a `--chart-5`):**
-  - `--chart-1: #2fe92b`, `--chart-2: #ff9821`, `--chart-3: #f57733`, `--chart-4: #ff5102`, `--chart-5: #6b7367`.
+- **Escala de Gráficos y Progreso:**
+  - `--chart-1: #AFF33F` (Lima), `--chart-2: #8B5CF6` (Púrpura), `--chart-3: #F59E0B` (Ámbar), `--chart-4: #EF4444` (Rojo), `--chart-5: #64748B` (Gris).
 - **Geometría y Sombras:**
-  - Radio base (`--radius`): `0.25rem` (4px). Derivados: `--radius-sm` (8px), `--radius-md` (16px), `--radius-lg` (24px).
-  - Espaciado base (`--spacing`): `0.25rem` (4px) y escala `--space-1` a `--space-6`.
-  - Sombras: `--shadow-blur: 24px`, `--shadow-color: #000000`, `--shadow-opacity: 0.08`, `--shadow-offset-y: 1px`.
-- **Estructura del Shell:** Ancho adaptativo (`max-width: 500px` en móvil, responsive hasta 1360px en escritorio con navegación lateral y diálogo de dos columnas), respetando la barra de navegación fija y safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
+  - Radio base (`--radius`): `0.375rem` (6px). Derivados: `--radius-sm` (10px), `--radius-md` (16px), `--radius-lg` (20px).
+  - Sombras: `--shadow-sm: 0 1px 2px rgba(0,0,0,0.04)`, `--shadow-md: 0 4px 6px -1px rgba(0,0,0,0.06)`, `--shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.07)`.
+- **Estructura del Shell y Navegación Dual:**
+  - En pantallas de escritorio (`min-width: 900px`): Grid CSS de dos columnas con barra lateral izquierda (`.main-nav`) de 240px fija, cabecera superior (`.app-header`) con barra de búsqueda rápida `⌘K`, conmutador de juego y botón `+ Añadir carta`.
+  - En dispositivos móviles (`max-width: 899px`): Navegación inferior fija estilo barra de pestañas que respeta safe-area de iOS (`calc(var(--nav-height) + var(--safe-area-bottom))`).
 
-### Componentes de UI Inspirados en Collectr:
+### Componentes de UI de Figma & Collectr:
+- **Cabecera de Escritorio (`.app-header`):**
+  - Brand badge con logotipo geométrico CardDex.
+  - Barra de búsqueda interactiva con placeholder descriptivo e indicador visual de atajo de teclado `⌘K` (`Ctrl+K`).
+  - Selector de juego (Pokémon / Magic) y botón verde lima de acción rápida `+ Añadir carta`.
+- **Navegación Lateral Izquierda (`.main-nav` en escritorio):**
+  - Logo/Header superior `CardDex Pro`.
+  - Enlaces de navegación con icono SVG, etiqueta y píldora indicadora verde lima cuando están activos.
+  - Tarjeta promocional de escáner en obsidian (`#172231`) con retícula de cámara.
+  - Tarjeta de usuario con avatar y correo.
+- **Dashboard de Inicio Figma (`js/home.js`):**
+  - **Tarjetas de Métricas:**
+    - Valor Total: Tarjeta Obsidian (`#172231`), cifra principal en negrita, badge de tendencia y barra verde lima inferior.
+    - Total Cartas: Conteo total con barra de desglose de 3 segmentos (lima, púrpura, ámbar) y puntos de leyenda.
+    - Rendimiento Estimado: Porcentaje y gráfica de línea SVG suavizada en verde lima.
+  - **Módulo «Lo que más se mueve»:**
+    - Ranking ordenado (`01`, `02`, `03`) con miniaturas de arte, barra de rendimiento lima, precios y badges porcentuales.
+  - **Módulo «Mazo activo»:**
+    - Visualizador de cartas en abanico 3D (`.fanned-cards` / `.fan-card-1`, `.fan-card-2`, `.fan-card-3`) con perspectiva CSS inclinada (`rotate(-10deg)`, `rotate(0deg)`, `rotate(10deg)`) y animación al pasar el cursor.
+    - Barra de progreso de rareza y estadísticas del mazo.
+  - **Banner Escáner Hero:**
+    - Tarjeta Obsidian (`#172231`) con retícula animada HUD (`.viewfinder-reticle`), titular, descripción y botón circular verde lima con icono de flecha.
 - **Barra de Filtros y Ordenación (`.collectr-filter-bar`):**
   - Contenedor con scroll horizontal optimizado para móviles sin romper el layout.
-  - Píldoras interactivas (`.filter-pill`): estados activo con acento neón y fondo sutil.
+  - Píldoras interactivas (`.filter-pill`): estados activo con acento verde lima y fondo sutil.
   - Desplegable de ordenación (`.filter-select`) para ordenar por relevancia, precio o nombre.
 - **Tarjetas Coleccionables en Cuadrícula (`.card-item`):**
   - Contenedor de arte (`.card-artwork-wrapper`) con relación de aspecto coleccionable `63 / 88`.

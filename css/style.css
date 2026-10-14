@@ -4,88 +4,91 @@
 */
 
 :root {
-  --card: #0f0f0f;
-  --ring: #2fe92b;
-  --input: #1b1b1d;
-  --muted: #1b1b1d;
-  --accent: #1b1b1d;
-  --border: #26272d;
-  --radius: 0.25rem;
-  --chart-1: #2fe92b;
-  --chart-2: #ff9821;
-  --chart-3: #f57733;
-  --chart-4: #ff5102;
-  --chart-5: #6b7367;
-  --popover: #0f0f0f;
-  --primary: #2fe92b;
-  --sidebar: #000000;
+  --card: #ffffff;
+  --ring: #aff33f;
+  --input: #f8fafc;
+  --muted: #f1f5f9;
+  --accent: #aff33f;
+  --border: #e2e8f0;
+  --radius: 0.75rem;
+  --chart-1: #aff33f;
+  --chart-2: #8b5cf6;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #64748b;
+  --popover: #ffffff;
+  --primary: #aff33f;
+  --sidebar: #ffffff;
   --spacing: 0.25rem;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --secondary: #2a2a2c;
-  --background: #000000;
-  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  --foreground: #ffffff;
-  --destructive: #ff5102;
-  --shadow-blur: 24px;
-  --shadow-color: #000000;
-  --sidebar-ring: #2fe92b;
+  --secondary: #f1f5f9;
+  --background: #f8fafc;
+  --font-serif: "Inter", ui-sans-serif, sans-serif;
+  --foreground: #0f172a;
+  --destructive: #ef4444;
+  --shadow-blur: 20px;
+  --shadow-color: rgba(15, 23, 42, 0.05);
+  --sidebar-ring: #aff33f;
   --shadow-spread: 0px;
-  --letter-spacing: 0em;
-  --shadow-opacity: 0.08;
-  --sidebar-accent: #1b1b1d;
-  --sidebar-border: #26272d;
-  --card-foreground: #ffffff;
+  --letter-spacing: -0.01em;
+  --shadow-opacity: 0.06;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-border: #e2e8f0;
+  --card-foreground: #0f172a;
   --shadow-offset-x: 0;
-  --shadow-offset-y: 1px;
-  --sidebar-primary: #2fe92b;
-  --muted-foreground: #bbcbb2;
-  --accent-foreground: #ffffff;
-  --popover-foreground: #ffffff;
-  --primary-foreground: #0f0f0f;
-  --sidebar-foreground: #ffffff;
-  --secondary-foreground: #ffffff;
+  --shadow-offset-y: 2px;
+  --sidebar-primary: #aff33f;
+  --muted-foreground: #64748b;
+  --accent-foreground: #0f172a;
+  --popover-foreground: #0f172a;
+  --primary-foreground: #0f172a;
+  --sidebar-foreground: #0f172a;
+  --secondary-foreground: #0f172a;
   --destructive-foreground: #ffffff;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-primary-foreground: #0f0f0f;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-primary-foreground: #0f172a;
 
   /* Mapeo de tokens a variables de la aplicación */
   --bg-color: var(--background);
   --surface-color: var(--card);
   --surface-hover: var(--secondary);
   --surface-active: var(--border);
+  --surface-dark: #172231;
+  --surface-dark-card: #172231;
+  --surface-dark-border: rgba(255, 255, 255, 0.08);
   --border-color: var(--border);
-  --border-bright: rgba(255, 255, 255, 0.16);
+  --border-bright: #cbd5e1;
   
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --text-muted: var(--chart-5);
   
   /* Game Themes */
-  --pk-accent: var(--primary);
-  --pk-accent-rgb: 47, 233, 43;
-  --mtg-accent: #a78bfa;
-  --mtg-accent-rgb: 167, 139, 250;
+  --pk-accent: #aff33f;
+  --pk-accent-rgb: 175, 243, 63;
+  --mtg-accent: #8b5cf6;
+  --mtg-accent-rgb: 139, 92, 246;
   
-  /* Dynamic Accent (Cambiado por JS / tema de juego) */
+  /* Dynamic Accent */
   --accent-color: var(--pk-accent);
   --accent-rgb: var(--pk-accent-rgb);
-  --accent-glow: rgba(var(--accent-rgb), 0.18);
+  --accent-glow: rgba(var(--accent-rgb), 0.25);
   
   /* Layout Constants */
   --nav-height: 72px;
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --radius-lg: 24px;
-  --radius-md: 16px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
   --radius-sm: 8px;
   
   /* Typography */
   --font-main: var(--font-sans);
-  --font-display: 'Cinzel', serif;
+  --font-display: var(--font-sans);
   
   /* Transitions */
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark {

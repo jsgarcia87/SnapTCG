@@ -4,6 +4,40 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.8.0] - 2026-10-14
+
+### Añadido
+- **Adaptación Visual Completa al Diseño Oficial de Figma (CardDex Pro)**:
+  - **Paleta Cromática y Tokens de Alta Gama**:
+    - Fondo de lienzo ultra limpio en blanco roto (`#F8FAFC`).
+    - Tarjetas de contenido en blanco puro (`#FFFFFF`) con bordes sutiles (`#E2E8F0`) y sombras de elevación suaves.
+    - Tarjetas de contraste hero en Obsidian Oscuro / Midnight Slate (`#172231`).
+    - Color de acento primario Verde Lima Eléctrico (`#AFF33F`, RGB `175, 243, 63`) con texto de contraste oscuro (`#0F172A`).
+  - **Nueva Cabecera Global de Escritorio (`.app-header`)**:
+    - Emblema estilizado CardDex con tipografía geométrica e indicador de versión.
+    - Barra de búsqueda rápida integrada con indicador de atajo de teclado `⌘K` (`Ctrl+K`).
+    - Conmutador directo de juego activo (Pokémon / Magic).
+    - Botón de acción destacado `+ Añadir carta` en verde lima eléctrico con apertura directa al buscador.
+  - **Arquitectura de Navegación Dual Unificada (`.main-nav`)**:
+    - Barra lateral izquierda (sidebar) en pantallas de escritorio (`min-width: 900px`) con cabecera de navegación, enlaces con píldora de acento lima activa, tarjeta promocional de escáner en obsidian (`#172231`) y ficha de perfil de usuario.
+    - Transformación fluida en barra de navegación inferior en dispositivos móviles preservando los mismos IDs y listeners de eventos.
+  - **Nuevo Dashboard de Inicio (`js/home.js`)**:
+    - **Cabecera de Bienvenida**: Píldora de estado `MI COLECCIÓN`, saludo personalizado `Hola. Todo bajo control.`, subtítulo explicativo y selector de rango temporal (`Todos`, `30 días`, `7 días`).
+    - **Fila 1 (3 Tarjetas de Métricas)**:
+      - Tarjeta Hero Oscura (`#172231`): Valor total de colección con badge de tendencia a 7 días y barra de acción lima.
+      - Tarjeta Total Cartas: Conteo total y desglose proporcional con barra de progreso segmentada en colores y leyenda por tipos.
+      - Tarjeta Rendimiento Estimado: Porcentaje de rentabilidad y curva de tendencia SVG suavizada.
+    - **Fila 2 (Columnas Centrales)**:
+      - Columna izquierda «Lo que más se mueve»: Ranking con badges numéricos (`01`, `02`, `03`), miniaturas de cartas, minibarritas de rendimiento lima, cotización actual y badges de tendencia.
+      - Columna derecha «Mazo activo»: Vista previa con abanico 3D de cartas en perspectiva (`.fanned-cards`), barra de progreso de rareza y estadísticas del mazo.
+    - **Fila 3 (Pie de Dashboard)**:
+      - Banner Hero Escáner Oscuro (`#172231`): Retícula de visor de cámara HUD con pulso luminoso, descripción persuasiva y botón circular verde lima con flecha para escaneo inmediato.
+      - Columna derecha «Últimas cartas añadidas»: Carrusel de actividad reciente con miniaturas y precios.
+  - **Atajo Global de Teclado (`⌘K`)**:
+    - Registrado listener global en `js/app.js` para enfocar de forma instantánea el campo de búsqueda rápida al pulsar `⌘K` en macOS o `Ctrl+K` en Windows/Linux.
+
+---
+
 ## [3.7.0] - 2026-10-14
 
 ### Añadido

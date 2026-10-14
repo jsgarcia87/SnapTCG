@@ -19,11 +19,11 @@ function updateAppTheme() {
   if (isMagic) {
     root.style.setProperty('--accent-color', 'var(--mtg-accent)');
     root.style.setProperty('--accent-rgb', 'var(--mtg-accent-rgb)');
-    document.body.className = "mode-magic dark";
+    document.body.className = "mode-magic figma-theme";
   } else {
     root.style.setProperty('--accent-color', 'var(--pk-accent)');
     root.style.setProperty('--accent-rgb', 'var(--pk-accent-rgb)');
-    document.body.className = "mode-pokemon dark";
+    document.body.className = "mode-pokemon figma-theme";
   }
 }
 
@@ -693,4 +693,17 @@ document.addEventListener("DOMContentLoaded", () => {
   actualizarVistaHistorial();
   avisarModoEscritorio();
   initCloud();
+});
+
+// Atajo de teclado global ⌘K / Ctrl+K para búsqueda rápida
+window.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    switchTab("scanner");
+    const input = document.getElementById("search-input");
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
 });
