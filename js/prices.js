@@ -300,8 +300,22 @@ async function hidratarPrecioPokemon(card, force = false) {
   let pricing;
   if (hit) pricing = hit.data;
   else {
-    const d = await fetchJSON(`https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(card.id)}`, { retries: 1, okStatuses: [404] });
-    if (!d.id) { const e = new Error("Carta no encontrada en TCGdex."); e.code = "http"; throw e; }
+    let d = null;
+    if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.get === "function") {
+      try {
+        const lang = card.lang && card.lang !== "all" ? (card.lang === "zh" ? "zh-cn" : card.lang) : "en";
+        if (typeof window.tcgdexClient.setLang === "function") {
+          window.tcgdexClient.setLang(lang);
+        }
+        d = await window.tcgdexClient.card.get(card.id);
+      } catch {
+        d = null;
+      }
+    }
+    if (!d) {
+      d = await fetchJSON(`https://api.tcgdex.net/v2/en/cards/${encodeURIComponent(card.id)}`, { retries: 1, okStatuses: [404] });
+    }
+    if (!d || !d.id) { const e = new Error("Carta no encontrada en TCGdex."); e.code = "http"; throw e; }
     pricing = d.pricing || null;
     cacheSet(key, pricing);
   }

@@ -142,6 +142,8 @@ async function setScannerLanguage(lang) {
   // Si se selecciona chino y el filtro global está en 'all', sincronizar el filtro de búsqueda
   if (lang === 'zh' && typeof searchFilters !== 'undefined' && searchFilters.lang === 'all') {
     if (typeof setSearchFilter === 'function') setSearchFilter('lang', 'zh');
+  } else if (typeof sincIdiomaTCGdexSDK === 'function') {
+    sincIdiomaTCGdexSDK(lang);
   }
 
   // Reinicializar el worker OCR con el nuevo modelo lingüístico

@@ -1,8 +1,8 @@
 /**
  * api.js — Capa de llamadas a APIs externas
  * Author: Sangar Studio
- * Version: 2.2.0
- * TCGdex (Pokémon, con respaldo en Pokémon TCG API v2)  |  Scryfall API (Magic)
+ * Version: 3.7.0
+ * TCGdex (Pokémon, SDK oficial @tcgdex/sdk@2 + GraphQL/REST resiliente) | Scryfall API (Magic)
  */
 
 const POKEMON_API_KEY = ""; // Opcional
@@ -14,6 +14,52 @@ const TRAINERS = { Supporter: "Supporter", Item: "Item", Stadium: "Stadium", Too
 const NO_IMAGE = "data:image/svg+xml," + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="245" height="342" viewBox="0 0 245 342"><rect width="245" height="342" rx="14" fill="#1a1e2a"/>' +
   '<text x="122" y="176" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#6b7280">Sin imagen</text></svg>');
+
+/* ───────────── Inicialización del SDK oficial TCGdex ───────────── */
+
+/**
+ * Instancia global del SDK oficial de TCGdex (@tcgdex/sdk@2).
+ * Coexiste con la capa directa REST y GraphQL para máxima resiliencia y tipado.
+ */
+let tcgdexClient = null;
+try {
+  if (typeof TCGdex !== "undefined") {
+    tcgdexClient = new TCGdex("es");
+    if (typeof tcgdexClient.setCacheTTL === "function") {
+      tcgdexClient.setCacheTTL(3600); // 1 hora de caché en memoria/almacenamiento
+    }
+  }
+} catch (err) {
+  console.warn("No se pudo instanciar TCGdex SDK, usando capa REST directa:", err);
+}
+if (typeof window !== "undefined") {
+  window.tcgdexClient = tcgdexClient;
+}
+
+/**
+ * Normaliza el código de idioma para el SDK de TCGdex.
+ * Idiomas soportados por TCGdex SDK: en, fr, es, it, pt, de, nl, pl, ru, ja, ko, zh-cn, zh-tw.
+ */
+function normalizeTCGdexSDKLang(lang) {
+  if (!lang || lang === "all") return "en";
+  const l = lang.toLowerCase();
+  if (l === "zh" || l === "zh-cn" || l === "zhs" || l === "zh-hans") return "zh-cn";
+  if (l === "zh-tw" || l === "zht" || l === "zh-hant") return "zh-tw";
+  if (l === "pt-br" || l === "pt-pt") return "pt";
+  return l;
+}
+
+/**
+ * Sincroniza el idioma activo en el SDK oficial de TCGdex.
+ */
+function sincIdiomaTCGdexSDK(lang) {
+  if (!window.tcgdexClient || typeof window.tcgdexClient.setLang !== "function") return;
+  try {
+    window.tcgdexClient.setLang(normalizeTCGdexSDKLang(lang));
+  } catch (err) {
+    console.warn("Error al sincronizar idioma en TCGdex SDK:", err);
+  }
+}
 
 const SUPPORTED_LANGUAGES = [
   { code: "all",   label: "Todos",  name: "Todos los idiomas" },
@@ -81,7 +127,7 @@ function matchCardLang(cardLang, filterLang) {
   return c === f;
 }
 
-/** Carta de TCGdex (lista GraphQL o ficha REST) → CardResult sin precio. */
+/** Carta de TCGdex (lista GraphQL, ficha REST o instancia de SDK) → CardResult sin precio. */
 function tcgdexToCard(c, lang = "en") {
   const subtypes = [];
   if (c.stage && STAGES[c.stage]) subtypes.push(STAGES[c.stage]);
@@ -91,11 +137,15 @@ function tcgdexToCard(c, lang = "en") {
   const variants = c.variants || { normal: true };
   const selectedVariant = variants.normal ? "normal" : (variants.holo ? "holo" : (variants.reverse ? "reverse" : "normal"));
 
+  const imgBase = typeof c.image === "function" ? c.image() : c.image;
+  const imagenThumb = imgBase ? (imgBase.endsWith(".webp") || imgBase.endsWith(".png") ? imgBase : `${imgBase}/low.webp`) : NO_IMAGE;
+  const imagen      = imgBase ? (imgBase.endsWith(".webp") || imgBase.endsWith(".png") ? imgBase : `${imgBase}/high.webp`) : NO_IMAGE;
+
   return {
     id:          c.id,
     localId:     c.localId ?? "",
-    imagenThumb: c.image ? `${c.image}/low.webp`  : NO_IMAGE,
-    imagen:      c.image ? `${c.image}/high.webp` : NO_IMAGE,
+    imagenThumb,
+    imagen,
     nombre:      c.name,
     set:         c.set?.name ?? "Desconocido",
     setCode:     c.set?.id   ?? "",
@@ -147,15 +197,43 @@ function normalizarNombrePokemon(nombre) {
     .trim();
 }
 
-/** Busca cartas Pokémon por número local de coleccionista (localId) en TCGdex. */
+/**
+ * Busca cartas Pokémon por número local de coleccionista (localId) en TCGdex.
+ * Híbrido: intenta primero con el SDK oficial (@tcgdex/sdk@2) y recurre a REST con reintentos si no está disponible.
+ */
 async function pokemonTCGdexLocalId(localId, lang = "en") {
   const targetLang = (lang === "all" || !lang) ? "en" : lang;
-  const brief = await fetchJSON(`${TCGDEX}/${targetLang}/cards?localId=${encodeURIComponent(localId)}`, { okStatuses: [404] });
+  const sdkLang = normalizeTCGdexSDKLang(targetLang);
+  let brief = null;
+
+  // Intento 1: SDK oficial
+  if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.list === "function") {
+    try {
+      if (typeof window.tcgdexClient.setLang === "function") {
+        window.tcgdexClient.setLang(sdkLang);
+      }
+      brief = await window.tcgdexClient.card.list({ localId: String(localId) });
+    } catch {
+      brief = null;
+    }
+  }
+
+  // Intento 2: Fallback REST directo
+  if (!Array.isArray(brief) || brief.length === 0) {
+    brief = await fetchJSON(`${TCGDEX}/${targetLang}/cards?localId=${encodeURIComponent(localId)}`, { okStatuses: [404] });
+  }
+
   if (!Array.isArray(brief) || brief.length === 0) return [];
   const cards = [];
   await runPool(brief.slice(0, 30), 6, async (b) => {
     try {
-      const d = await fetchJSON(`${TCGDEX}/${targetLang}/cards/${encodeURIComponent(b.id)}`, { retries: 1 });
+      let d = null;
+      if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.get === "function") {
+        try { d = await window.tcgdexClient.card.get(b.id); } catch {}
+      }
+      if (!d) {
+        d = await fetchJSON(`${TCGDEX}/${targetLang}/cards/${encodeURIComponent(b.id)}`, { retries: 1 });
+      }
       const card = tcgdexToCard(d, targetLang);
       applyPokemonPricing(card, d.pricing);
       cards.push(card);
@@ -176,20 +254,150 @@ async function pokemonTCGdexEn(nombre) {
   return (data.data?.cards || []).map(c => tcgdexToCard(c, "en"));
 }
 
-/** Otros idiomas (p. ej. español o japonés): lista breve + fichas completas (incluyen precio). */
+/**
+ * Otros idiomas (p. ej. español, japonés o chino): lista breve + fichas completas (incluyen precio).
+ * Híbrido: intenta listar y obtener con el SDK oficial de TCGdex y recurre a REST como fallback.
+ */
 async function pokemonTCGdexLang(nombre, lang = "es") {
-  const brief = await fetchJSON(`${TCGDEX}/${lang}/cards?name=${encodeURIComponent(nombre)}`, { okStatuses: [404] });
+  const sdkLang = normalizeTCGdexSDKLang(lang);
+  let brief = null;
+
+  // Intento 1: SDK oficial
+  if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.list === "function") {
+    try {
+      if (typeof window.tcgdexClient.setLang === "function") {
+        window.tcgdexClient.setLang(sdkLang);
+      }
+      brief = await window.tcgdexClient.card.list({ name: nombre });
+    } catch {
+      brief = null;
+    }
+  }
+
+  // Intento 2: Fallback REST directo
+  if (!Array.isArray(brief) || brief.length === 0) {
+    brief = await fetchJSON(`${TCGDEX}/${lang}/cards?name=${encodeURIComponent(nombre)}`, { okStatuses: [404] });
+  }
+
   if (!Array.isArray(brief)) return [];
   const cards = [];
   await runPool(brief.slice(0, 24), 6, async (b) => {
     try {
-      const d = await fetchJSON(`${TCGDEX}/${lang}/cards/${encodeURIComponent(b.id)}`, { retries: 1 });
+      let d = null;
+      if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.get === "function") {
+        try { d = await window.tcgdexClient.card.get(b.id); } catch {}
+      }
+      if (!d) {
+        d = await fetchJSON(`${TCGDEX}/${lang}/cards/${encodeURIComponent(b.id)}`, { retries: 1 });
+      }
       const card = tcgdexToCard(d, lang);
       applyPokemonPricing(card, d.pricing);
       cards.push(card);
     } catch { /* se omite la carta que falle */ }
   });
   return cards;
+}
+
+/* ───────────── Métodos de conveniencia del SDK oficial TCGdex ───────────── */
+
+/**
+ * Obtiene los detalles completos de una carta mediante el SDK oficial de TCGdex (con fallback REST).
+ * @param {string} cardId
+ * @param {string} [lang="en"]
+ * @returns {Promise<CardResult|null>}
+ */
+async function obtenerCartaTCGdexSDK(cardId, lang = "en") {
+  const targetLang = normalizeTCGdexSDKLang(lang);
+  let rawCard = null;
+
+  if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.card?.get === "function") {
+    try {
+      if (typeof window.tcgdexClient.setLang === "function") {
+        window.tcgdexClient.setLang(targetLang);
+      }
+      rawCard = await window.tcgdexClient.card.get(cardId);
+    } catch (err) {
+      console.warn("Fallo en tcgdexClient.card.get, usando fallback REST:", err.message);
+    }
+  }
+
+  if (!rawCard) {
+    try {
+      rawCard = await fetchJSON(`${TCGDEX}/${targetLang}/cards/${encodeURIComponent(cardId)}`, { retries: 1, okStatuses: [404] });
+    } catch {
+      rawCard = null;
+    }
+  }
+
+  if (!rawCard || !rawCard.id) return null;
+
+  const card = tcgdexToCard(rawCard, targetLang);
+  if (rawCard.pricing) {
+    applyPokemonPricing(card, rawCard.pricing);
+  }
+  return card;
+}
+
+/**
+ * Obtiene una carta aleatoria mediante el SDK oficial de TCGdex (endpoint /random/card).
+ * @param {string} [lang="es"]
+ * @returns {Promise<CardResult|null>}
+ */
+async function obtenerCartaAleatoriaSDK(lang = "es") {
+  const targetLang = normalizeTCGdexSDKLang(lang);
+  let rawCard = null;
+
+  if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.random?.card === "function") {
+    try {
+      if (typeof window.tcgdexClient.setLang === "function") {
+        window.tcgdexClient.setLang(targetLang);
+      }
+      rawCard = await window.tcgdexClient.random.card();
+    } catch (err) {
+      console.warn("Fallo en tcgdexClient.random.card, usando fallback REST:", err.message);
+    }
+  }
+
+  if (!rawCard) {
+    try {
+      rawCard = await fetchJSON(`${TCGDEX}/${targetLang}/random/card`, { retries: 1 });
+    } catch {
+      rawCard = null;
+    }
+  }
+
+  if (!rawCard || !rawCard.id) return null;
+
+  const card = tcgdexToCard(rawCard, targetLang);
+  if (rawCard.pricing) {
+    applyPokemonPricing(card, rawCard.pricing);
+  }
+  return card;
+}
+
+/**
+ * Obtiene la información completa de una colección o expansión (Set) usando el SDK oficial de TCGdex.
+ * @param {string} setId
+ * @param {string} [lang="es"]
+ * @returns {Promise<Object|null>}
+ */
+async function obtenerSetTCGdexSDK(setId, lang = "es") {
+  const targetLang = normalizeTCGdexSDKLang(lang);
+  if (typeof window !== "undefined" && window.tcgdexClient && typeof window.tcgdexClient.set?.get === "function") {
+    try {
+      if (typeof window.tcgdexClient.setLang === "function") {
+        window.tcgdexClient.setLang(targetLang);
+      }
+      return await window.tcgdexClient.set.get(setId);
+    } catch (err) {
+      console.warn("Fallo en tcgdexClient.set.get, usando fallback REST:", err.message);
+    }
+  }
+  try {
+    return await fetchJSON(`${TCGDEX}/${targetLang}/sets/${encodeURIComponent(setId)}`, { retries: 1, okStatuses: [404] });
+  } catch {
+    return null;
+  }
 }
 
 /** Respaldo: Pokémon TCG API (pokemontcg.io), menos estable. */

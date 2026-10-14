@@ -4,6 +4,24 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.7.0] - 2026-10-14
+
+### Añadido
+- **Integración y Coexistencia del SDK Oficial TCGdex (`@tcgdex/sdk@2`)**:
+  - **Carga Global en Shell (`index.html`)**: Incorporado el bundle de navegador oficial `tcgdex.browser.global.min.js` (~8.9 KB minificado) vía CDN de jsDelivr manteniendo la arquitectura Zero-Build sin bundlers ni compiladores.
+  - **Singleton Global y Sincronización de Idioma (`js/api.js`)**: Instanciación segura de `window.tcgdexClient = new TCGdex("es")` con TTL de caché configurado en 3600 segundos y helpers `normalizeTCGdexSDKLang` y `sincIdiomaTCGdexSDK` que mantienen sincronizado el idioma del SDK cuando el usuario cambia el selector de idioma en la búsqueda (`js/app.js`) o el escáner (`js/scanner.js`).
+  - **Arquitectura Híbrida de Coexistencia Resiliente**:
+    - **Hidratación y Búsqueda por Coleccionista (`pokemonTCGdexLocalId`)**: Intenta listar cartas mediante `tcgdexClient.card.list({ localId })` y obtener fichas individuales con `tcgdexClient.card.get(id)`, recurriendo automáticamente a peticiones directas REST `fetchJSON` con reintentos si el SDK no está disponible o la conexión falla.
+    - **Búsqueda por Idioma Específico (`pokemonTCGdexLang`)**: Consulta híbrida mediante `tcgdexClient.card.list({ name })` e hidratación concurrente con `runPool`.
+    - **Hidratación de Precios de Pokémon (`js/prices.js`)**: `hidratarPrecioPokemon` prioriza `tcgdexClient.card.get(id)` para cargar precios oficiales con caché local antes de recurrir a REST directo.
+    - **Preservación de la Escalera de Búsqueda de Alto Rendimiento**: La consulta masiva en inglés conserva GraphQL (`/v2/graphql`) para obtener hasta 100 cartas en una única ida y vuelta de red, combinada con la normalización de nombres base, números de coleccionista y respaldo internacional.
+  - **Nuevos Métodos de Utilidad del SDK**:
+    - `obtenerCartaTCGdexSDK(cardId, lang)`: Ficha completa tipada de carta con precios normalizados.
+    - `obtenerCartaAleatoriaSDK(lang)`: Acceso al endpoint aleatorio `/random/card` del SDK.
+    - `obtenerSetTCGdexSDK(setId, lang)`: Consulta de metadatos y cartas de una expansión o set.
+
+---
+
 ## [3.6.0] - 2026-10-13
 
 ### Añadido

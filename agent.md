@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.6.0
+- **Versión Actual:** 3.7.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil (mobile-first) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en Collectr y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
@@ -20,9 +20,9 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 |---|---|---|
 | **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible, diseño Neo-Brutalista Premium OLED (`#000000`), estética inspirada en Collectr, marcos coleccionables con brillo holográfico (`.card-holo-sheen`), selector de idiomas (`.lang-picker`) y shell móvil responsive (`max-width: 500px` hasta 1360px). |
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
-| **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo `SINGLE_LINE` con whitelist de caracteres. |
+| **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo adaptativo con modelos multilingües (chi_sim, chi_tra, jpn, kor, spa, eng). |
 | **Tipografía** | Google Fonts | `Inter` (UI/textos principales), `DM Sans` (cuerpo alternativo) y `Cinzel` (títulos/display). |
-| **API Pokémon** | [TCGdex](https://tcgdex.dev/) (principal) y [Pokémon TCG API v2](https://pokemontcg.io/) (respaldo) | TCGdex: consulta multilingüe en inglés (`en`), español (`es`), japonés (`ja`), chino simplificado (`zh-cn`), chino tradicional (`zh-tw`), coreano (`ko`), francés (`fr`), alemán (`de`), italiano (`it`) y portugués (`pt`), con variantes (`normal`, `holo`, `reverse`, `firstEdition`), número de coleccionista (`localId`) y desglose de precios. |
+| **API Pokémon** | [TCGdex Oficial SDK @2](https://tcgdex.dev/es/sdks/javascript) + API REST/GraphQL | Coexistencia híbrida: SDK oficial `@tcgdex/sdk@2` instanciado globalmente (`window.tcgdexClient`), con consultas GraphQL para búsquedas masivas, endpoints REST para idiomas internacionales (`en`, `es`, `ja`, `zh-cn`, `zh-tw`, `ko`, `fr`, `de`, `it`, `pt`), resolución por número de coleccionista (`localId`) e hidratación concurrente con `runPool`. Respaldo secundario en Pokémon TCG API v2 (`pokemontcg.io`). |
 | **API Magic** | [Scryfall API](https://scryfall.com/docs/api) | Resolución difusa, listado de ediciones (`/cards/search?q=!&unique=prints`), acabados (`finishes`), filtrado por idioma (`(lang:zhs or lang:zht)`, `lang:zhs`, `lang:zht`, `lang:ko`, etc.) con fallback tolerante y número de coleccionista. |
 | **Persistencia** | Web Storage (`localStorage`) y Supabase | Colección y mazos sincronizables con RLS en Postgres o utilizables en modo demo local. |
 
@@ -40,7 +40,7 @@ SnapTCG/
 │   ├── icons.js       # Catálogo centralizado de iconos SVG (Heroicons v2, zero-build, cero emojis)
 │   ├── charts.js      # Gráficas de línea en SVG (sin librerías) y selector de rango
 │   ├── prices.js      # Red resiliente, cálculo de variantes (holo/reverse/normal), market stats (mín/med/máx), caché y refresco
-│   ├── api.js         # Normalización multilingüe (EN, ES, JA), variantes y APIs externas (TCGdex/Scryfall)
+│   ├── api.js         # Normalización multilingüe (EN, ES, JA, ZH, KO), variantes, TCGdex SDK (@tcgdex/sdk@2) + GraphQL/REST y Scryfall
 │   ├── scanner.js     # Gestión de WebRTC (getUserMedia), preprocesamiento Canvas y ciclo OCR continuo
 │   ├── deckbuilder.js # Motor de reglas de mazos (Standard, Commander), métricas y persistencia
 │   ├── config.js      # URL/anon key de Supabase y PUBLIC_OWNER_ID (vacío = modo demo local)

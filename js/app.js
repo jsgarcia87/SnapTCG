@@ -133,6 +133,9 @@ function setSearchFilter(type, val) {
     if (typeof syncScannerLanguage === "function") {
       syncScannerLanguage(val);
     }
+    if (typeof sincIdiomaTCGdexSDK === "function") {
+      sincIdiomaTCGdexSDK(val);
+    }
     const input = document.getElementById("search-input");
     if (input && input.value.trim()) {
       ejecutarBusqueda();
