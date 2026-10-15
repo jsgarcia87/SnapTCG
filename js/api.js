@@ -186,13 +186,17 @@ function extraerNumeroColeccionista(nombre) {
   return null;
 }
 
-/** Elimina sufijos de mecánicas (VSTAR, ex, etc.) y números para búsqueda por nombre base. */
+/** Elimina sufijos de mecánicas (VSTAR, ex, etc.), tokens de salud (HP, PS, PV, KP) y números para búsqueda por nombre base. */
 function normalizarNombrePokemon(nombre) {
   if (!nombre) return "";
   return nombre
     .replace(/(?:^|\s)\d{1,3}\s*\/\s*\d{2,3}(?:\s|$)/g, " ")
+    .replace(/\b(\d{2,4}\s*(HP|PS|PV|KP)|(HP|PS|PV|KP)\s*\d{2,4})\b/gi, " ")
+    .replace(/\b(HP|PS|PV|KP)\b/gi, " ")
     .replace(/\s+(VSTAR|V-ASTRO|VMAX|V-MAX|V|ex|EX|GX|BREAK|Prime|LV\.X|Tag Team|TAG TEAM)\b/gi, "")
     .replace(/(VSTAR|V-ASTRO|VMAX|ex|EX|GX)\b/gi, "")
+    .replace(/^\d{1,4}\s+/, " ")
+    .replace(/\s+\d{1,4}$/, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -496,7 +500,8 @@ async function buscarPokemon(nombre, lang = "all") {
     }
 
     // 3. Si se detectó número de coleccionista (p. ej. "025/165") y aún no hay cartas
-    if (cards.length === 0 && collectorNum) {
+    const isExplicitCollectorQuery = /^\d{1,4}\s*\/\s*\d{1,4}$/.test(cleanQuery);
+    if (cards.length === 0 && collectorNum && (baseName.length >= 2 || isExplicitCollectorQuery)) {
       cards = await pokemonTCGdexLocalId(collectorNum, l !== "all" ? l : "en").catch(() => []);
       if (cards.length === 0 && l !== "en") {
         cards = await pokemonTCGdexLocalId(collectorNum, "en").catch(() => []);

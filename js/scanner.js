@@ -216,24 +216,50 @@ async function iniciarEscaner() {
     torchActive = false;
     actualizarBotonLinterna(false, false);
 
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: facingMode },
-        width: { ideal: 1920, min: 1280 },
-        height: { ideal: 1080, min: 720 }
-      },
-      audio: false
-    });
+    // Solicitar cámara con preferencia de alta resolución y enfoque continuo
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          advanced: [{ focusMode: "continuous" }]
+        },
+        audio: false
+      });
+    } catch (_) {
+      // Fallback estándar por si el navegador rechaza constraints avanzados
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 }
+        },
+        audio: false
+      });
+    }
 
     const video = document.getElementById('live-video');
     video.srcObject = videoStream;
     try { await video.play(); } catch (_) { /* play ya manejado por autoplay */ }
 
-    // Detectar soporte para linterna (torch)
+    // Activar enfoque continuo y detectar capacidades de linterna
     const track = videoStream.getVideoTracks()[0];
     const caps = (track && track.getCapabilities) ? track.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) {
+      try {
+        await track.applyConstraints({
+          advanced: [{ focusMode: 'continuous' }]
+        });
+      } catch (e) {
+        console.warn('No se pudo activar enfoque continuo:', e);
+      }
+    }
+
     hasTorch = Boolean(caps.torch);
     actualizarBotonLinterna(hasTorch, false);
+
+    initScannerTapToFocus();
 
     setScannerStatus("BUSCANDO CARTA...", "active");
 
@@ -322,6 +348,60 @@ function actualizarBotonLinterna(disponible, activo) {
   btn.classList.toggle('active', Boolean(activo));
 }
 
+/**
+ * Inicializa el soporte de toque para enfocar (Tap-to-Focus) sobre el visor
+ */
+function initScannerTapToFocus() {
+  const container = document.querySelector('.scanner-container');
+  if (!container || container.dataset.tapFocusInit) return;
+  container.dataset.tapFocusInit = "true";
+
+  container.addEventListener('click', async (e) => {
+    // Si se hizo click en controles interactivos, omitir
+    if (e.target.closest('.cam-ctrl-btn') || e.target.closest('.scanner-lang-pill')) return;
+    if (!videoStream) return;
+
+    const track = videoStream.getVideoTracks()[0];
+    if (track && track.getCapabilities) {
+      const caps = track.getCapabilities();
+      const advanced = {};
+      if (caps.focusMode && caps.focusMode.includes('continuous')) {
+        advanced.focusMode = 'continuous';
+      }
+      if (caps.pointsOfInterest) {
+        const rect = container.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+        advanced.pointsOfInterest = [{ x, y }];
+      }
+      if (Object.keys(advanced).length > 0) {
+        try {
+          await track.applyConstraints({ advanced: [advanced] });
+        } catch (_) {}
+      }
+    }
+
+    mostrarIndicadorEnfoque(container, e);
+  });
+}
+
+/**
+ * Muestra un anillo visual en el punto del visor donde se pulsó para enfocar
+ */
+function mostrarIndicadorEnfoque(container, e) {
+  const rect = container.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const ring = document.createElement('div');
+  ring.className = 'scanner-focus-ring';
+  ring.style.left = `${x}px`;
+  ring.style.top = `${y}px`;
+  container.appendChild(ring);
+
+  setTimeout(() => ring.remove(), 700);
+}
+
 function startContinuousScan() {
   stopContinuousScan();
   scanInterval = setInterval(autoScan, SCAN_INTERVAL_MS);
@@ -346,6 +426,15 @@ function hasCJK(text) {
  */
 function hasChinese(text) {
   return /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(text);
+}
+
+/**
+ * Comprueba si una cadena contiene al menos una letra válida (alfabeto latino o caracteres CJK).
+ * Ninguna carta real de TCG consiste exclusivamente en números o signos de puntuación.
+ */
+function hasCardLetters(text) {
+  if (!text) return false;
+  return /[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/.test(text);
 }
 
 /**
@@ -385,7 +474,7 @@ async function autoScan() {
     const cleaned = cleanOcrText(text);
     const minLen = hasCJK(cleaned) ? 2 : 3;
 
-    if (!cleaned || cleaned.length < minLen) {
+    if (!cleaned || cleaned.length < minLen || !hasCardLetters(cleaned)) {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
       return;
     }
@@ -418,8 +507,8 @@ async function capturarYProcesar() {
     let cleaned = cleanOcrText(text);
     let minLen = hasCJK(cleaned) ? 2 : 3;
 
-    // Si la ROI estrecha no detecta texto, probar con la franja superior amplia (35% superior del cuadro)
-    if (!cleaned || cleaned.length < minLen) {
+    // Si la ROI estrecha no detecta texto o carece de letras, probar con la franja superior amplia (35% superior)
+    if (!cleaned || cleaned.length < minLen || !hasCardLetters(cleaned)) {
       const vw = video.videoWidth;
       const vh = video.videoHeight;
       if (vw && vh) {
@@ -435,7 +524,7 @@ async function capturarYProcesar() {
       }
     }
 
-    if (cleaned && cleaned.length >= minLen) {
+    if (cleaned && cleaned.length >= minLen && hasCardLetters(cleaned)) {
       dispararExitoEscaneo(cleaned);
     } else {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
@@ -485,8 +574,8 @@ async function procesarImagenArchivo(file) {
       let cleaned = cleanOcrText(text);
       let minLen = hasCJK(cleaned) ? 2 : 3;
 
-      // Si falla, probar con la imagen completa reescalada
-      if (!cleaned || cleaned.length < minLen) {
+      // Si falla o no contiene letras de carta, probar con la imagen completa reescalada
+      if (!cleaned || cleaned.length < minLen || !hasCardLetters(cleaned)) {
         const fullCanvas = document.createElement('canvas');
         const maxDim = 1200;
         const scale = Math.min(1, maxDim / Math.max(w, h));
@@ -500,7 +589,7 @@ async function procesarImagenArchivo(file) {
         minLen = hasCJK(cleaned) ? 2 : 3;
       }
 
-      if (cleaned && cleaned.length >= minLen) {
+      if (cleaned && cleaned.length >= minLen && hasCardLetters(cleaned)) {
         dispararExitoEscaneo(cleaned);
       } else {
         setScannerStatus("NO DETECTADO", "active");
@@ -577,9 +666,9 @@ function extractHeaderRoi(video) {
     let rawSw = Math.round(rRect.width / scale);
     let rawSh = Math.round(rRect.height / scale);
 
-    // Margen de seguridad (+12% horizontal, +20% vertical) para evitar cortes si la carta está ladeada
-    const padX = Math.round(rawSw * 0.12);
-    const padY = Math.round(rawSh * 0.20);
+    // Margen de seguridad (+15% horizontal, +25% vertical) para evitar cortes si la carta está ladeada
+    const padX = Math.round(rawSw * 0.15);
+    const padY = Math.round(rawSh * 0.25);
 
     sx = Math.max(0, rawSx - padX);
     sy = Math.max(0, rawSy - padY);
@@ -588,10 +677,10 @@ function extractHeaderRoi(video) {
   }
 
   if (sWidth <= 20 || sHeight <= 20) {
-    sx = Math.round(vw * 0.08);
+    sx = Math.round(vw * 0.06);
     sy = Math.round(vh * 0.04);
-    sWidth = Math.round(vw * 0.84);
-    sHeight = Math.round(vh * 0.26);
+    sWidth = Math.round(vw * 0.88);
+    sHeight = Math.round(vh * 0.28);
   }
 
   const canvas = document.createElement('canvas');
@@ -827,7 +916,7 @@ function getBestLine(data, isCJK = false) {
   for (const l of data.lines) {
     if (!l || !l.text) continue;
     const cleaned = cleanOcrText(l.text);
-    if (cleaned.length >= minLen) {
+    if (cleaned.length >= minLen && hasCardLetters(cleaned)) {
       // Puntuación: confianza base ponderada por longitud útil de texto
       // Cartas reales suelen tener nombres de 4 a 25 caracteres.
       // Símbolos parásitos o iniciales cortas no deben superar al nombre completo.
@@ -849,18 +938,19 @@ function getBestLine(data, isCJK = false) {
 }
 
 /**
- * Limpieza inteligente de OCR: descarta HP, fases evolutivas y símbolos parásitos,
+ * Limpieza inteligente de OCR: descarta HP, PS, PV, KP, fases evolutivas y símbolos parásitos,
  * preservando completamente ideogramas chinos (Hanzi), kana japoneses, hangul, caracteres latinos y números de coleccionista.
  */
 function cleanOcrText(raw) {
   if (!raw) return '';
-  return raw
-    // Descartar tokens de HP (Pokémon en inglés, español, chino, japonés)
-    .replace(/\b(\d{2,4}\s*HP|HP\s*\d{2,4})\b/gi, '')
-    .replace(/(血量|生命值|HP)\s*\d{2,4}/gi, '')
-    .replace(/\d{2,4}\s*(血量|生命值|HP)/gi, '')
+  let cleaned = raw
+    // Descartar tokens de HP, PS, PV, KP (Pokémon en inglés, español, francés, alemán, italiano, chino, japonés)
+    .replace(/\b(\d{2,4}\s*(HP|PS|PV|KP)|(HP|PS|PV|KP)\s*\d{2,4})\b/gi, '')
+    .replace(/(血量|生命值|HP|PS|PV|KP)\s*\d{2,4}/gi, '')
+    .replace(/\d{2,4}\s*(血量|生命值|HP|PS|PV|KP)/gi, '')
+    .replace(/\b(HP|PS|PV|KP)\b/gi, '')
     // Descartar fases evolutivas, entrenadores y tipos (multilingüe: EN, ES, FR, DE, IT, ZH, JA)
-    .replace(/\b(Basic|Básico|Basico|Basis|Base|Fase\s*[12]|Stage\s*[12]|Phase\s*[12]|Niveau\s*[12]|Creature|Trainer|Item|Supporter|Entrenador|Energía|Energy)\b/gi, '')
+    .replace(/\b(Basic|Básico|Basico|Basis|Base|De\s+Base|Fase\s*[12]|Stage\s*[12]|Phase\s*[12]|Niveau\s*[12]|Evoluciona\s+de|Evolves\s+from|Creature|Trainer|Item|Supporter|Entrenador|Energía|Energy)\b/gi, '')
     .replace(/(基础|基礎|1阶|2阶|1階|2階|宝可梦|寶可夢|训练家|訓練家|物品|支援者|能量)/g, '')
     .replace(/(たね|1進化|2進化|トレーナーズ|グッズ|サポート|エネルギー)/g, '')
     .replace(/[{}[\]()<>@#$%^*+=~|\\_]/g, ' ')
@@ -868,8 +958,17 @@ function cleanOcrText(raw) {
     .replace(/[^a-zA-Z0-9áéíóúñüÁÉÍÓÚÑÜ\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF '&:\-\/]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/\s+\d+$/, '') // descarta números aislados finales como costes de maná
+    // Descartar números aislados al principio o al final (ej: "120 Zeraora" -> "Zeraora", "Zeraora 120" -> "Zeraora")
+    .replace(/^\d{1,4}\s+/, '')
+    .replace(/\s+\d{1,4}$/, '')
     .trim();
+
+  // Una carta real NUNCA es exclusivamente números o símbolos. Exigir letras latinas o CJK.
+  if (!hasCardLetters(cleaned)) {
+    return '';
+  }
+
+  return cleaned;
 }
 
 /**

@@ -1710,6 +1710,22 @@ body.modal-open { overflow: hidden; }
   box-shadow: 0 0 14px rgba(175, 243, 63, 0.5);
 }
 
+.scanner-lang-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto 10px auto;
+  padding: 2px 4px;
+  z-index: 5;
+}
+
+.scanner-focus-ring {
+  border-color: #AFF33F;
+  box-shadow: 0 0 14px rgba(175, 243, 63, 0.6);
+}
+
 .scanner-lang-pill {
   background: rgba(23, 34, 49, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);

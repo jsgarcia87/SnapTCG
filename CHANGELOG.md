@@ -4,6 +4,26 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.10.0] - 2026-10-15
+
+### Corregido y Optimizado
+- **Reubicación de la Barra de Selección de Idioma fuera del Visor de Cámara**:
+  - Trasladado `<div class="scanner-lang-bar">` fuera de `.scanner-container` en `index.html`. En dispositivos móviles portrait, las 4 píldoras de idioma envolvían en dos filas superponiéndose directamente sobre la región de interés (`#scanner-header-roi`) y tapando el título de la carta física.
+  - Actualizadas las reglas CSS en `css/style.css` y `css/design.css` para posicionamiento relativo centrado con margen inferior limpio, dejando el visor de la cámara 100% despejado.
+- **Enfoque Continuo y Tap-to-Focus en WebRTC (`js/scanner.js`)**:
+  - Incorporada la restricción de hardware `focusMode: "continuous"` en la solicitud `navigator.mediaDevices.getUserMedia` y en `track.applyConstraints()`, resolviendo el problema de desenfoque e imagen borrosa en cámaras móviles al sostener cartas a corta distancia (~10-15 cm).
+  - Implementado sistema de toque para enfocar (`Tap-to-Focus`) interactivo sobre el visor: pulsar sobre la carta reorienta el enfoque mediante `pointsOfInterest` y despliega un anillo visual pulsante (`.scanner-focus-ring`) con estética Verde Lima Eléctrico (`#AFF33F`).
+- **Validación Alfabética e Ideográfica Estricta en OCR (`hasCardLetters`)**:
+  - Implementada comprobación estricta que exige al menos una letra latina (`[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ]`) o ideograma CJK (`[\u4E00-\u9FFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]`) en cualquier candidato de texto OCR.
+  - Descarte radical de lecturas espurias compuestas exclusivamente por dígitos o barras (ej. `"1"`, `"120"`, `"1/160"`), impidiendo falsos positivos donde la app buscaba erróneamente cartas número `#1`.
+  - Soporte multilingüe completo para tokens de salud: ahora filtra `PS` (Puntos de Salud en español y portugués), `PV` (francés e italiano) y `KP` (alemán), además de `HP`.
+  - Limpieza de dígitos aislados en extremos (ej. `"120 Zeraora"` -> `"Zeraora"`, `"Zeraora 120"` -> `"Zeraora"`).
+- **Protección de Consulta por Número de Coleccionista (`js/api.js`)**:
+  - `normalizarNombrePokemon` ahora elimina tokens `PS`, `PV`, `KP` y números aislados residuales, garantizando que búsquedas de cartas en español (como *Zeraora 120 PS*) busquen limpiamente *Zeraora*.
+  - La consulta fallback por `collectorNum` en `buscarPokemon` ahora exige obligatoriamente un nombre base de carta válido (`baseName.length >= 2`) o un formato fraccionario explícito manual (`X/Y`), evitando la descarga masiva de todas las cartas `#1` de múltiples colecciones ante lecturas parciales.
+
+---
+
 ## [3.9.0] - 2026-10-14
 
 ### Corregido y Optimizado

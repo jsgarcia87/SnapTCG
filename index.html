@@ -151,6 +151,14 @@
         <div id="scanner-view-container">
           <!-- Scanner Pro Activo -->
           <div class="scanner-wrap" id="scanner-wrap" style="display:none;">
+            <!-- Selector Rápido de Idioma del Escáner (Exterior al visor para mantener la retícula limpia) -->
+            <div class="scanner-lang-bar" id="scanner-lang-bar">
+              <button type="button" class="scanner-lang-pill active" data-lang="auto" onclick="setScannerLanguage('auto')" title="Español e Inglés">Auto (EN/ES)</button>
+              <button type="button" class="scanner-lang-pill" data-lang="zh" onclick="setScannerLanguage('zh')" title="Chino Simplificado y Tradicional">中文 (ZH)</button>
+              <button type="button" class="scanner-lang-pill" data-lang="ja" onclick="setScannerLanguage('ja')" title="Japonés">日本語 (JA)</button>
+              <button type="button" class="scanner-lang-pill" data-lang="ko" onclick="setScannerLanguage('ko')" title="Coreano">한국어 (KO)</button>
+            </div>
+
             <div class="scanner-container">
               <video id="live-video" autoplay playsinline muted></video>
 
@@ -172,14 +180,6 @@
                     <svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
-              </div>
-
-              <!-- Selector Rápido de Idioma del Escáner -->
-              <div class="scanner-lang-bar" id="scanner-lang-bar">
-                <button type="button" class="scanner-lang-pill active" data-lang="auto" onclick="setScannerLanguage('auto')" title="Español e Inglés">Auto (EN/ES)</button>
-                <button type="button" class="scanner-lang-pill" data-lang="zh" onclick="setScannerLanguage('zh')" title="Chino Simplificado y Tradicional">中文 (ZH)</button>
-                <button type="button" class="scanner-lang-pill" data-lang="ja" onclick="setScannerLanguage('ja')" title="Japonés">日本語 (JA)</button>
-                <button type="button" class="scanner-lang-pill" data-lang="ko" onclick="setScannerLanguage('ko')" title="Coreano">한국어 (KO)</button>
               </div>
 
               <!-- Retícula de Escaneo: Marco de Carta Proporción 63:88 -->
