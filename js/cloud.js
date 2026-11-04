@@ -387,7 +387,7 @@ function renderCollection() {
   const gamePills = [["all", "Todas"], ["pokemon", "Pokémon"], ["magic", "Magic"]]
     .map(([k, l]) => `<button class="filter-pill ${collectionFilter.game === k ? "active" : ""}" onclick="setCollectionFilter('game','${k}')">${l}</button>`).join("");
 
-  const finishPills = [["all", "Todos"], ["holo", `${HEROICONS.sparkles} Holofoil`], ["normal", "Normal"], ["reverse", "Reverse"]]
+  const finishPills = [["all", "Todos"], ["holo", "Holofoil"], ["normal", "Normal"], ["reverse", "Reverse"]]
     .map(([k, l]) => `<button class="filter-pill ${collectionFilter.finish === k ? "active" : ""}" onclick="setCollectionFilter('finish','${k}')">${l}</button>`).join("");
 
   const langPills = [
@@ -478,7 +478,7 @@ function renderCollection() {
 
         let finishBadge = "";
         if (isHolo) {
-          finishBadge = `<span class="badge-finish holo">${HEROICONS.sparkles} Holo</span>`;
+          finishBadge = `<span class="badge-finish holo">Holo</span>`;
         } else if (isReverse) {
           finishBadge = `<span class="badge-finish reverse">Rev Holo</span>`;
         } else if (variant === "firstEdition") {

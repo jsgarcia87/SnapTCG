@@ -84,7 +84,7 @@ SnapTCG/
 
 2. **`js/icons.js`** (se carga primero):
    - Catálogo `HEROICONS` con iconos SVG vectoriales basados en [Heroicons v2](https://heroicons.com/).
-   - **Cero emojis en la interfaz**: `bolt`, `sparkles`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`, `funnel`, `globeAlt`, `check`, `arrowsUpDown`.
+   - **Cero emojis en la interfaz**: `bolt`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`, `funnel`, `globeAlt`, `check`, `arrowsUpDown`.
    - Clases de soporte CSS: `.heroicon` (18px), `.heroicon-sm` (14px), `.heroicon-lg` (24px), `.btn-icon`, `.trend-icon`.
 
 3. **`js/prices.js`** (se carga antes que `api.js`):
@@ -361,8 +361,8 @@ Cuando un agente trabaje en este proyecto, debe acatar estrictamente las siguien
    - La interfaz de usuario, placeholders, toasts y mensajes de error están en **Español** (`es`). Mantén la coherencia idiomática en las cadenas visibles.
 6. **Integridad del OCR**:
    - Al ajustar el escáner, ten presente que procesar cada frame consume CPU en dispositivos móviles. Mantener `SCAN_INTERVAL_MS` entre 1000ms y 1500ms y utilizar el filtro Laplaciano de movimiento y la proyección del ROI en el canvas antes de pasar la imagen a Tesseract.
-7. **Iconografía Profesional y Sin Emojis**:
-   - **NO** usar emojis en la UI (botones, cabeceras, badges, acciones, mensajes o estados vacíos). Usar siempre los iconos SVG de `HEROICONS` en `js/icons.js` estilizados con `.heroicon`, `.heroicon-sm`, etc.
+7. **Iconografía Profesional, Sin Emojis ni Adornos Gráficos**:
+   - **NO** usar emojis ni adornos gráficos de destellos (como destellos o sus equivalentes vectoriales) en la UI (botones, cabeceras, badges, acciones, mensajes o estados vacíos), ni en la documentación o respuestas del agente. Usar siempre iconos limpios y funcionales de `HEROICONS` en `js/icons.js` estilizados con `.heroicon`, `.heroicon-sm`, etc. Evitar estrictamente destellos y adornos superfluos.
 
 ---
 

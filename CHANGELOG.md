@@ -4,6 +4,20 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.10.1] - 2026-11-01
+
+### Limpieza y Estandarización Visual
+- **Eliminación Total de Adornos Gráficos de Destellos y Emojis**:
+  - Sustituidos los iconos de destellos en la interfaz por iconos limpios y representativos:
+    - Botones de juego de Magic: The Gathering actualizados con el icono `rectangleStack` (baraja de cartas) en cabecera, buscador y editor de mazos.
+    - Placeholder de descubrimiento (`#discovery-view`) actualizado con `magnifyingGlass` de 48px en lugar del adorno de destellos.
+    - Badges de acabado holográfico (`holo`, `foil`) y píldoras de filtrado saneados sin adornos gráficos superfluos, manteniendo solo etiquetas de texto limpias y estilizadas.
+    - Eliminado el icono `sparkles` de `HEROICONS` en `js/icons.js`.
+  - Verificada la ausencia total de caracteres emoji en todo el código fuente y documentación.
+  - Actualizadas las directrices en `agent.md` con prohibición estricta de emojis y adornos gráficos de destellos en interfaz, código y respuestas.
+
+---
+
 ## [3.10.0] - 2026-10-15
 
 ### Corregido y Optimizado
@@ -258,7 +272,7 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
   - Tokens de geometría y espaciado: `--radius: 0.25rem`, `--spacing: 0.25rem`.
 - **Iconografía Profesional con Heroicons v2 (Cero Emojis)**:
   - Creación de [`js/icons.js`](js/icons.js) con catálogo centralizado `HEROICONS` conteniendo SVGs vectoriales inline extraídos de [Heroicons](https://heroicons.com/).
-  - Iconos integrados: `bolt`, `sparkles`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`.
+  - Iconos integrados: `bolt`, `trophy`, `home`, `magnifyingGlass`, `camera`, `rectangleStack`, `archiveBox`, `bookmark`, `arrowUpTray`, `plusCircle`, `trash`, `arrowPath`, `link`, `play`, `xMark`, `plus`, `minus`, `arrowTrendingUp`, `arrowTrendingDown`.
   - Reemplazo total de emojis y caracteres unicode en la interfaz (botones de juego, barra de búsqueda, navegación inferior, acciones del editor de mazos, simulación Monte Carlo, refresco de precios, indicadores de tendencia y diálogos modales).
 - **Documentación**:
   - Actualización completa de la guía técnica en [`agent.md`](agent.md) reflejando los nuevos tokens, jerarquía visual, catálogo de iconos y reglas de desarrollo sin emojis.

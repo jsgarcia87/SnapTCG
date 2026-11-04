@@ -248,7 +248,7 @@ function renderizarLista(resultados) {
     
     let finishBadge = "";
     if (isHolo) {
-      finishBadge = `<span class="badge-finish holo" title="Holográfica / Foil">${HEROICONS.sparkles} Holo</span>`;
+      finishBadge = `<span class="badge-finish holo" title="Holográfica / Foil">Holo</span>`;
     } else if (isReverse) {
       finishBadge = `<span class="badge-finish reverse" title="Reverse Holo">Rev Holo</span>`;
     } else if (carta.variants?.firstEdition) {
@@ -323,7 +323,6 @@ function pintarVariantesModal(carta) {
     return `
       <button type="button" class="variant-pill ${active ? 'active' : ''} ${v.isFoil ? 'foil-pill' : ''}"
               onclick="selectCardVariant('${v.key}')">
-        ${v.isFoil ? HEROICONS.sparkles : ''}
         <span class="v-label">${v.label}</span>
         <span class="v-price">${priceTxt}</span>
       </button>
@@ -350,7 +349,7 @@ function updateDetailHoloState(carta) {
   if (glare) glare.classList.toggle("active", isHolo);
   if (badgeFinish) {
     badgeFinish.className = `badge-finish ${isHolo ? 'holo' : 'normal'}`;
-    badgeFinish.innerHTML = isHolo ? `${HEROICONS.sparkles} ${formatVariantName(carta.selectedVariant)}` : formatVariantName(carta.selectedVariant);
+    badgeFinish.innerHTML = formatVariantName(carta.selectedVariant);
   }
 }
 

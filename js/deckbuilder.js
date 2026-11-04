@@ -10,7 +10,7 @@ const DECK_RULES = {
     standard: { min: 60, max: 60, maxCopies: 4, label: "Pokémon Standard", icon: HEROICONS.bolt }
   },
   magic: {
-    standard:  { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: HEROICONS.sparkles },
+    standard:  { min: 60, max: 60, maxCopies: 4, label: "Magic Standard", icon: HEROICONS.rectangleStack },
     commander: { min: 100, max: 100, maxCopies: 1, label: "Magic Commander", icon: HEROICONS.trophy }
   }
 };
