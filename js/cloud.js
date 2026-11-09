@@ -9,6 +9,7 @@
 
 const COLLECTION_KEY = "snaptcg_collection";
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js";
+const SUPABASE_JS_SRI = "sha384-WmjsOVSSw3JNqIKfmDU35+uddOzBdP9PlYIWCg7xdnVOesjWVGpRcooOVheFFwH4";
 
 let collection = [];          // [{ card, qty }]
 let sbClient = null;
@@ -28,9 +29,10 @@ const collectionOwner = () => (sbSession ? sbSession.user.id : PUBLIC_OWNER_ID);
 
 /* ───────────── Inicialización ───────────── */
 
-function loadScript(src) {
+function loadScript(src, integrity) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
+    if (integrity) { s.integrity = integrity; s.crossOrigin = "anonymous"; }
     s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("No se pudo cargar " + src));
     document.head.appendChild(s);
   });
@@ -39,7 +41,7 @@ function loadScript(src) {
 async function initCloud() {
   if (cloudConfigured()) {
     try {
-      await loadScript(SUPABASE_JS);
+      await loadScript(SUPABASE_JS, SUPABASE_JS_SRI);
       sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const { data } = await sbClient.auth.getSession();
       sbSession = data.session;

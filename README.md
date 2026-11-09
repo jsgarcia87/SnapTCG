@@ -103,6 +103,8 @@ Sin configurar nada, la colección y los mazos se guardan en `localStorage` (mod
 
 **Seguridad:** la *anon key* es pública por diseño; las políticas RLS permiten a cualquiera **leer** la colección, pero solo el dueño autenticado puede escribir. Los mazos son privados (solo tú los ves). No pongas nunca la `service_role key` en el repositorio.
 
+**CSP y SRI:** `index.html` lleva una Content-Security-Policy (meta) que limita scripts, conexiones e imágenes a los orígenes que usa la app, y los tres scripts de jsDelivr (Tesseract, SDK de TCGdex y Supabase) van con versión exacta e `integrity` SHA-384. Al actualizar una de esas versiones hay que recalcular el hash (`openssl dgst -sha384 -binary fichero | openssl base64 -A`). Limitación conocida: los `onclick` inline obligan a mantener `'unsafe-inline'` en `script-src`; para quitarlo hay que migrarlos a `addEventListener`. Nota: `frame-ancestors` no funciona en una meta; si se sirve con cabeceras, añádela allí.
+
 ### Histórico de precios (tendencias y gráficas)
 Una tarea diaria de GitHub Actions ([`.github/workflows/update-prices.yml`](.github/workflows/update-prices.yml), 10:30 UTC) guarda en Supabase el precio de cada carta de tu colección y mazos, la tendencia de Magic y el valor total de la colección. La web dibuja las gráficas de 30 d / 90 d / 1 año. Para activarla:
 
