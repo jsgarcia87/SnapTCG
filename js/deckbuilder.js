@@ -69,8 +69,11 @@ function addCardToDeck(card, juego) {
   }
   
   if (!isUnlimited(card, juego)) {
-    const entry = currentDeck.find(e => e.card.id === card.id);
-    if (entry && entry.qty >= rules.maxCopies) {
+    // La regla de copias es por nombre: distintas impresiones de la misma carta cuentan juntas
+    const nombre = (card.nombre || "").trim().toLowerCase();
+    const copias = currentDeck.filter(e => (e.card.nombre || "").trim().toLowerCase() === nombre)
+      .reduce((n, e) => n + e.qty, 0);
+    if (copias >= rules.maxCopies) {
       showDeckToast(`Máximo ${rules.maxCopies} copia(s) en ${rules.label}`, "warn");
       return;
     }

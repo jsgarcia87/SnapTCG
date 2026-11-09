@@ -52,7 +52,7 @@ async function main() {
   const rows = await sbAll("/collection?select=owner,card_id,game,qty,card");
   const decks = await sbAll("/decks?select=cards");
   const tracked = new Map();
-  rows.forEach(r => tracked.set(r.card_id, { id: r.card_id, tipo: r.game }));
+  rows.forEach(r => { const id = r.card?.id ?? r.card_id; tracked.set(id, { id, tipo: r.game }); });
   decks.forEach(d => (d.cards || []).forEach(e => { if (e.card?.id && !tracked.has(e.card.id)) tracked.set(e.card.id, { id: e.card.id, tipo: e.card.tipo }); }));
   console.log(`Cartas a seguir: ${tracked.size} (colección: ${rows.length} filas, mazos: ${decks.length})`);
   if (tracked.size === 0) { console.log("Nada que hacer."); return; }
@@ -119,19 +119,19 @@ async function main() {
   const totals = new Map();
   let patched = 0;
   await runPool(rows, 5, async (r) => {
-    const p = priced.get(r.card_id);
+    const p = priced.get(r.card?.id ?? r.card_id);
     if (!p) return;
     const card = {
       ...r.card, precio: p.precio, precioFoil: p.precioFoil, moneda: p.moneda, fuente: p.fuente,
       actualizado: p.actualizado, consultado: p.consultado, preciosCargados: true,
-      tendencia: r.card.tipo === "magic" ? (magicTrend.get(r.card_id) ?? null) : p.tendencia
+      tendencia: r.card.tipo === "magic" ? (magicTrend.get(r.card.id) ?? null) : p.tendencia
     };
     await sb(`/collection?owner=eq.${r.owner}&card_id=eq.${encodeURIComponent(r.card_id)}`,
       { method: "PATCH", body: { card, updated_at: new Date().toISOString() }, prefer: "return=minimal" });
     patched++;
   });
   rows.forEach(r => {
-    const p = priced.get(r.card_id);
+    const p = priced.get(r.card?.id ?? r.card_id);
     const t = totals.get(r.owner) || totals.set(r.owner, { eur: 0, usd: 0, cards: 0 }).get(r.owner);
     t.cards += r.qty;
     if (p?.precio > 0) t[p.moneda === "usd" ? "usd" : "eur"] += p.precio * r.qty;
