@@ -239,7 +239,7 @@ function abrirCartaGuardada(encodedKey) {
 }
 
 let valueRange = 90;
-let valueRows = null;
+let valueRows = null, valueRowsOwner = null, valueRowsAt = 0;
 
 function setValueRange(days) { valueRange = days; paintValueChart(); }
 
@@ -274,7 +274,10 @@ async function renderValueChart() {
   const box = document.getElementById("value-chart");
   if (!box) return;
   if (!cloudReady() && collection.length) recordValueSnapshot(collection);
-  try { valueRows = await loadValueHistory(365); }
+  // En la nube el histórico lo escribe el trabajo diario: basta con pedirlo cada 5 min por dueño
+  const owner = cloudReady() ? collectionOwner() : "local";
+  if (cloudReady() && valueRows && valueRowsOwner === owner && Date.now() - valueRowsAt < 300e3) { paintValueChart(); return; }
+  try { valueRows = await loadValueHistory(365); valueRowsOwner = owner; valueRowsAt = Date.now(); }
   catch (e) { console.error(e); box.innerHTML = `<div class="an-muted">No se pudo cargar el histórico.</div>`; return; }
   paintValueChart();
 }

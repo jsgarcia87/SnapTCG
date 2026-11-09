@@ -205,7 +205,7 @@ function saveDeck() {
 
   const deck = {
     id: editingDeckIdx > -1 ? allDecks[editingDeckIdx].id : Date.now(),
-    nombre, juego: juegoActual, formato: currentFormat, cards: [...currentDeck],
+    nombre, juego: juegoActual, formato: currentFormat, cards: currentDeck.map(e => ({ ...e })),
     total: totalCards(),
     value: sumValue(currentDeck).eur.toFixed(2),
     date: new Date().toLocaleDateString()
@@ -252,7 +252,7 @@ function renderDeckLibrary() {
 
 function loadDeck(idx) {
   const deck = allDecks[idx];
-  currentDeck = [...deck.cards];
+  currentDeck = deck.cards.map(e => ({ ...e }));   // copia: editar no debe tocar el mazo guardado
   editingDeckIdx = idx;
   currentFormat = deck.formato || "standard";
   
