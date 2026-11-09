@@ -2,7 +2,7 @@
 
 **CardDex** es una herramienta profesional de gestión para jugadores de TCG (Trading Card Games). Permite escanear cartas físicamente, consultar precios en tiempo real y construir mazos competitivos de **Pokémon TCG** y **Magic: The Gathering** con validación de reglas avanzada.
 
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.4.0-gold)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.11.0-gold)
 ![Tech](https://img.shields.io/badge/Tech-Vanilla_JS-blue)
 ![OCR](https://img.shields.io/badge/OCR-Tesseract.js-green)
 
