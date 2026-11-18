@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.11.0] - 2026-11-09
+
+### Corregido
+- **Colección**: cada fila se identifica por carta + variante + estado + idioma; antes la misma carta en Normal y Holo se fundía en una sola. Las filas antiguas se migran al iniciar sesión. `scripts/update-prices.mjs` adaptado a la nueva clave.
+- **Mazos**: el límite de copias se cuenta por nombre de carta (suma de todas las impresiones). Editar un mazo guardado ya no lo modifica hasta pulsar Guardar.
+- **Precios**: eliminados los mínimos y máximos de mercado estimados; si la fuente no los da, se muestra «—».
+- **Rendimiento**: el histórico de valor de la colección se pide a Supabase como máximo cada 5 minutos.
+
+### Seguridad
+- Content-Security-Policy en `index.html` y scripts de CDN con versión exacta e `integrity` SHA-384 (Tesseract 5.1.1, SDK TCGdex 2.9.0, Supabase 2.58.0). Los handlers de colección usan claves codificadas.
+
+---
+
 ## [3.10.1] - 2026-11-01
 
 ### Limpieza y Estandarización Visual

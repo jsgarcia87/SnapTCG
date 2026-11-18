@@ -429,9 +429,9 @@ function pintarPrecioModal(carta) {
   }
 
   // Estadísticas Mín / Media / Máx de mercado estilo Collectr
-  if (lowEl) lowEl.textContent = carta.marketLow ? formatMoney(carta.marketLow, carta.moneda) : (activePrice ? formatMoney(activePrice * 0.8, carta.moneda) : "—");
+  if (lowEl) lowEl.textContent = carta.marketLow ? formatMoney(carta.marketLow, carta.moneda) : "—";
   if (midEl) midEl.textContent = carta.marketMid ? formatMoney(carta.marketMid, carta.moneda) : (activePrice ? formatMoney(activePrice, carta.moneda) : "—");
-  if (highEl) highEl.textContent = carta.marketHigh ? formatMoney(carta.marketHigh, carta.moneda) : (activePrice ? formatMoney(activePrice * 1.3, carta.moneda) : "—");
+  if (highEl) highEl.textContent = carta.marketHigh ? formatMoney(carta.marketHigh, carta.moneda) : "—";
 
   let html = "";
   if (carta.errorPrecio) {
@@ -562,7 +562,7 @@ function pintarChipsModal(carta) {
 
 /** «Tienes ×N en tu colección · ×M en el mazo»: contexto de posesión. */
 function pintarPoseidaModal(carta) {
-  const enColeccion = (typeof collection !== "undefined" ? collection : []).find(e => e.card.id === carta.id)?.qty || 0;
+  const enColeccion = (typeof collection !== "undefined" ? collection : []).filter(e => e.card.id === carta.id).reduce((s, e) => s + e.qty, 0);
   const enMazo = typeof getCardCountInDeck === "function" ? getCardCountInDeck(carta.id) : 0;
   const partes = [];
   if (enColeccion) partes.push(`<strong>×${enColeccion}</strong> en tu colección`);

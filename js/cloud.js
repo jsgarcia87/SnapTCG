@@ -9,11 +9,17 @@
 
 const COLLECTION_KEY = "snaptcg_collection";
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.min.js";
+const SUPABASE_JS_SRI = "sha384-WmjsOVSSw3JNqIKfmDU35+uddOzBdP9PlYIWCg7xdnVOesjWVGpRcooOVheFFwH4";
 
 let collection = [];          // [{ card, qty }]
 let sbClient = null;
 let sbSession = null;
 let collectionFilter = { game: "all", finish: "all", lang: "all", sort: "value-desc", text: "" };
+
+/** Clave de una fila de colección: la misma carta en otra variante, estado o idioma es otra fila. */
+const entryKey = (c) => [c.id, c.selectedVariant || "normal", c.condition || "NM", (c.lang || "en").toLowerCase()].join("~");
+/** Codifica una clave para usarla dentro de un atributo onclick sin poder romper la cadena JS. */
+const encKey = (k) => encodeURIComponent(k).replace(/'/g, "%27");
 
 const demoForced = () => new URLSearchParams(location.search).has("demo");
 const cloudConfigured = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY) && !demoForced();
@@ -23,9 +29,10 @@ const collectionOwner = () => (sbSession ? sbSession.user.id : PUBLIC_OWNER_ID);
 
 /* ───────────── Inicialización ───────────── */
 
-function loadScript(src) {
+function loadScript(src, integrity) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
+    if (integrity) { s.integrity = integrity; s.crossOrigin = "anonymous"; }
     s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("No se pudo cargar " + src));
     document.head.appendChild(s);
   });
@@ -34,7 +41,7 @@ function loadScript(src) {
 async function initCloud() {
   if (cloudConfigured()) {
     try {
-      await loadScript(SUPABASE_JS);
+      await loadScript(SUPABASE_JS, SUPABASE_JS_SRI);
       sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       const { data } = await sbClient.auth.getSession();
       sbSession = data.session;
@@ -73,16 +80,35 @@ function setSyncStatus() {
 /* ───────────── Colección: datos ───────────── */
 
 function loadLocalCollection() {
-  try { return JSON.parse(localStorage.getItem(COLLECTION_KEY)) || []; } catch { return []; }
+  try {
+    return (JSON.parse(localStorage.getItem(COLLECTION_KEY)) || []).map(e => ({ ...e, key: entryKey(e.card) }));
+  } catch { return []; }
 }
 
 async function loadCollection() {
   if (!cloudReady()) { collection = loadLocalCollection(); return; }
   const owner = collectionOwner();
   if (!owner) { collection = []; return; }
-  const { data, error } = await sbClient.from("collection").select("card,qty").eq("owner", owner);
+  const { data, error } = await sbClient.from("collection").select("card_id,card,qty").eq("owner", owner);
   if (error) { console.error(error); showDeckToast("Error al cargar la colección", "warn"); collection = []; return; }
-  collection = data.map(r => ({ card: r.card, qty: r.qty }));
+  collection = data.map(r => ({ key: r.card_id, card: r.card, qty: r.qty }));
+  await migrateLegacyKeys();
+}
+
+/** Filas antiguas (card_id = id de carta): se reescriben con la clave id+variante+estado+idioma. */
+async function migrateLegacyKeys() {
+  if (!sbSession) return;
+  const legacy = collection.filter(e => e.key === e.card.id && entryKey(e.card) !== e.key);
+  for (const e of legacy) {
+    const owner = sbSession.user.id, newKey = entryKey(e.card);
+    const { error } = await sbClient.from("collection").upsert({
+      owner, card_id: newKey, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+    }, { onConflict: "owner,card_id" });
+    if (error) { console.error(error); continue; }
+    const del = await sbClient.from("collection").delete().eq("owner", owner).eq("card_id", e.key);
+    if (del.error) { console.error(del.error); continue; }
+    e.key = newKey;
+  }
 }
 
 async function persistCollectionEntry(entry, removed) {
@@ -92,9 +118,9 @@ async function persistCollectionEntry(entry, removed) {
   }
   const owner = sbSession.user.id;
   const q = removed
-    ? sbClient.from("collection").delete().eq("owner", owner).eq("card_id", entry.card.id)
+    ? sbClient.from("collection").delete().eq("owner", owner).eq("card_id", entry.key)
     : sbClient.from("collection").upsert({
-        owner, card_id: entry.card.id, game: entry.card.tipo, qty: entry.qty,
+        owner, card_id: entry.key, game: entry.card.tipo, qty: entry.qty,
         card: entry.card, updated_at: new Date().toISOString()
       }, { onConflict: "owner,card_id" });
   const { error } = await q;
@@ -116,23 +142,22 @@ async function collectionAdd(card, variant = null, condition = null) {
     lang: chosenLang
   };
 
-  let entry = collection.find(e => e.card.id === card.id);
+  const key = entryKey(cardToSave);
+  let entry = collection.find(e => e.key === key);
   if (entry) {
     entry.qty++;
-    entry.card.selectedVariant = chosenVariant;
-    entry.card.condition = chosenCondition;
-    entry.card.lang = chosenLang;
   } else {
-    entry = { card: cardToSave, qty: 1 };
+    entry = { key, card: cardToSave, qty: 1 };
     collection.push(entry);
   }
   await persistCollectionEntry(entry, false);
   renderCollection();
 }
 
-async function collectionRemove(cardId) {
+async function collectionRemove(encodedKey) {
   if (!canEditCollection()) return;
-  const i = collection.findIndex(e => e.card.id === cardId);
+  const key = decodeURIComponent(encodedKey);
+  const i = collection.findIndex(e => e.key === key);
   if (i < 0) return;
   const entry = collection[i];
   const removed = entry.qty <= 1;
@@ -146,7 +171,7 @@ async function persistAllCollection() {
   if (!sbSession || collection.length === 0) return;
   const owner = sbSession.user.id;
   const rows = collection.map(e => ({
-    owner, card_id: e.card.id, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+    owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
   }));
   const { error } = await sbClient.from("collection").upsert(rows, { onConflict: "owner,card_id" });
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
@@ -209,13 +234,14 @@ async function loadValueHistory(days = 365) {
 }
 
 /** Abre el detalle de una carta guardada en la colección (sin registrarla en el historial de búsqueda). */
-function abrirCartaGuardada(id) {
-  const e = collection.find(x => x.card.id === id);
+function abrirCartaGuardada(encodedKey) {
+  const key = decodeURIComponent(encodedKey);
+  const e = collection.find(x => x.key === key);
   if (e) abrirDetalle(e.card, false);
 }
 
 let valueRange = 90;
-let valueRows = null;
+let valueRows = null, valueRowsOwner = null, valueRowsAt = 0;
 
 function setValueRange(days) { valueRange = days; paintValueChart(); }
 
@@ -250,7 +276,10 @@ async function renderValueChart() {
   const box = document.getElementById("value-chart");
   if (!box) return;
   if (!cloudReady() && collection.length) recordValueSnapshot(collection);
-  try { valueRows = await loadValueHistory(365); }
+  // En la nube el histórico lo escribe el trabajo diario: basta con pedirlo cada 5 min por dueño
+  const owner = cloudReady() ? collectionOwner() : "local";
+  if (cloudReady() && valueRows && valueRowsOwner === owner && Date.now() - valueRowsAt < 300e3) { paintValueChart(); return; }
+  try { valueRows = await loadValueHistory(365); valueRowsOwner = owner; valueRowsAt = Date.now(); }
   catch (e) { console.error(e); box.innerHTML = `<div class="an-muted">No se pudo cargar el histórico.</div>`; return; }
   paintValueChart();
 }
@@ -486,7 +515,7 @@ function renderCollection() {
         }
 
         return `<article class="card-item ${isHolo ? 'is-holo-card' : ''}" tabindex="0" role="button" aria-label="Ver ${esc(c.nombre)}"
-          onclick="abrirCartaGuardada('${esc(c.id)}')" onkeydown="if(event.key==='Enter') abrirCartaGuardada('${esc(c.id)}')">
+          onclick="abrirCartaGuardada('${encKey(e.key)}')" onkeydown="if(event.key==='Enter') abrirCartaGuardada('${encKey(e.key)}')">
           <div class="card-artwork-wrapper">
             <div class="possession-badge">x${e.qty}</div>
             <div class="card-badges-overlay">
@@ -502,8 +531,8 @@ function renderCollection() {
             <p class="card-meta">${esc(c.set || "Desconocido")}${c.localId ? ' · #' + esc(c.localId) : ''}</p>
             <p class="card-price">${precioHtml(c)}</p>
             ${editable ? `<div class="dcr-controls" style="margin-top:4px;">
-              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${esc(c.id)}')">${HEROICONS.minus}</button>
-              <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.card.id==='${esc(c.id)}').card)">${HEROICONS.plus}</button>
+              <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${encKey(e.key)}')">${HEROICONS.minus}</button>
+              <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.key===decodeURIComponent('${encKey(e.key)}')).card)">${HEROICONS.plus}</button>
             </div>` : ""}
           </div>
         </article>`;

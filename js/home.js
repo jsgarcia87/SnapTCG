@@ -49,7 +49,7 @@ function moversHtml() {
     const priceStr = formatMoney(e.card.precio, e.card.moneda) || "—";
     const barWidth = Math.min(100, Math.max(20, (parseFloat(e.card.precio) || 10) * 1.5));
     return `
-      <div class="mover-row" onclick="abrirCartaGuardada('${esc(e.card.id)}')">
+      <div class="mover-row" onclick="abrirCartaGuardada('${encKey(e.key)}')">
         <span class="mover-rank">${num}</span>
         <div class="mover-thumb-wrapper">
           <img src="${esc(e.card.imagenThumb || '')}" alt="${esc(e.card.nombre)}" loading="lazy">
@@ -65,7 +65,7 @@ function moversHtml() {
           <span class="mover-price-val">${esc(priceStr)}</span>
           ${pct != null ? trendBadge(pct) : '<span class="trend-tag-stable">= 0.0%</span>'}
         </div>
-        <button class="mover-quick-btn" onclick="event.stopPropagation(); abrirCartaGuardada('${esc(e.card.id)}')" aria-label="Ver detalles">
+        <button class="mover-quick-btn" onclick="event.stopPropagation(); abrirCartaGuardada('${encKey(e.key)}')" aria-label="Ver detalles">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="heroicon-sm"><path d="M12 4.5v15m7.5-7.5h-15"/></svg>
         </button>
       </div>`;
@@ -82,7 +82,7 @@ function recentCardsHtml() {
   }
   const recent = [...collection].slice(-3).reverse();
   return recent.map(e => `
-    <div class="recent-card-row" onclick="abrirCartaGuardada('${esc(e.card.id)}')">
+    <div class="recent-card-row" onclick="abrirCartaGuardada('${encKey(e.key)}')">
       <img src="${esc(e.card.imagenThumb || '')}" alt="${esc(e.card.nombre)}" class="rc-thumb" loading="lazy">
       <div class="rc-info">
         <span class="rc-name">${esc(e.card.nombre)}</span>

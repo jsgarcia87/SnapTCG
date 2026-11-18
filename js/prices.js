@@ -164,7 +164,7 @@ function applyPokemonPricing(card, pricing) {
     };
 
     card.marketLow = cm.low > 0 ? cm.low : (cm["low-holo"] > 0 ? cm["low-holo"] : null);
-    card.marketHigh = cm.trend > 0 ? cm.trend * 1.5 : (card.precio ? card.precio * 1.4 : null);
+    card.marketHigh = null;   // Cardmarket no publica máximo: no se inventa
     card.marketMid = card.precio;
   } else if (tp) {
     const variants = ["normal", "holofoil", "reverse-holofoil", "1st-edition", "1st-edition-holofoil"]
@@ -231,9 +231,9 @@ function applyScryfallPricing(card, c, bulkUpdatedAt) {
     holo: card.precioFoil
   };
 
-  card.marketLow = card.precio ? Number((card.precio * 0.75).toFixed(2)) : null;
+  card.marketLow = null;    // Scryfall no da mínimo ni máximo: no se inventan
   card.marketMid = card.precio;
-  card.marketHigh = card.precioFoil ? card.precioFoil : (card.precio ? Number((card.precio * 1.5).toFixed(2)) : null);
+  card.marketHigh = null;
 
   const finishes = c.finishes || ["nonfoil"];
   card.variants = {

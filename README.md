@@ -2,7 +2,7 @@
 
 **CardDex** es una herramienta profesional de gestión para jugadores de TCG (Trading Card Games). Permite escanear cartas físicamente, consultar precios en tiempo real y construir mazos competitivos de **Pokémon TCG** y **Magic: The Gathering** con validación de reglas avanzada.
 
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.4.0-gold)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.11.0-gold)
 ![Tech](https://img.shields.io/badge/Tech-Vanilla_JS-blue)
 ![OCR](https://img.shields.io/badge/OCR-Tesseract.js-green)
 
@@ -102,6 +102,8 @@ Sin configurar nada, la colección y los mazos se guardan en `localStorage` (mod
 6. Haz commit y push. Entra en la pestaña **Colección**, inicia sesión con tu email (enlace mágico) y añade cartas desde el detalle de carta.
 
 **Seguridad:** la *anon key* es pública por diseño; las políticas RLS permiten a cualquiera **leer** la colección, pero solo el dueño autenticado puede escribir. Los mazos son privados (solo tú los ves). No pongas nunca la `service_role key` en el repositorio.
+
+**CSP y SRI:** `index.html` lleva una Content-Security-Policy (meta) que limita scripts, conexiones e imágenes a los orígenes que usa la app, y los tres scripts de jsDelivr (Tesseract, SDK de TCGdex y Supabase) van con versión exacta e `integrity` SHA-384. Al actualizar una de esas versiones hay que recalcular el hash (`openssl dgst -sha384 -binary fichero | openssl base64 -A`). Limitación conocida: los `onclick` inline obligan a mantener `'unsafe-inline'` en `script-src`; para quitarlo hay que migrarlos a `addEventListener`. Nota: `frame-ancestors` no funciona en una meta; si se sirve con cabeceras, añádela allí.
 
 ### Histórico de precios (tendencias y gráficas)
 Una tarea diaria de GitHub Actions ([`.github/workflows/update-prices.yml`](.github/workflows/update-prices.yml), 10:30 UTC) guarda en Supabase el precio de cada carta de tu colección y mazos, la tendencia de Magic y el valor total de la colección. La web dibuja las gráficas de 30 d / 90 d / 1 año. Para activarla:
