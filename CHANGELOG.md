@@ -4,6 +4,23 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.13.0] - 2026-11-21
+
+### Control del valor de la colección
+- **Precio de compra y ganancia/pérdida**: cada carta puede llevar su coste (€ por carta; al sumar copias a otro precio se guarda la media ponderada). Se muestra ganancia/pérdida por carta, en la colección y en el Inicio, avisando de cuántas cartas no tienen coste.
+- **Un solo total en euros**: las cartas en dólares se convierten con el tipo de cambio del BCE (Frankfurter, caché de 12 h). El histórico guarda `eur_all` con el cambio de cada día. El total indica cuánto se convirtió y a qué cambio.
+- **Seguimiento y alertas**: «Seguir» cualquier carta (la tengas o no) con precio objetivo de bajada/subida; el Inicio muestra las alertas activas y los movimientos de 7 días mayores que un umbral configurable. Las alertas son dentro de la app, sin notificaciones externas.
+- El valor total usa el precio de la **variante elegida** (antes usaba siempre el precio base). El job diario ya no deja `variantPrices` obsoletos y usa el mismo precio activo para el histórico.
+
+### Corregido
+- El Inicio mostraba cifras de ejemplo inventadas (12.840 €, +12,8 %, «Rendimiento estimado» = valor × 1,05, mazo Lugia VSTAR, «Rareza 82 %»). Ahora solo muestra datos reales o vacíos.
+- «Lo que más se mueve» solo mostraba las subidas; ahora ordena por variación absoluta.
+
+### Base de datos
+- `supabase/schema.sql`: tabla `watchlist` (RLS, privada) y columnas `eur_all` y `fx` en `collection_value_history`.
+
+---
+
 ## [3.12.0] - 2026-11-21
 
 ### Escáner: reconocimiento de la carta completa

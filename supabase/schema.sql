@@ -81,3 +81,29 @@ alter table public.collection_value_history enable row level security;
 drop policy if exists "value_history_public_read" on public.collection_value_history;
 create policy "value_history_public_read" on public.collection_value_history
   for select using (true);
+
+
+-- ───────── Valor de la colección en una sola moneda (v3.13) ─────────
+-- eur_all = eur + usd × fx (tipo de cambio USD→EUR del día, BCE). Lo rellena el trabajo diario.
+alter table public.collection_value_history add column if not exists eur_all numeric;
+alter table public.collection_value_history add column if not exists fx numeric;
+
+-- ───────── Seguimiento de cartas y precios objetivo (privado: solo el dueño) ─────────
+create table if not exists public.watchlist (
+  owner      uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  card_id    text        not null,
+  game       text        not null check (game in ('pokemon', 'magic')),
+  card       jsonb       not null,
+  below      numeric,
+  above      numeric,
+  updated_at timestamptz not null default now(),
+  primary key (owner, card_id)
+);
+
+alter table public.watchlist enable row level security;
+
+drop policy if exists "watchlist_owner_all" on public.watchlist;
+create policy "watchlist_owner_all" on public.watchlist
+  for all to authenticated
+  using (owner = auth.uid())
+  with check (owner = auth.uid());
