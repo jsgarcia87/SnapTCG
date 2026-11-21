@@ -107,3 +107,20 @@ create policy "watchlist_owner_all" on public.watchlist
   for all to authenticated
   using (owner = auth.uid())
   with check (owner = auth.uid());
+
+-- ───────── Precio de compra (PRIVADO: la colección es pública, el coste no) ─────────
+create table if not exists public.collection_cost (
+  owner      uuid        not null default auth.uid() references auth.users(id) on delete cascade,
+  card_id    text        not null,          -- misma clave que public.collection.card_id
+  coste      numeric     not null check (coste >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (owner, card_id)
+);
+
+alter table public.collection_cost enable row level security;
+
+drop policy if exists "collection_cost_owner_all" on public.collection_cost;
+create policy "collection_cost_owner_all" on public.collection_cost
+  for all to authenticated
+  using (owner = auth.uid())
+  with check (owner = auth.uid());

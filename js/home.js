@@ -149,6 +149,16 @@ function activeDeckHtml() {
     </div>`;
 }
 
+/** Aviso si los precios guardados están viejos (p. ej. el job diario ha dejado de funcionar). */
+function staleBannerHtml() {
+  const fechas = collection.map(e => priceDate(e.card)).filter(Boolean).map(f => new Date(f).getTime()).filter(t => !isNaN(t));
+  if (!fechas.length) return "";
+  const dias = Math.floor((Date.now() - Math.max(...fechas)) / 86400e3);
+  if (dias < 2) return "";
+  return `<div class="stale-banner" role="status"><strong>Precios de hace ${dias} días.</strong>
+    ${cloudConfigured() ? "El trabajo diario de precios puede haber fallado: revisa la pestaña Actions del repositorio." : "Pulsa «Actualizar precios» en Colección para refrescarlos."}</div>`;
+}
+
 async function renderHome() {
   const root = document.getElementById("home-body");
   const tab = document.getElementById("tab-home");
@@ -187,6 +197,8 @@ async function renderHome() {
         <button class="range-pill" onclick="setHomeRange(this, '7d')">7 días</button>
       </div>
     </div>
+
+    ${staleBannerHtml()}
 
     <!-- Fila 1: 3 Tarjetas Métricas Superiores -->
     <div class="home-metrics-grid">

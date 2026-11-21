@@ -448,12 +448,25 @@ function pintarPrecioModal(carta) {
     const fecha = timeAgo(priceDate(carta));
     html += `<small class="price-source">${esc(carta.fuente || "")}${fecha ? ` · actualizado ${fecha}` : ""}${carta.moneda === "usd" ? " · en dólares" : ""}</small>`;
   }
+  if (activePrice != null) html += `<small class="price-source">Precio de referencia de mercado: el estado (NM, LP…) que indiques no lo modifica.</small>`;
   if (carta.enCache) html += `<small class="price-source">Resultados guardados (sin conexión)</small>`;
   meta.innerHTML = html;
+  pintarEnlacesModal(carta);
 
   const box = document.getElementById("price-chart");
   if (activePrice != null && box.dataset.cardId !== carta.id) cargarHistorialModal(carta, 90);
   else if (activePrice == null && !(carta.preciosCargados === false)) { box.innerHTML = ""; box.dataset.cardId = ""; }
+}
+
+/** Enlaces de búsqueda de la carta en los mercados donde se compra y vende. */
+function pintarEnlacesModal(carta) {
+  const box = document.getElementById("price-links");
+  if (!box) return;
+  const q = encodeURIComponent(carta.printedName && carta.lang !== "en" ? carta.nombre : carta.nombre);
+  const mtg = carta.tipo === "magic";
+  const cm = `https://www.cardmarket.com/es/${mtg ? "Magic" : "Pokemon"}/Products/Search?searchString=${q}`;
+  const tp = `https://www.tcgplayer.com/search/${mtg ? "magic" : "pokemon"}/product?q=${q}&view=grid`;
+  box.innerHTML = `<a href="${cm}" target="_blank" rel="noopener noreferrer">Ver en Cardmarket</a> · <a href="${tp}" target="_blank" rel="noopener noreferrer">Ver en TCGplayer</a>`;
 }
 
 let modalHist = { id: null, pts: [] };

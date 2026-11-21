@@ -612,31 +612,44 @@ async function buscarMagic(nombre, lang = "all") {
     showDeckToast(`No hay impresiones en ${formatLanguageName(lang)}, mostrando todas`, "warn");
   }
 
-  return data.data.map(c => {
-    const faces = c.card_faces?.[0]?.image_uris;
-    const uris  = c.image_uris ?? faces ?? null;
-    let cardLang = (c.lang || "en").toLowerCase();
-    if (cardLang === "zhs") cardLang = "zh-cn";
-    if (cardLang === "zht") cardLang = "zh-tw";
+  return data.data.map(c => scryfallToCard(c, bulk));
+}
 
-    const card = {
-      id:          c.id,
-      localId:     c.collector_number || "",
-      imagenThumb: uris?.small  ?? NO_IMAGE,
-      imagen:      uris?.large  ?? uris?.normal ?? NO_IMAGE,
-      nombre:      c.name,
-      printedName: c.printed_name || null,
-      set:         c.set_name,
-      setCode:     c.set,
-      tipo:        "magic",
-      lang:        cardLang,
-      rarity:      c.rarity || "",
-      manaCost:    c.mana_cost || c.card_faces?.[0]?.mana_cost || "",
-      typeLine:    c.type_line ?? "",
-      cmc:         c.cmc ?? null
-    };
-    return applyScryfallPricing(card, c, bulk);
-  });
+/** Carta de Scryfall → CardResult con precio. */
+function scryfallToCard(c, bulk) {
+  const faces = c.card_faces?.[0]?.image_uris;
+  const uris  = c.image_uris ?? faces ?? null;
+  let cardLang = (c.lang || "en").toLowerCase();
+  if (cardLang === "zhs") cardLang = "zh-cn";
+  if (cardLang === "zht") cardLang = "zh-tw";
+
+  const card = {
+    id:          c.id,
+    localId:     c.collector_number || "",
+    imagenThumb: uris?.small  ?? NO_IMAGE,
+    imagen:      uris?.large  ?? uris?.normal ?? NO_IMAGE,
+    nombre:      c.name,
+    printedName: c.printed_name || null,
+    set:         c.set_name,
+    setCode:     c.set,
+    tipo:        "magic",
+    lang:        cardLang,
+    rarity:      c.rarity || "",
+    manaCost:    c.mana_cost || c.card_faces?.[0]?.mana_cost || "",
+    typeLine:    c.type_line ?? "",
+    cmc:         c.cmc ?? null
+  };
+  return applyScryfallPricing(card, c, bulk);
+}
+
+/** Carga una carta concreta por su id (importación de CSV). Devuelve null si no existe. */
+async function obtenerCartaPorId(juego, id, lang = "en") {
+  if (juego === "magic") {
+    const c = await fetchJSON(`https://api.scryfall.com/cards/${encodeURIComponent(id)}`, { okStatuses: [404], headers: { Accept: "application/json" } });
+    if (!c || c.object === "error") return null;
+    return scryfallToCard(c, await scryfallPricesDate());
+  }
+  return obtenerCartaTCGdexSDK(id, lang);
 }
 
 /**

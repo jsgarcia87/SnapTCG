@@ -4,6 +4,24 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.14.0] - 2026-11-21
+
+### Privacidad
+- **El precio de compra ya no es público.** La colección es de lectura pública y el coste se guardaba dentro de cada fila (cualquiera podía leerlo por la API). Ahora vive en la tabla privada `collection_cost` (RLS solo para el dueño) y nunca se publica en `collection`.
+
+### Análisis y datos
+- **Dónde está tu valor**: concentración (peso de tus 5 cartas más valiosas), reparto por juego, edición, rareza e idioma, y qué cartas han movido más tu valor en 7 días (en €).
+- **Exportar CSV** (separador `;`, coma decimal, abre bien en Excel en español) e **Importar CSV** de ficheros exportados por CardDex (necesitan `juego` e `id`; suma a la colección con confirmación previa, máx. 500 filas).
+- **Aviso de precios viejos** en el Inicio si los precios guardados tienen 2 o más días (señal de que el job diario ha fallado).
+- **Enlaces a Cardmarket y TCGplayer** en la ficha de carta.
+- La ficha aclara que el precio es de referencia de mercado y que el estado (NM, LP…) no lo modifica.
+- Cartas sin precio: se avisa de cuántas quedan fuera del total.
+
+### Base de datos
+- `supabase/schema.sql`: tabla `collection_cost` (privada).
+
+---
+
 ## [3.13.0] - 2026-11-21
 
 ### Control del valor de la colección

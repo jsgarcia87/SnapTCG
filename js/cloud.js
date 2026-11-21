@@ -96,6 +96,30 @@ async function loadCollection() {
   if (error) { console.error(error); showDeckToast("Error al cargar la colección", "warn"); collection = []; return; }
   collection = data.map(r => ({ key: r.card_id, card: r.card, qty: r.qty }));
   await migrateLegacyKeys();
+  await loadCosts();
+}
+
+/* ───────────── Precio de compra: tabla privada (la colección es de lectura pública) ───────────── */
+
+/** Copia de la carta sin el coste: lo único que se publica en `collection`. */
+const publicCard = (card) => { const { coste, ...rest } = card; return rest; };
+
+async function loadCosts() {
+  if (!sbSession) return;   // solo el dueño ve sus costes
+  const { data, error } = await sbClient.from("collection_cost").select("card_id,coste").eq("owner", sbSession.user.id);
+  if (error) { console.error(error); return; }
+  const byKey = new Map(data.map(r => [r.card_id, Number(r.coste)]));
+  collection.forEach(e => { if (byKey.has(e.key)) e.card.coste = byKey.get(e.key); });
+}
+
+async function persistCost(entry, removed) {
+  if (!cloudReady() || !sbSession) return;
+  const owner = sbSession.user.id;
+  const has = !removed && entry.card.coste != null && entry.card.coste >= 0;
+  const { error } = has
+    ? await sbClient.from("collection_cost").upsert({ owner, card_id: entry.key, coste: entry.card.coste, updated_at: new Date().toISOString() }, { onConflict: "owner,card_id" })
+    : await sbClient.from("collection_cost").delete().eq("owner", owner).eq("card_id", entry.key);
+  if (error) { console.error(error); showDeckToast("Error al guardar el precio de compra", "warn"); }
 }
 
 /** Filas antiguas (card_id = id de carta): se reescriben con la clave id+variante+estado+idioma. */
@@ -105,7 +129,7 @@ async function migrateLegacyKeys() {
   for (const e of legacy) {
     const owner = sbSession.user.id, newKey = entryKey(e.card);
     const { error } = await sbClient.from("collection").upsert({
-      owner, card_id: newKey, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+      owner, card_id: newKey, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString()
     }, { onConflict: "owner,card_id" });
     if (error) { console.error(error); continue; }
     const del = await sbClient.from("collection").delete().eq("owner", owner).eq("card_id", e.key);
@@ -124,10 +148,11 @@ async function persistCollectionEntry(entry, removed) {
     ? sbClient.from("collection").delete().eq("owner", owner).eq("card_id", entry.key)
     : sbClient.from("collection").upsert({
         owner, card_id: entry.key, game: entry.card.tipo, qty: entry.qty,
-        card: entry.card, updated_at: new Date().toISOString()
+        card: publicCard(entry.card), updated_at: new Date().toISOString()
       }, { onConflict: "owner,card_id" });
   const { error } = await q;
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
+  await persistCost(entry, removed);
 }
 
 async function collectionAdd(card, variant = null, condition = null) {
@@ -194,7 +219,7 @@ async function persistAllCollection() {
   if (!sbSession || collection.length === 0) return;
   const owner = sbSession.user.id;
   const rows = collection.map(e => ({
-    owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+    owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString()
   }));
   const { error } = await sbClient.from("collection").upsert(rows, { onConflict: "owner,card_id" });
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
@@ -483,6 +508,8 @@ function renderCollection() {
       </div>
     </div>
 
+    <div class="an-card"><h3>Dónde está tu valor</h3>${analysisHtml()}</div>
+
     <div class="an-card"><h3>Evolución del Portfolio</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
 
     <div class="col-prices ${viejo ? "stale" : ""}">
@@ -523,7 +550,12 @@ function renderCollection() {
         oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
     </div>
 
-    <button class="dab-btn" onclick="copyCollectionLink()" style="margin-bottom:12px;">${HEROICONS.link} Compartir enlace público</button>
+    <div class="col-tools">
+      <button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Compartir enlace público</button>
+      <button class="dab-btn" onclick="exportCollectionCsv()">Exportar CSV</button>
+      ${editable ? `<button class="dab-btn" id="btn-import-csv" onclick="document.getElementById('csv-file').click()">Importar CSV</button>
+      <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none" onchange="importCollectionCsv(this.files[0]); this.value=''">` : ""}
+    </div>
 
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "No hay cartas que coincidan con los filtros aplicados." : (editable ? "Aún no tienes cartas en tu colección. Búscalas o escanéalas y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
 
