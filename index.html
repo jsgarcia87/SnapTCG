@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <!-- CSP: los handlers onclick inline exigen 'unsafe-inline' en script-src; ver README (Seguridad) -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://api.tcgdex.net https://api.scryfall.com https://api.pokemontcg.io https://rgyoatclhoblugdjekwl.supabase.co wss://rgyoatclhoblugdjekwl.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://api.tcgdex.net https://api.scryfall.com https://api.pokemontcg.io https://rgyoatclhoblugdjekwl.supabase.co wss://rgyoatclhoblugdjekwl.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://api.frankfurter.dev https://api.frankfurter.app data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="author" content="Sangar Studio">
   <meta name="version" content="3.11.0">
@@ -201,7 +201,10 @@
                     <div class="scanner-laser" id="scanner-laser"></div>
                   </div>
 
-                  <div class="frame-hint">Centra la carta en el recuadro</div>
+                  <!-- Franja inferior: número de coleccionista -->
+                  <div class="scanner-number-roi" aria-hidden="true"><span class="roi-label roi-label-bottom">NÚMERO</span></div>
+
+                  <div class="frame-hint">Encaja la carta entera en el recuadro</div>
                 </div>
               </div>
             </div>
@@ -453,6 +456,7 @@
             <p class="detail-label">Precio de mercado</p>
             <p class="detail-price-main" id="price-main">…</p>
             <div class="price-trend" id="price-trend"></div>
+            <p class="price-links" id="price-links"></p>
 
             <div class="market-stats-grid" id="market-stats-grid">
               <div class="market-stat-box">
@@ -471,6 +475,29 @@
           </div>
 
           <p class="detail-owned" id="card-owned" aria-live="polite"></p>
+
+          <!-- Precio de compra: base para calcular ganancia o pérdida -->
+          <div class="detail-cost" id="detail-cost">
+            <label class="detail-label" for="cost-input">Precio de compra por carta (€)</label>
+            <div class="cost-row">
+              <input type="number" id="cost-input" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" oninput="onCostInput(this.value)">
+              <button type="button" class="link-btn" id="btn-save-cost" onclick="guardarCosteActual()" style="display:none">Guardar coste</button>
+            </div>
+            <p class="detail-pl" id="detail-pl" aria-live="polite"></p>
+          </div>
+
+          <!-- Seguimiento y alertas de precio -->
+          <div class="detail-alert" id="detail-alert">
+            <label class="detail-label">Alertas de precio <small>(<span id="alert-currency">€</span>)</small></label>
+            <div class="alert-row">
+              <input type="number" id="alert-below" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si baja de" aria-label="Avisar si baja de">
+              <input type="number" id="alert-above" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si sube de" aria-label="Avisar si sube de">
+            </div>
+            <div class="alert-actions">
+              <button type="button" class="btn-secondary" id="btn-follow" onclick="guardarSeguimiento()">Seguir</button>
+              <button type="button" class="link-btn" id="btn-unfollow" onclick="dejarDeSeguir()" style="display:none">Dejar de seguir</button>
+            </div>
+          </div>
 
           <div class="detail-actions">
             <button class="btn-primary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()">Añadir a colección</button>
@@ -503,10 +530,13 @@
   <script src="js/prices.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/cardmatch.js"></script>
   <script src="js/scanner.js"></script>
   <script src="js/deckbuilder.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/cloud.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/portfolio.js"></script>
   <script src="js/home.js"></script>
   <script src="js/app.js"></script>
 </body>

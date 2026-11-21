@@ -448,12 +448,25 @@ function pintarPrecioModal(carta) {
     const fecha = timeAgo(priceDate(carta));
     html += `<small class="price-source">${esc(carta.fuente || "")}${fecha ? ` · actualizado ${fecha}` : ""}${carta.moneda === "usd" ? " · en dólares" : ""}</small>`;
   }
+  if (activePrice != null) html += `<small class="price-source">Precio de referencia de mercado: el estado (NM, LP…) que indiques no lo modifica.</small>`;
   if (carta.enCache) html += `<small class="price-source">Resultados guardados (sin conexión)</small>`;
   meta.innerHTML = html;
+  pintarEnlacesModal(carta);
 
   const box = document.getElementById("price-chart");
   if (activePrice != null && box.dataset.cardId !== carta.id) cargarHistorialModal(carta, 90);
   else if (activePrice == null && !(carta.preciosCargados === false)) { box.innerHTML = ""; box.dataset.cardId = ""; }
+}
+
+/** Enlaces de búsqueda de la carta en los mercados donde se compra y vende. */
+function pintarEnlacesModal(carta) {
+  const box = document.getElementById("price-links");
+  if (!box) return;
+  const q = encodeURIComponent(carta.printedName && carta.lang !== "en" ? carta.nombre : carta.nombre);
+  const mtg = carta.tipo === "magic";
+  const cm = `https://www.cardmarket.com/es/${mtg ? "Magic" : "Pokemon"}/Products/Search?searchString=${q}`;
+  const tp = `https://www.tcgplayer.com/search/${mtg ? "magic" : "pokemon"}/product?q=${q}&view=grid`;
+  box.innerHTML = `<a href="${cm}" target="_blank" rel="noopener noreferrer">Ver en Cardmarket</a> · <a href="${tp}" target="_blank" rel="noopener noreferrer">Ver en TCGplayer</a>`;
 }
 
 let modalHist = { id: null, pts: [] };
@@ -530,6 +543,7 @@ function abrirDetalle(carta, registrar = false) {
   pintarVariantesModal(carta);
   pintarPrecioModal(carta);
   pintarPoseidaModal(carta);
+  if (typeof pintarSeguimientoModal === "function") pintarSeguimientoModal(carta);
   if (typeof updateCollectionButton === "function") updateCollectionButton();
 
   if (carta.preciosCargados === false && carta.tipo === "pokemon") {
@@ -568,6 +582,53 @@ function pintarPoseidaModal(carta) {
   if (enColeccion) partes.push(`<strong>×${enColeccion}</strong> en tu colección`);
   if (enMazo) partes.push(`<strong>×${enMazo}</strong> en el mazo actual`);
   document.getElementById("card-owned").innerHTML = partes.length ? "Tienes " + partes.join(" · ") : "Aún no la tienes en tu colección";
+  pintarCosteModal(carta);
+}
+
+/** Entrada de la colección que corresponde a la carta abierta (misma variante, estado e idioma). */
+function entradaActual(carta) {
+  if (!carta || typeof collection === "undefined" || typeof entryKey !== "function") return null;
+  const k = entryKey(carta);
+  return collection.find(e => e.key === k) || null;
+}
+
+/** Precio de compra y ganancia/pérdida de la carta abierta. */
+function pintarCosteModal(carta) {
+  const box = document.getElementById("detail-cost");
+  if (!box) return;
+  const editable = typeof canEditCollection === "function" && canEditCollection();
+  box.style.display = editable ? "" : "none";
+  const input = document.getElementById("cost-input");
+  if (input && document.activeElement !== input) input.value = carta.coste != null && carta.coste !== "" ? carta.coste : "";
+  const entrada = entradaActual(carta);
+  const btn = document.getElementById("btn-save-cost");
+  if (btn) btn.style.display = entrada ? "" : "none";
+  pintarGananciaModal(carta, entrada);
+}
+
+function pintarGananciaModal(carta, entrada = entradaActual(carta)) {
+  const el = document.getElementById("detail-pl");
+  if (!el) return;
+  const origen = entrada ? entrada.card : carta;
+  const pl = pnlOf(origen, entrada ? entrada.qty : 1);
+  if (!pl) { el.textContent = ""; el.className = "detail-pl"; return; }
+  el.className = "detail-pl " + (pl.ganancia >= 0 ? "pl-up" : "pl-down");
+  el.textContent = (entrada ? `Tus ${entrada.qty} carta(s): ` : "Por carta: ") + formatPnL(pl.ganancia, pl.pct);
+}
+
+function onCostInput(v) {
+  const carta = window._currentCard;
+  if (!carta) return;
+  const n = v === "" ? NaN : parseFloat(v);
+  if (n >= 0) carta.coste = n; else delete carta.coste;
+  pintarGananciaModal(carta);
+}
+
+async function guardarCosteActual() {
+  const carta = window._currentCard, entrada = entradaActual(carta);
+  if (!carta || !entrada) return;
+  const ok = await collectionSetCost(entrada.key, carta.coste != null ? carta.coste : null);
+  if (ok) { pintarCosteModal(carta); showDeckToast("Precio de compra guardado", "success"); }
 }
 
 function closeModal() {
@@ -661,10 +722,21 @@ async function ejecutarBusqueda() {
   
   mostrarCargando(`Buscando "${nombre}"...`);
   try {
-    const resultados = await buscarCartas(nombre, juegoActual, searchFilters.lang);
+    let resultados = await buscarCartas(nombre, juegoActual, searchFilters.lang);
+    // Escaneo con cámara: ordena por parecido de diseño y número de coleccionista
+    const scanCtx = window._scanContext; window._scanContext = null;
+    let reconocida = false;
+    if (scanCtx) {
+      try {
+        mostrarCargando("Comparando con la carta escaneada...");
+        const r = await ordenarPorEscaneo(resultados, scanCtx);
+        resultados = r.cards; reconocida = r.confident;
+      } catch (e) { console.warn("No se pudo comparar el diseño:", e); }
+    }
     rawSearchResults = resultados;
     const filtrados = filterAndSortCards(resultados);
     renderizarLista(filtrados);
+    if (reconocida) { showDeckToast("Carta reconocida por diseño y número", "success"); abrirDetalle(resultados[0], true); }
     if (resultados[0]?.enCache) showDeckToast("Sin conexión: resultados guardados", "warn");
     if (searchFilters.lang !== "all" && resultados.length > 0 && resultados.every(c => !matchCardLang(c.lang, searchFilters.lang))) {
       showDeckToast(`Cartas en ${formatLanguageName(searchFilters.lang)} no encontradas, mostrando en ${formatLanguageName(resultados[0].lang)}`, "info");

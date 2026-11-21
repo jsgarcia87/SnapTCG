@@ -4,6 +4,52 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.14.0] - 2026-11-21
+
+### Privacidad
+- **El precio de compra ya no es público.** La colección es de lectura pública y el coste se guardaba dentro de cada fila (cualquiera podía leerlo por la API). Ahora vive en la tabla privada `collection_cost` (RLS solo para el dueño) y nunca se publica en `collection`.
+
+### Análisis y datos
+- **Dónde está tu valor**: concentración (peso de tus 5 cartas más valiosas), reparto por juego, edición, rareza e idioma, y qué cartas han movido más tu valor en 7 días (en €).
+- **Exportar CSV** (separador `;`, coma decimal, abre bien en Excel en español) e **Importar CSV** de ficheros exportados por CardDex (necesitan `juego` e `id`; suma a la colección con confirmación previa, máx. 500 filas).
+- **Aviso de precios viejos** en el Inicio si los precios guardados tienen 2 o más días (señal de que el job diario ha fallado).
+- **Enlaces a Cardmarket y TCGplayer** en la ficha de carta.
+- La ficha aclara que el precio es de referencia de mercado y que el estado (NM, LP…) no lo modifica.
+- Cartas sin precio: se avisa de cuántas quedan fuera del total.
+
+### Base de datos
+- `supabase/schema.sql`: tabla `collection_cost` (privada).
+
+---
+
+## [3.13.0] - 2026-11-21
+
+### Control del valor de la colección
+- **Precio de compra y ganancia/pérdida**: cada carta puede llevar su coste (€ por carta; al sumar copias a otro precio se guarda la media ponderada). Se muestra ganancia/pérdida por carta, en la colección y en el Inicio, avisando de cuántas cartas no tienen coste.
+- **Un solo total en euros**: las cartas en dólares se convierten con el tipo de cambio del BCE (Frankfurter, caché de 12 h). El histórico guarda `eur_all` con el cambio de cada día. El total indica cuánto se convirtió y a qué cambio.
+- **Seguimiento y alertas**: «Seguir» cualquier carta (la tengas o no) con precio objetivo de bajada/subida; el Inicio muestra las alertas activas y los movimientos de 7 días mayores que un umbral configurable. Las alertas son dentro de la app, sin notificaciones externas.
+- El valor total usa el precio de la **variante elegida** (antes usaba siempre el precio base). El job diario ya no deja `variantPrices` obsoletos y usa el mismo precio activo para el histórico.
+
+### Corregido
+- El Inicio mostraba cifras de ejemplo inventadas (12.840 €, +12,8 %, «Rendimiento estimado» = valor × 1,05, mazo Lugia VSTAR, «Rareza 82 %»). Ahora solo muestra datos reales o vacíos.
+- «Lo que más se mueve» solo mostraba las subidas; ahora ordena por variación absoluta.
+
+### Base de datos
+- `supabase/schema.sql`: tabla `watchlist` (RLS, privada) y columnas `eur_all` y `fx` en `collection_value_history`.
+
+---
+
+## [3.12.0] - 2026-11-21
+
+### Escáner: reconocimiento de la carta completa
+- Antes solo se leía la franja del título y la búsqueda devolvía todas las ediciones. Ahora, al leer el nombre, se captura la **carta entera** del marco de cámara.
+- Se lee el **número de coleccionista** (franja inferior, p. ej. `025/165`) con OCR propio.
+- Se compara el **diseño** de la foto con las imágenes oficiales de los candidatos (correlación cruzada normalizada sobre una miniatura en grises, `js/cardmatch.js`). Los resultados se reordenan por parecido y número; si hay una ganadora clara, se abre su ficha directamente.
+- Fotos de galería: solo reordenan los resultados, nunca abren una carta automáticamente (no van encuadradas).
+- El marco muestra ahora también la franja del número.
+
+---
+
 ## [3.11.0] - 2026-11-09
 
 ### Corregido

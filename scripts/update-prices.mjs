@@ -18,7 +18,7 @@ if (!SUPABASE_URL || !KEY) { console.error("Faltan SUPABASE_URL o SUPABASE_SERVI
 // ───── Reutiliza prices.js (script clásico del navegador) ─────
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 vm.runInThisContext(fs.readFileSync(new URL("../js/prices.js", import.meta.url), "utf8"), { filename: "js/prices.js" });
-const { fetchJSON, applyPokemonPricing, applyScryfallPricing, scryfallPricesDate, runPool, trendFromHistory } = globalThis;
+const { fetchJSON, applyPokemonPricing, applyScryfallPricing, scryfallPricesDate, runPool, trendFromHistory, getCardActivePrice } = globalThis;
 
 // ───── Cliente REST de Supabase ─────
 const REST = SUPABASE_URL.replace(/\/$/, "") + "/rest/v1";
@@ -47,14 +47,24 @@ async function sbAll(path) {
 const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
 const today = new Date().toISOString().slice(0, 10);
 
+/** Tipo de cambio USD→EUR del BCE (Frankfurter); null si ninguna fuente responde. */
+async function getFx() {
+  for (const url of ["https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR", "https://api.frankfurter.app/latest?from=USD&to=EUR"]) {
+    try { const d = await fetchJSON(url, { retries: 1 }); if (d?.rates?.EUR > 0) return d.rates.EUR; } catch (e) { console.warn("FX:", e.message); }
+  }
+  return null;
+}
+
 async function main() {
-  // 1. Cartas a seguir: colección (con cantidad y dueño) + cartas de los mazos
+  // 1. Cartas a seguir: colección (con cantidad y dueño) + seguimiento + cartas de los mazos
   const rows = await sbAll("/collection?select=owner,card_id,game,qty,card");
+  const watch = await sbAll("/watchlist?select=owner,card_id,game,card");
   const decks = await sbAll("/decks?select=cards");
   const tracked = new Map();
   rows.forEach(r => { const id = r.card?.id ?? r.card_id; tracked.set(id, { id, tipo: r.game }); });
+  watch.forEach(r => { const id = r.card?.id ?? r.card_id; if (!tracked.has(id)) tracked.set(id, { id, tipo: r.game }); });
   decks.forEach(d => (d.cards || []).forEach(e => { if (e.card?.id && !tracked.has(e.card.id)) tracked.set(e.card.id, { id: e.card.id, tipo: e.card.tipo }); }));
-  console.log(`Cartas a seguir: ${tracked.size} (colección: ${rows.length} filas, mazos: ${decks.length})`);
+  console.log(`Cartas a seguir: ${tracked.size} (colección: ${rows.length} filas, seguimiento: ${watch.length}, mazos: ${decks.length})`);
   if (tracked.size === 0) { console.log("Nada que hacer."); return; }
 
   // 2. Precios de hoy
@@ -115,30 +125,48 @@ async function main() {
     });
   }
 
-  // 5. Refresca los precios guardados en la colección y calcula el valor por dueño
-  const totals = new Map();
-  let patched = 0;
+  // 5. Refresca los precios guardados (colección y seguimiento) y calcula el valor por dueño
+  const fx = await getFx();
+  console.log(fx ? `Tipo de cambio USD→EUR: ${fx}` : "Sin tipo de cambio: eur_all solo se guardará si no hay cartas en dólares.");
+  const mergeCard = (r, p) => ({
+    ...r.card, precio: p.precio, precioFoil: p.precioFoil, moneda: p.moneda, fuente: p.fuente,
+    actualizado: p.actualizado, consultado: p.consultado, preciosCargados: true,
+    variantPrices: p.variantPrices, variantTrends: p.variantTrends,
+    marketLow: p.marketLow ?? null, marketMid: p.marketMid ?? null, marketHigh: p.marketHigh ?? null,
+    tendencia: r.card.tipo === "magic" ? (magicTrend.get(r.card?.id ?? r.card_id) ?? null) : p.tendencia
+  });
+  const merged = new Map();            // owner|card_id → carta actualizada (para el total)
+  let patched = 0, patchedWatch = 0;
   await runPool(rows, 5, async (r) => {
     const p = priced.get(r.card?.id ?? r.card_id);
     if (!p) return;
-    const card = {
-      ...r.card, precio: p.precio, precioFoil: p.precioFoil, moneda: p.moneda, fuente: p.fuente,
-      actualizado: p.actualizado, consultado: p.consultado, preciosCargados: true,
-      tendencia: r.card.tipo === "magic" ? (magicTrend.get(r.card.id) ?? null) : p.tendencia
-    };
+    const card = mergeCard(r, p);
+    merged.set(`${r.owner}|${r.card_id}`, card);
     await sb(`/collection?owner=eq.${r.owner}&card_id=eq.${encodeURIComponent(r.card_id)}`,
       { method: "PATCH", body: { card, updated_at: new Date().toISOString() }, prefer: "return=minimal" });
     patched++;
   });
-  rows.forEach(r => {
+  await runPool(watch, 5, async (r) => {
     const p = priced.get(r.card?.id ?? r.card_id);
+    if (!p) return;
+    await sb(`/watchlist?owner=eq.${r.owner}&card_id=eq.${encodeURIComponent(r.card_id)}`,
+      { method: "PATCH", body: { card: mergeCard(r, p), updated_at: new Date().toISOString() }, prefer: "return=minimal" });
+    patchedWatch++;
+  });
+  const totals = new Map();
+  rows.forEach(r => {
     const t = totals.get(r.owner) || totals.set(r.owner, { eur: 0, usd: 0, cards: 0 }).get(r.owner);
     t.cards += r.qty;
-    if (p?.precio > 0) t[p.moneda === "usd" ? "usd" : "eur"] += p.precio * r.qty;
+    const card = merged.get(`${r.owner}|${r.card_id}`);
+    const precio = card ? getCardActivePrice(card) : null;      // precio de la variante elegida, no solo el base
+    if (precio > 0) t[card.moneda === "usd" ? "usd" : "eur"] += precio * r.qty;
   });
-  const values = [...totals].map(([owner, t]) => ({ owner, day: today, eur: +t.eur.toFixed(2), usd: +t.usd.toFixed(2), cards: t.cards }));
+  const values = [...totals].map(([owner, t]) => ({
+    owner, day: today, eur: +t.eur.toFixed(2), usd: +t.usd.toFixed(2), cards: t.cards,
+    fx, eur_all: t.usd > 0 ? (fx ? +(t.eur + t.usd * fx).toFixed(2) : null) : +t.eur.toFixed(2)
+  }));
   if (values.length) await sb("/collection_value_history?on_conflict=owner,day", { method: "POST", body: values, prefer: "resolution=merge-duplicates,return=minimal" });
-  console.log(`Colección: ${patched} filas actualizadas; valor guardado para ${values.length} dueño(s).`);
+  console.log(`Colección: ${patched} filas y seguimiento: ${patchedWatch} filas actualizadas; valor guardado para ${values.length} dueño(s).`);
 }
 
 main().catch(e => { console.error("ERROR:", e.message); process.exit(1); });

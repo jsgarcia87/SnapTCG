@@ -38,8 +38,8 @@ function moversHtml() {
   }
 
   const sorted = [...con].sort((a, b) => {
-    const tB = b.card.tendencia?.d7 ?? 0;
-    const tA = a.card.tendencia?.d7 ?? 0;
+    const tB = Math.abs(b.card.tendencia?.d7 ?? 0);   // lo que más se mueve: subidas y bajadas
+    const tA = Math.abs(a.card.tendencia?.d7 ?? 0);
     return tB - tA;
   }).slice(0, 3);
 
@@ -98,24 +98,24 @@ function recentCardsHtml() {
 
 function activeDeckHtml() {
   const hasDeck = allDecks.length > 0;
-  const d = hasDeck ? allDecks[0] : null;
-  const cards = (d && d.cards) ? d.cards : [];
-  
-  const samplePkmImages = [
-    "https://assets.tcgdex.net/es/swsh/swsh12/139/low.webp",
-    "https://assets.tcgdex.net/es/sv/sv01/25/low.webp",
-    "https://assets.tcgdex.net/es/swsh/swsh3/136/low.webp"
-  ];
+  if (!hasDeck) {
+    return `<div class="hpc-empty-state">
+      <p class="hpc-empty-title">Aún no tienes mazos</p>
+      <p class="hpc-empty-desc">Crea uno y verás aquí su valor y lo que le falta.</p>
+      <button class="btn-primary-sm" onclick="irANuevoMazo()">Crear nuevo mazo</button></div>`;
+  }
+  const d = allDecks[0];
+  const cards = d.cards || [];
+  const img0 = cards[0]?.card.imagenThumb || "";
+  const img1 = cards[1]?.card.imagenThumb || img0;
+  const img2 = cards[2]?.card.imagenThumb || img0;
 
-  const img0 = cards[0]?.card.imagenThumb || samplePkmImages[0];
-  const img1 = cards[1]?.card.imagenThumb || samplePkmImages[1];
-  const img2 = cards[2]?.card.imagenThumb || samplePkmImages[2];
-
-  const deckName = d ? d.nombre : "Lugia VSTAR";
-  const deckFormat = d ? (d.juego === "magic" ? "Commander" : "Standard") : "Standard";
-  const deckTotal = d ? d.total : 60;
-  const deckVal = d ? d.value : "340,50";
-  const completionPct = Math.min(100, Math.round((deckTotal / 60) * 100));
+  const deckName = d.nombre;
+  const rulesMax = (DECK_RULES[d.juego] && DECK_RULES[d.juego][d.formato] ? DECK_RULES[d.juego][d.formato] : DECK_RULES[d.juego].standard).max;
+  const deckFormat = d.formato === "commander" ? "Commander" : "Standard";
+  const deckTotal = d.total;
+  const deckVal = d.value;
+  const completionPct = Math.min(100, Math.round((deckTotal / rulesMax) * 100));
 
   return `
     <div class="active-deck-widget">
@@ -135,11 +135,7 @@ function activeDeckHtml() {
         <div class="adw-metrics">
           <div class="adw-metric-col">
             <span class="adw-lbl">Total</span>
-            <span class="adw-val">${deckTotal}/60</span>
-          </div>
-          <div class="adw-metric-col">
-            <span class="adw-lbl">Rareza</span>
-            <span class="adw-val">82%</span>
+            <span class="adw-val">${deckTotal}/${rulesMax}</span>
           </div>
           <div class="adw-metric-col">
             <span class="adw-lbl">Valor</span>
@@ -153,6 +149,16 @@ function activeDeckHtml() {
     </div>`;
 }
 
+/** Aviso si los precios guardados están viejos (p. ej. el job diario ha dejado de funcionar). */
+function staleBannerHtml() {
+  const fechas = collection.map(e => priceDate(e.card)).filter(Boolean).map(f => new Date(f).getTime()).filter(t => !isNaN(t));
+  if (!fechas.length) return "";
+  const dias = Math.floor((Date.now() - Math.max(...fechas)) / 86400e3);
+  if (dias < 2) return "";
+  return `<div class="stale-banner" role="status"><strong>Precios de hace ${dias} días.</strong>
+    ${cloudConfigured() ? "El trabajo diario de precios puede haber fallado: revisa la pestaña Actions del repositorio." : "Pulsa «Actualizar precios» en Colección para refrescarlos."}</div>`;
+}
+
 async function renderHome() {
   const root = document.getElementById("home-body");
   const tab = document.getElementById("tab-home");
@@ -164,16 +170,18 @@ async function renderHome() {
   const mtgCount = collection.filter(e => e.card.tipo === "magic").reduce((s, e) => s + e.qty, 0);
   const holoCount = collection.filter(e => e.card.selectedVariant === "holo" || e.card.variants?.holo).reduce((s, e) => s + e.qty, 0);
 
-  const pkmPct = total ? Math.max(10, Math.round((pkmCount / total) * 100)) : 75;
-  const mtgPct = total ? Math.max(5, Math.round((mtgCount / total) * 100)) : 15;
-  const holoPct = total ? Math.max(5, Math.round((holoCount / total) * 100)) : 10;
+  const pkmPct = total ? Math.round((pkmCount / total) * 100) : 0;
+  const mtgPct = total ? Math.round((mtgCount / total) * 100) : 0;
+  const holoPct = total ? Math.round((holoCount / total) * 100) : 0;
 
-  const displayTotalValue = total > 0 ? formatValue(value) : "€12.840,50";
-  const displayCardCount = total > 0 ? total : 738;
-  const displayPkmCount = total > 0 ? pkmCount : 720;
-  const displayMtgCount = total > 0 ? mtgCount : 18;
-  const displayHoloCount = total > 0 ? holoCount : 142;
-  const displayEstimatedReturn = total > 0 ? formatMoney(value.eur * 1.05 || 100, "eur") : "€13.420";
+  const pnl = sumPnL(collection);
+  const displayTotalValue = formatValue(value);
+  const displayCardCount = total;
+  const displayPkmCount = pkmCount;
+  const displayMtgCount = mtgCount;
+  const displayHoloCount = holoCount;
+  const nota = [fxNote(value), value.missing ? `${value.missing} sin precio` : ""].filter(Boolean).join(" · ");
+  const alertas = evaluateAlerts();
 
   root.innerHTML = `
     <!-- Cabecera de bienvenida estilo Figma -->
@@ -190,16 +198,18 @@ async function renderHome() {
       </div>
     </div>
 
+    ${staleBannerHtml()}
+
     <!-- Fila 1: 3 Tarjetas Métricas Superiores -->
     <div class="home-metrics-grid">
       <!-- Tarjeta 1: Dark Obsidian Hero Card -->
       <div class="metric-card dark-hero-card">
         <div class="mcd-header">
           <span class="mcd-label">VALOR TOTAL</span>
-          <span class="trend-tag-green" id="home-hero-trend">+12.8% 7D</span>
+          <span class="trend-tag-green" id="home-hero-trend" hidden></span>
         </div>
         <div class="mcd-value" id="home-total-value">${displayTotalValue}</div>
-        <div class="mcd-meta" id="home-meta-info">${displayCardCount} cartas · ${collection.length || 68} únicas</div>
+        <div class="mcd-meta" id="home-meta-info">${displayCardCount} cartas · ${collection.length} únicas${nota ? " · " + esc(nota) : ""}</div>
         <button class="mcd-action-bar" onclick="irAEscanear()">
           <span>Escanear nueva carta</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="heroicon-sm"><path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
@@ -228,24 +238,23 @@ async function renderHome() {
       <!-- Tarjeta 3: Rendimiento con Gráfica Curva -->
       <div class="metric-card light-metric-card">
         <div class="mcl-header">
-          <span class="mcl-label">Rendimiento estimado</span>
-          <span class="trend-tag-green" id="home-gain-trend">+5.4%</span>
+          <span class="mcl-label">Ganancia / pérdida</span>
+          ${pnl.conCoste > 0 && pnl.pct != null ? `<span class="${pnl.ganancia >= 0 ? "trend-tag-green" : "trend-tag-red"}" id="home-gain-trend">${pnl.pct >= 0 ? "+" : "−"}${Math.abs(pnl.pct).toFixed(1)}%</span>` : ""}
         </div>
-        <div class="mcl-value" id="home-gain-value">${displayEstimatedReturn}</div>
-        <div class="mcl-spark" id="home-spark">
-          <svg class="spark-smooth-svg" viewBox="0 0 240 60" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#AFF33F" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="#AFF33F" stop-opacity="0.0"/>
-              </linearGradient>
-            </defs>
-            <path d="M0,45 Q30,40 60,48 T120,30 T180,22 T240,12 L240,60 L0,60 Z" fill="url(#sparkGrad)"/>
-            <path d="M0,45 Q30,40 60,48 T120,30 T180,22 T240,12" fill="none" stroke="#65A30D" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="mcl-footer-text">Precios verificados en Cardmarket y TCGplayer</div>
+        <div class="mcl-value ${pnl.conCoste > 0 ? (pnl.ganancia >= 0 ? "pl-up" : "pl-down") : ""}" id="home-gain-value">${pnl.conCoste > 0 ? esc(formatPnL(pnl.ganancia, null)) : "—"}</div>
+        <div class="mcl-spark" id="home-spark"></div>
+        <div class="mcl-footer-text">${pnl.conCoste > 0
+          ? `Invertido ${esc(formatMoney(pnl.invertido, "eur"))} en ${pnl.conCoste} carta(s)${pnl.sinCoste ? ` · ${pnl.sinCoste} sin precio de compra` : ""}`
+          : "Añade el precio de compra en la ficha de cada carta para ver tu rendimiento."}</div>
       </div>
+    </div>
+
+    <!-- Alertas de precio -->
+    <div class="home-panel-card home-alerts-panel">
+      <div class="hpc-header">
+        <h3 class="hpc-title">Alertas ${alertas.length ? `<small>${alertas.length}</small>` : ""}</h3>
+      </div>
+      <div class="hpc-alerts-list">${alertsHtml()}</div>
     </div>
 
     <!-- Fila 2: Sección Central (2 Columnas) -->
@@ -314,6 +323,8 @@ async function renderHome() {
     const heroTrendEl = document.getElementById("home-hero-trend");
     if (heroTrendEl && t && t.d7 != null) {
       heroTrendEl.textContent = `${t.d7 >= 0 ? "+" : ""}${t.d7.toFixed(1)}% 7D`;
+      heroTrendEl.hidden = false;
+      heroTrendEl.className = t.d7 >= 0 ? "trend-tag-green" : "trend-tag-red";
     }
     const sparkEl = document.getElementById("home-spark");
     if (sparkEl && pts && pts.length >= 2) {

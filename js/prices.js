@@ -110,22 +110,114 @@ function trendBadge(pct) {
 /** Fecha de referencia del precio de una carta: la de la fuente o, si no hay, cuándo la consultamos. */
 function priceDate(card) { return card.actualizado || card.consultado || null; }
 
-/** Suma el valor de [{card, qty}] separando monedas (no se convierten). */
+/** Suma el valor de [{card, qty}] separando monedas; usa el precio de la variante elegida (normal, holo…). */
 function sumValue(entries) {
   const out = { eur: 0, usd: 0, missing: 0 };
   entries.forEach(({ card, qty }) => {
-    const p = parseFloat(card.precio);
+    const p = parseFloat(getCardActivePrice(card));
     if (!(p > 0)) { out.missing += qty; return; }
     out[card.moneda === "usd" ? "usd" : "eur"] += p * qty;
   });
   return out;
 }
 
+/* ───────────── Tipo de cambio USD → EUR (BCE vía Frankfurter, caché 12 h) ───────────── */
+
+const FX_KEY = "snaptcg_fx_v1";
+const TTL_FX = 12 * 3600e3;
+const FX_URLS = [
+  "https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR",
+  "https://api.frankfurter.app/latest?from=USD&to=EUR"
+];
+
+/** Último tipo de cambio guardado { rate, date, t } o null (síncrono). */
+function readFx() {
+  try { const v = JSON.parse(localStorage.getItem(FX_KEY)); return v && v.rate > 0 ? v : null; } catch { return null; }
+}
+
+/** Descarga el tipo de cambio si la caché caducó. Devuelve { rate, date } o null. */
+async function initFx() {
+  const c = readFx();
+  if (c && Date.now() - c.t < TTL_FX) return c;
+  for (const url of FX_URLS) {
+    try {
+      const d = await fetchJSON(url, { retries: 1 });
+      const rate = d && d.rates && d.rates.EUR;
+      if (rate > 0) {
+        const v = { rate, date: d.date || null, t: Date.now() };
+        try { localStorage.setItem(FX_KEY, JSON.stringify(v)); } catch { /* opcional */ }
+        return v;
+      }
+    } catch { /* prueba el siguiente */ }
+  }
+  return c;   // caché vieja mejor que nada
+}
+
+/** Convierte a euros (null si es dólar y no hay tipo de cambio). */
+function toEur(value, moneda) {
+  if (value == null || isNaN(value)) return null;
+  if (moneda !== "usd") return value;
+  const f = readFx();
+  return f ? value * f.rate : null;
+}
+
+/** Total en euros de un resultado de sumValue (null si hay dólares y no hay cambio). */
+function totalEur(v) {
+  if (!(v.usd > 0)) return v.eur;
+  const f = readFx();
+  return f ? v.eur + v.usd * f.rate : null;
+}
+
+/** Texto del total: un solo importe en € si se puede convertir; si no, euros + dólares por separado. */
 function formatValue(v) {
+  const t = totalEur(v);
+  if (t != null) return formatMoney(t, "eur");
   const parts = [];
-  if (v.eur > 0 || v.usd === 0) parts.push(formatMoney(v.eur, "eur"));
-  if (v.usd > 0) parts.push(formatMoney(v.usd, "usd"));
+  if (v.eur > 0) parts.push(formatMoney(v.eur, "eur"));
+  parts.push(formatMoney(v.usd, "usd"));
   return parts.join(" + ");
+}
+
+/** Nota sobre la conversión, o "" si no hay dólares. */
+function fxNote(v) {
+  if (!(v.usd > 0)) return "";
+  const f = readFx();
+  return f ? `incluye ${formatMoney(v.usd, "usd")} convertidos a € (1 $ = ${new Intl.NumberFormat("es-ES", { minimumFractionDigits: 4 }).format(f.rate)} €${f.date ? ", " + f.date : ""})`
+           : `hay ${formatMoney(v.usd, "usd")} sin convertir (sin tipo de cambio)`;
+}
+
+/**
+ * Inversión y ganancia/pérdida de [{card, qty}] en euros. El coste (`card.coste`) es por carta y en €.
+ * Solo cuentan las cartas con coste y con precio convertible; el resto se informa aparte.
+ */
+function sumPnL(entries) {
+  const r = { invertido: 0, valor: 0, ganancia: 0, pct: null, conCoste: 0, sinCoste: 0, sinPrecio: 0 };
+  entries.forEach(({ card, qty }) => {
+    const coste = card.coste == null || card.coste === "" ? NaN : parseFloat(card.coste);
+    if (!(coste >= 0)) { r.sinCoste += qty; return; }
+    const precio = toEur(parseFloat(getCardActivePrice(card)), card.moneda);
+    if (!(precio > 0)) { r.sinPrecio += qty; return; }
+    r.conCoste += qty; r.invertido += coste * qty; r.valor += precio * qty;
+  });
+  r.ganancia = r.valor - r.invertido;
+  r.pct = r.invertido > 0 ? (r.ganancia / r.invertido) * 100 : null;
+  return r;
+}
+
+/** Ganancia/pérdida de una sola fila (€, %) o null si falta coste o precio. */
+function pnlOf(card, qty = 1) {
+  const coste = card.coste == null || card.coste === "" ? NaN : parseFloat(card.coste);
+  const precio = toEur(parseFloat(getCardActivePrice(card)), card.moneda);
+  if (!(coste >= 0) || !(precio > 0)) return null;
+  const g = (precio - coste) * qty;
+  return { ganancia: g, pct: coste > 0 ? ((precio - coste) / coste) * 100 : null };
+}
+
+function formatPnL(g, pct) {
+  const sign = g > 0 ? "+" : g < 0 ? "−" : "";
+  const abs = formatMoney(Math.abs(g), "eur");
+  const n = (x, d) => new Intl.NumberFormat("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d }).format(x);
+  return `${sign}${abs}${pct != null ? ` (${pct > 0 ? "+" : pct < 0 ? "−" : ""}${n(Math.abs(pct), 1)} %)` : ""}`;
 }
 
 /* ───────────── Extracción de precios por fuente ───────────── */

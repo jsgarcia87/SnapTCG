@@ -438,6 +438,82 @@ function hasCardLetters(text) {
 }
 
 /**
+ * Rectángulo del marco de carta (63:88) proyectado sobre las coordenadas nativas del vídeo.
+ * Con object-fit: cover, parte del vídeo queda fuera de pantalla: se corrige con la escala y el desplazamiento.
+ */
+function frameRectInVideo(video) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return null;
+  const vRect = video.getBoundingClientRect();
+  const fEl = document.getElementById('scanner-card-frame');
+  const fRect = fEl ? fEl.getBoundingClientRect() : null;
+  if (!fRect || !vRect.width || !vRect.height || !fRect.width) {
+    const sw = Math.round(Math.min(vw * 0.74, vh * 0.8 * 63 / 88)), sh = Math.round(sw * 88 / 63);
+    return { sx: Math.round((vw - sw) / 2), sy: Math.round((vh - sh) / 2), sw, sh };
+  }
+  const scale = Math.max(vRect.width / vw, vRect.height / vh);
+  const offX = (vw * scale - vRect.width) / 2, offY = (vh * scale - vRect.height) / 2;
+  let sx = Math.round(((fRect.left - vRect.left) + offX) / scale);
+  let sy = Math.round(((fRect.top - vRect.top) + offY) / scale);
+  let sw = Math.round(fRect.width / scale), sh = Math.round(fRect.height / scale);
+  sx = Math.max(0, sx); sy = Math.max(0, sy);
+  sw = Math.min(vw - sx, sw); sh = Math.min(vh - sy, sh);
+  return sw > 40 && sh > 40 ? { sx, sy, sw, sh } : null;
+}
+
+/** Lee el número de coleccionista de la franja inferior de la carta ("025/165"). */
+async function recognizeNumberStrip(stripCanvas) {
+  if (!ocrWorker) await initOcrWorker();
+  if (!ocrWorker) return null;
+  const scale = Math.min(3, Math.max(1, 900 / stripCanvas.width));
+  const c = document.createElement('canvas');
+  c.width = Math.round(stripCanvas.width * scale);
+  c.height = Math.round(stripCanvas.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(stripCanvas, 0, 0, c.width, c.height);
+  for (const mode of ['otsu', 'contrast']) {
+    const pass = document.createElement('canvas');
+    pass.width = c.width; pass.height = c.height;
+    pass.getContext('2d').drawImage(c, 0, 0);
+    preprocessCanvas(pass, mode);
+    try {
+      const r = await ocrWorker.recognize(pass);
+      const parsed = parseCollectorNumber(r.data && r.data.text);
+      if (parsed) return parsed;
+    } catch (e) { console.warn('Fallo OCR del número:', e); }
+  }
+  return null;
+}
+
+/**
+ * Captura la carta ENTERA del fotograma actual: firma de diseño (para compararla con las
+ * imágenes oficiales) y número de coleccionista de la franja inferior.
+ */
+async function captureCardContext(video) {
+  const rect = video && frameRectInVideo(video);
+  if (!rect) return null;
+  const { sx, sy, sw, sh } = rect;
+  const ctx = { auto: true };
+
+  const full = document.createElement('canvas');
+  full.width = sw; full.height = sh;
+  full.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+  ctx.sig = cardSignature(full, sw, sh);
+
+  // Franja inferior (88–99 % de la altura): número, rareza y código de edición
+  const stripY = Math.round(sh * 0.88), stripH = Math.max(10, Math.round(sh * 0.11));
+  const strip = document.createElement('canvas');
+  strip.width = sw; strip.height = stripH;
+  strip.getContext('2d').drawImage(full, 0, stripY, sw, stripH, 0, 0, sw, stripH);
+  try {
+    const n = await recognizeNumberStrip(strip);
+    if (n) { ctx.number = n.number; ctx.total = n.total; }
+  } catch (e) { console.warn('No se pudo leer el número:', e); }
+  return (ctx.sig || ctx.number != null) ? ctx : null;
+}
+
+/**
  * Ciclo periódico de análisis de fotograma
  */
 async function autoScan() {
@@ -483,7 +559,9 @@ async function autoScan() {
     lastRead   = cleaned;
     scanPaused = true;
 
-    dispararExitoEscaneo(cleaned);
+    setScannerStatus("LEYENDO CARTA COMPLETA...", "processing");
+    const cardCtx = await captureCardContext(video);
+    dispararExitoEscaneo(cleaned, cardCtx);
   } catch (err) {
     isScanning = false;
     console.warn('Error en ciclo autoScan:', err);
@@ -525,7 +603,8 @@ async function capturarYProcesar() {
     }
 
     if (cleaned && cleaned.length >= minLen && hasCardLetters(cleaned)) {
-      dispararExitoEscaneo(cleaned);
+      setScannerStatus("LEYENDO CARTA COMPLETA...", "processing");
+      dispararExitoEscaneo(cleaned, await captureCardContext(video));
     } else {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
       showScannerToast("No se detectó el título de la carta. Alinea bien el borde superior.", "error");
@@ -590,7 +669,9 @@ async function procesarImagenArchivo(file) {
       }
 
       if (cleaned && cleaned.length >= minLen && hasCardLetters(cleaned)) {
-        dispararExitoEscaneo(cleaned);
+        // La foto no está encuadrada: se usa para ordenar candidatas, nunca para abrir una sola
+        const sig = cardSignature(img, origW, origH);
+        dispararExitoEscaneo(cleaned, sig ? { sig, auto: false } : null);
       } else {
         setScannerStatus("NO DETECTADO", "active");
         showScannerToast("No se reconoció el nombre. Prueba con una foto más nítida o escribe el nombre.", "error");
@@ -611,7 +692,8 @@ async function procesarImagenArchivo(file) {
 /**
  * Acciones ejecutadas al reconocer una carta con éxito
  */
-function dispararExitoEscaneo(nombreCarta) {
+function dispararExitoEscaneo(nombreCarta, cardCtx = null) {
+  window._scanContext = cardCtx;
   playSuccessChime();
   triggerHaptic();
 

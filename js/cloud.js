@@ -57,6 +57,8 @@ async function initCloud() {
     }
   }
   await onAuthChanged();
+  // El tipo de cambio llega después: al tenerlo, se repinta el valor total
+  initFx().then(f => { if (f) { renderCollection(); if (typeof renderHome === "function") renderHome(); } });
   // Tras el enlace mágico Supabase devuelve los tokens en el fragmento (#access_token=...)
   if (location.hash.includes("access_token")) switchTab("collection");
 }
@@ -64,6 +66,7 @@ async function initCloud() {
 async function onAuthChanged() {
   if (sbSession && cloudReady()) await pullDecksFromCloud();
   await loadCollection();
+  if (typeof loadWatchlist === "function") await loadWatchlist();
   renderCollection();
   updateCollectionButton();
   if (typeof renderHome === "function") renderHome();
@@ -93,6 +96,30 @@ async function loadCollection() {
   if (error) { console.error(error); showDeckToast("Error al cargar la colección", "warn"); collection = []; return; }
   collection = data.map(r => ({ key: r.card_id, card: r.card, qty: r.qty }));
   await migrateLegacyKeys();
+  await loadCosts();
+}
+
+/* ───────────── Precio de compra: tabla privada (la colección es de lectura pública) ───────────── */
+
+/** Copia de la carta sin el coste: lo único que se publica en `collection`. */
+const publicCard = (card) => { const { coste, ...rest } = card; return rest; };
+
+async function loadCosts() {
+  if (!sbSession) return;   // solo el dueño ve sus costes
+  const { data, error } = await sbClient.from("collection_cost").select("card_id,coste").eq("owner", sbSession.user.id);
+  if (error) { console.error(error); return; }
+  const byKey = new Map(data.map(r => [r.card_id, Number(r.coste)]));
+  collection.forEach(e => { if (byKey.has(e.key)) e.card.coste = byKey.get(e.key); });
+}
+
+async function persistCost(entry, removed) {
+  if (!cloudReady() || !sbSession) return;
+  const owner = sbSession.user.id;
+  const has = !removed && entry.card.coste != null && entry.card.coste >= 0;
+  const { error } = has
+    ? await sbClient.from("collection_cost").upsert({ owner, card_id: entry.key, coste: entry.card.coste, updated_at: new Date().toISOString() }, { onConflict: "owner,card_id" })
+    : await sbClient.from("collection_cost").delete().eq("owner", owner).eq("card_id", entry.key);
+  if (error) { console.error(error); showDeckToast("Error al guardar el precio de compra", "warn"); }
 }
 
 /** Filas antiguas (card_id = id de carta): se reescriben con la clave id+variante+estado+idioma. */
@@ -102,7 +129,7 @@ async function migrateLegacyKeys() {
   for (const e of legacy) {
     const owner = sbSession.user.id, newKey = entryKey(e.card);
     const { error } = await sbClient.from("collection").upsert({
-      owner, card_id: newKey, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+      owner, card_id: newKey, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString()
     }, { onConflict: "owner,card_id" });
     if (error) { console.error(error); continue; }
     const del = await sbClient.from("collection").delete().eq("owner", owner).eq("card_id", e.key);
@@ -121,10 +148,11 @@ async function persistCollectionEntry(entry, removed) {
     ? sbClient.from("collection").delete().eq("owner", owner).eq("card_id", entry.key)
     : sbClient.from("collection").upsert({
         owner, card_id: entry.key, game: entry.card.tipo, qty: entry.qty,
-        card: entry.card, updated_at: new Date().toISOString()
+        card: publicCard(entry.card), updated_at: new Date().toISOString()
       }, { onConflict: "owner,card_id" });
   const { error } = await q;
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
+  await persistCost(entry, removed);
 }
 
 async function collectionAdd(card, variant = null, condition = null) {
@@ -142,9 +170,17 @@ async function collectionAdd(card, variant = null, condition = null) {
     lang: chosenLang
   };
 
+  // Coste por carta (€): al sumar copias a otro precio se guarda la media ponderada
+  const coste = card.coste == null || card.coste === "" ? NaN : parseFloat(card.coste);
+  if (coste >= 0) cardToSave.coste = coste; else delete cardToSave.coste;
+
   const key = entryKey(cardToSave);
   let entry = collection.find(e => e.key === key);
   if (entry) {
+    if (coste >= 0) {
+      const previo = parseFloat(entry.card.coste);
+      entry.card.coste = previo >= 0 ? (previo * entry.qty + coste) / (entry.qty + 1) : coste;
+    }
     entry.qty++;
   } else {
     entry = { key, card: cardToSave, qty: 1 };
@@ -166,12 +202,24 @@ async function collectionRemove(encodedKey) {
   renderCollection();
 }
 
+/** Fija el coste por carta (€) de una fila de la colección; null lo borra. */
+async function collectionSetCost(key, coste) {
+  if (!canEditCollection()) return false;
+  const entry = collection.find(e => e.key === key);
+  if (!entry) return false;
+  if (coste != null && coste >= 0) entry.card.coste = coste; else delete entry.card.coste;
+  await persistCollectionEntry(entry, false);
+  renderCollection();
+  if (typeof renderHome === "function") renderHome();
+  return true;
+}
+
 async function persistAllCollection() {
   if (!cloudReady()) { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); return; }
   if (!sbSession || collection.length === 0) return;
   const owner = sbSession.user.id;
   const rows = collection.map(e => ({
-    owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: e.card, updated_at: new Date().toISOString()
+    owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString()
   }));
   const { error } = await sbClient.from("collection").upsert(rows, { onConflict: "owner,card_id" });
   if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); }
@@ -227,10 +275,10 @@ async function loadValueHistory(days = 365) {
   if (!cloudReady()) return localValueHistory(days);
   const owner = collectionOwner();
   if (!owner) return [];
-  const { data, error } = await sbClient.from("collection_value_history").select("day,eur,usd,cards")
+  const { data, error } = await sbClient.from("collection_value_history").select("day,eur,usd,cards,eur_all")
     .eq("owner", owner).gte("day", sinceDay(days)).order("day");
   if (error) throw error;
-  return data.map(r => ({ day: r.day, eur: Number(r.eur), usd: Number(r.usd), cards: r.cards }));
+  return data.map(r => ({ day: r.day, eur: Number(r.eur), usd: Number(r.usd), cards: r.cards, eur_all: r.eur_all == null ? null : Number(r.eur_all) }));
 }
 
 /** Abre el detalle de una carta guardada en la colección (sin registrarla en el historial de búsqueda). */
@@ -247,8 +295,12 @@ function setValueRange(days) { valueRange = days; paintValueChart(); }
 
 /** Serie del valor de la colección en una sola moneda (EUR salvo que solo haya USD). */
 function valueSeries(rows, days) {
-  const useUsd = rows.length > 0 && rows.every(r => !(r.eur > 0)) && rows.some(r => r.usd > 0);
-  const all = rows.map(r => ({ day: r.day, v: useUsd ? r.usd : r.eur }));
+  // Una sola serie en €: el job diario guarda eur_all (con el cambio de ese día); si falta, se convierte con el cambio actual
+  const fx = readFx();
+  const toAll = r => r.eur_all != null ? r.eur_all : !(r.usd > 0) ? r.eur : fx ? r.eur + r.usd * fx.rate : null;
+  const converted = rows.map(r => ({ day: r.day, v: toAll(r) }));
+  const useUsd = converted.every(p => p.v == null) && rows.some(r => r.usd > 0);
+  const all = useUsd ? rows.map(r => ({ day: r.day, v: r.usd })) : converted.filter(p => p.v != null);
   const since = sinceDay(days);
   return { moneda: useUsd ? "usd" : "eur", all, pts: all.filter(p => p.day >= since) };
 }
@@ -376,6 +428,7 @@ function renderCollection() {
 
   const total = collection.reduce((s, e) => s + e.qty, 0);
   const value = sumValue(collection);
+  const pnl = sumPnL(collection);
   const holosCount = collection.filter(e => e.card.selectedVariant === "holo" || e.card.selectedVariant === "reverse" || e.card.variants?.holo).reduce((s, e) => s + e.qty, 0);
   const langsCount = new Set(collection.map(e => (e.card.lang || "en").toLowerCase())).size;
 
@@ -442,6 +495,10 @@ function renderCollection() {
       <div class="phc-header">
         <span class="eyebrow">Mi Portfolio</span>
         <h2 class="phc-total">${esc(formatValue(value))}</h2>
+        ${pnl.conCoste > 0
+          ? `<p class="phc-pl ${pnl.ganancia >= 0 ? "pl-up" : "pl-down"}">Invertido ${esc(formatMoney(pnl.invertido, "eur"))} · ${pnl.ganancia >= 0 ? "Ganancia" : "Pérdida"} ${esc(formatPnL(pnl.ganancia, pnl.pct))}${pnl.sinCoste ? ` · ${pnl.sinCoste} sin precio de compra` : ""}</p>`
+          : `<p class="phc-pl pl-none">Añade el precio de compra en la ficha de cada carta para ver tu ganancia o pérdida.</p>`}
+        ${value.missing ? `<p class="phc-pl pl-none">${value.missing} carta(s) sin precio no están incluidas en el total.</p>` : ""}
       </div>
       <div class="phc-stats-grid">
         <div class="phc-stat"><span class="phc-num">${total}</span><span class="phc-lbl">Cartas</span></div>
@@ -451,10 +508,12 @@ function renderCollection() {
       </div>
     </div>
 
+    <div class="an-card"><h3>Dónde está tu valor</h3>${analysisHtml()}</div>
+
     <div class="an-card"><h3>Evolución del Portfolio</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
 
     <div class="col-prices ${viejo ? "stale" : ""}">
-      <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${value.usd > 0 ? " · hay cartas en $ (no convertidas)" : ""}</span>
+      <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${fxNote(value) ? " · " + esc(fxNote(value)) : ""}</span>
       ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">${HEROICONS.arrowPath} Actualizar precios</button>` : ""}
     </div>
 
@@ -491,7 +550,12 @@ function renderCollection() {
         oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
     </div>
 
-    <button class="dab-btn" onclick="copyCollectionLink()" style="margin-bottom:12px;">${HEROICONS.link} Compartir enlace público</button>
+    <div class="col-tools">
+      <button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Compartir enlace público</button>
+      <button class="dab-btn" onclick="exportCollectionCsv()">Exportar CSV</button>
+      ${editable ? `<button class="dab-btn" id="btn-import-csv" onclick="document.getElementById('csv-file').click()">Importar CSV</button>
+      <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none" onchange="importCollectionCsv(this.files[0]); this.value=''">` : ""}
+    </div>
 
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "No hay cartas que coincidan con los filtros aplicados." : (editable ? "Aún no tienes cartas en tu colección. Búscalas o escanéalas y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
 
@@ -530,6 +594,7 @@ function renderCollection() {
             <h3 class="card-name">${esc(c.nombre)}</h3>
             <p class="card-meta">${esc(c.set || "Desconocido")}${c.localId ? ' · #' + esc(c.localId) : ''}</p>
             <p class="card-price">${precioHtml(c)}</p>
+            ${(() => { const pl = pnlOf(c, e.qty); return pl ? `<p class="card-pl ${pl.ganancia >= 0 ? "pl-up" : "pl-down"}">${esc(formatPnL(pl.ganancia, pl.pct))}</p>` : ""; })()}
             ${editable ? `<div class="dcr-controls" style="margin-top:4px;">
               <button class="dcr-btn remove" aria-label="Quitar una copia" onclick="event.stopPropagation(); collectionRemove('${encKey(e.key)}')">${HEROICONS.minus}</button>
               <button class="dcr-btn" aria-label="Añadir una copia" onclick="event.stopPropagation(); collectionAdd(collection.find(x=>x.key===decodeURIComponent('${encKey(e.key)}')).card)">${HEROICONS.plus}</button>
