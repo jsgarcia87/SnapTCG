@@ -2169,3 +2169,14 @@ body.modal-open { overflow: hidden; }
     top: 0;
   }
 }
+
+/* Franja inferior del marco: número de coleccionista (se lee junto al título) */
+.scanner-number-roi {
+  position: absolute;
+  left: 5%; right: 5%; bottom: 1%;
+  height: 10%;
+  border: 1.5px solid rgba(175, 243, 63, 0.85);
+  background: rgba(175, 243, 63, 0.08);
+  border-radius: 6px;
+}
+.roi-label-bottom { top: auto; bottom: -15px; }

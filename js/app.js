@@ -661,10 +661,21 @@ async function ejecutarBusqueda() {
   
   mostrarCargando(`Buscando "${nombre}"...`);
   try {
-    const resultados = await buscarCartas(nombre, juegoActual, searchFilters.lang);
+    let resultados = await buscarCartas(nombre, juegoActual, searchFilters.lang);
+    // Escaneo con cámara: ordena por parecido de diseño y número de coleccionista
+    const scanCtx = window._scanContext; window._scanContext = null;
+    let reconocida = false;
+    if (scanCtx) {
+      try {
+        mostrarCargando("Comparando con la carta escaneada...");
+        const r = await ordenarPorEscaneo(resultados, scanCtx);
+        resultados = r.cards; reconocida = r.confident;
+      } catch (e) { console.warn("No se pudo comparar el diseño:", e); }
+    }
     rawSearchResults = resultados;
     const filtrados = filterAndSortCards(resultados);
     renderizarLista(filtrados);
+    if (reconocida) { showDeckToast("Carta reconocida por diseño y número", "success"); abrirDetalle(resultados[0], true); }
     if (resultados[0]?.enCache) showDeckToast("Sin conexión: resultados guardados", "warn");
     if (searchFilters.lang !== "all" && resultados.length > 0 && resultados.every(c => !matchCardLang(c.lang, searchFilters.lang))) {
       showDeckToast(`Cartas en ${formatLanguageName(searchFilters.lang)} no encontradas, mostrando en ${formatLanguageName(resultados[0].lang)}`, "info");
