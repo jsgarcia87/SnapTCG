@@ -4,6 +4,17 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.12.0] - 2026-11-21
+
+### Escáner: reconocimiento de la carta completa
+- Antes solo se leía la franja del título y la búsqueda devolvía todas las ediciones. Ahora, al leer el nombre, se captura la **carta entera** del marco de cámara.
+- Se lee el **número de coleccionista** (franja inferior, p. ej. `025/165`) con OCR propio.
+- Se compara el **diseño** de la foto con las imágenes oficiales de los candidatos (correlación cruzada normalizada sobre una miniatura en grises, `js/cardmatch.js`). Los resultados se reordenan por parecido y número; si hay una ganadora clara, se abre su ficha directamente.
+- Fotos de galería: solo reordenan los resultados, nunca abren una carta automáticamente (no van encuadradas).
+- El marco muestra ahora también la franja del número.
+
+---
+
 ## [3.11.0] - 2026-11-09
 
 ### Corregido
