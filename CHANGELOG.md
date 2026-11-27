@@ -4,6 +4,21 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.21.0] - 2026-11-28
+
+### Ficha de carta (auditoría UX, prioridad alta)
+- **Barra fija** al pie de la ficha con **selector de cantidad** (1–99), «Añadir» y «Al mazo»: siempre visible, sin desplazarse. Añadir varias copias es una sola escritura.
+- «Precio de compra y alertas» pasan a un bloque **plegable**; se abre solo si la carta ya tiene coste o seguimiento.
+- Mínimo / Media / Máximo: solo se muestran las cifras que da la fuente (Cardmarket no publica máximo); si solo queda la media, el recuadro se oculta porque repetía el precio.
+- La gráfica de precio sube junto al resto de la información de mercado.
+- Corregido en escritorio: el botón de cerrar ocupaba una celda de la cuadrícula y descolocaba imagen e información.
+
+### Colección en pestañas (auditoría UX, prioridad alta)
+- Pestañas **Cartas** (por defecto), **Análisis** y **Cuenta**. En «Cartas»: valor total y ganancia, frescura de los precios, buscador y lista; los filtros y el orden van en un bloque plegable que indica cuántos hay activos. En «Análisis»: estadísticas, dónde está tu valor y evolución. En «Cuenta»: inicio de sesión o cuenta, compartir y CSV. `#cuenta` abre directamente esa pestaña.
+- Quitada la línea de estado repetida (ya está en la cabecera).
+
+---
+
 ## [3.20.0] - 2026-11-28
 
 ### Escáner continuo a pantalla completa (auditoría UX, prioridad crítica)

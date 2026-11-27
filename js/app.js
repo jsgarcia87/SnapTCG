@@ -433,6 +433,10 @@ function pintarPrecioModal(carta) {
   if (lowEl) lowEl.textContent = carta.marketLow ? formatMoney(carta.marketLow, carta.moneda) : "—";
   if (midEl) midEl.textContent = carta.marketMid ? formatMoney(carta.marketMid, carta.moneda) : (activePrice ? formatMoney(activePrice, carta.moneda) : "—");
   if (highEl) highEl.textContent = carta.marketHigh ? formatMoney(carta.marketHigh, carta.moneda) : "—";
+  // Solo se muestran las cifras que da la fuente (Cardmarket no publica máximo)
+  [lowEl, midEl, highEl].forEach(el => { if (el) el.closest(".market-stat-box").hidden = el.textContent === "—"; });
+  const grid = document.getElementById("market-stats-grid");
+  if (grid) grid.hidden = [lowEl, highEl].every(el => !el || el.textContent === "—");   // si solo queda la media, repite el precio
 
   let html = "";
   if (carta.errorPrecio) {
@@ -516,6 +520,14 @@ async function reintentarPrecioModal() {
 }
 
 let focoPrevio = null;
+let altaQty = 1;
+
+/** Cantidad a añadir desde la ficha (reset = volver a 1). */
+function cambiarCantidadAlta(delta, reset = false) {
+  altaQty = reset ? 1 : Math.max(1, Math.min(99, altaQty + delta));
+  const el = document.getElementById("add-qty");
+  if (el) el.textContent = altaQty;
+}
 
 function seleccionarCarta(index) {
   abrirDetalle(ultimosResultados[index], true);
@@ -545,6 +557,10 @@ function abrirDetalle(carta, registrar = false) {
   pintarPrecioModal(carta);
   pintarPoseidaModal(carta);
   if (typeof pintarSeguimientoModal === "function") pintarSeguimientoModal(carta);
+  cambiarCantidadAlta(0, true);
+  // «Precio de compra y alertas» se abre solo si la carta ya tiene coste o seguimiento
+  const masOpc = document.getElementById("detail-more");
+  if (masOpc) masOpc.open = !!(entradaActual(carta)?.card.coste != null || (typeof watchOf === "function" && watchOf(carta)));
   if (typeof updateCollectionButton === "function") updateCollectionButton();
 
   if (carta.preciosCargados === false && carta.tipo === "pokemon") {

@@ -16,6 +16,7 @@ let collection = [];          // [{ card, qty }]
 let sbClient = null;
 let sbSession = null;
 let collectionFilter = { game: "all", finish: "all", lang: "all", sort: "value-desc", text: "" };
+let colTab = location.hash === "#cuenta" ? "cuenta" : "cartas";   // pestañas de Colección: cartas | analisis | cuenta
 
 /** Clave de una fila de colección: la misma carta en otra variante, estado o idioma es otra fila. */
 const entryKey = (c) => [c.id, c.selectedVariant || "normal", c.condition || "NM", (c.lang || "en").toLowerCase()].join("~");
@@ -292,9 +293,12 @@ async function addCurrentCardToCollection() {
   const variant = card.selectedVariant || "normal";
   const cond = (typeof cardCondition !== "undefined" ? cardCondition : "NM");
   const langName = typeof formatLanguageName === "function" ? formatLanguageName(card.lang || "en") : (card.lang || "en").toUpperCase();
-  await collectionAdd(card, variant, cond);
+  const qty = typeof altaQty === "number" && altaQty > 0 ? altaQty : 1;
+  const n = await collectionAddBatch([{ card: { ...card, selectedVariant: variant, condition: cond }, qty }]);
+  if (!n) return;
+  if (typeof cambiarCantidadAlta === "function") cambiarCantidadAlta(0, true);
   pintarPoseidaModal(card);
-  showDeckToast(`${card.nombre} (${formatVariantName(variant)} · ${cond} · ${langName}) añadida a tu colección`, "success");
+  showDeckToast(`${qty > 1 ? qty + " × " : ""}${card.nombre} (${formatVariantName(variant)} · ${cond} · ${langName}) añadida${qty > 1 ? "s" : ""} a tu colección`, "success");
 }
 
 /* ───────────── Histórico de precios ───────────── */
@@ -540,6 +544,8 @@ function accountPanelHtml() {
 function updateCollectionButton() {
   const btn = document.getElementById("btn-add-to-collection");
   if (btn) btn.style.display = canEditCollection() ? "" : "none";
+  const qty = document.querySelector(".detail-actions-sticky .qty-stepper");
+  if (qty) qty.style.display = canEditCollection() ? "" : "none";
 }
 
 function copyCollectionLink() {
@@ -548,6 +554,8 @@ function copyCollectionLink() {
   if (navigator.share) { navigator.share({ title: "Mi colección en Kard Lume", url }).catch(() => {}); return; }
   navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"), () => prompt("Copia este enlace:", url));
 }
+
+function setColTab(tab) { colTab = tab; renderCollection(); window.scrollTo({ top: 0 }); }
 
 function setCollectionFilter(key, value) {
   collectionFilter[key] = value;
@@ -559,10 +567,6 @@ function renderCollection() {
   if (!root) return;
 
   const editable = canEditCollection();
-  const mode = !cloudConfigured() ? "Modo demo · guardado solo en este navegador"
-    : viewingOther() ? "Colección compartida · solo lectura"
-    : useCloud() ? `Sesión iniciada · guardada en tu cuenta (${profile.public_collection ? "pública" : "privada"})`
-    : "Sin sesión · guardada solo en este dispositivo";
   // conserva lo escrito en el email si se repinta mientras se escribe
   const emailPrevio = document.getElementById("collection-email")?.value || "";
   const auth = accountPanelHtml().replace('id="collection-email"', `id="collection-email" value="${esc(emailPrevio)}"`);
@@ -627,10 +631,11 @@ function renderCollection() {
     ["it", "IT"]
   ].map(([k, l]) => `<button class="filter-pill ${collectionFilter.lang === k ? "active" : ""}" onclick="setCollectionFilter('lang','${k}')">${l}</button>`).join("");
 
-  root.innerHTML = `
-    <div class="col-mode">${esc(mode)}</div>
-    ${auth}
-    
+  const filtrosActivos = ["game", "finish", "lang"].filter(k => collectionFilter[k] !== "all").length;
+  const tabs = [["cartas", "Cartas"], ["analisis", "Análisis"], ["cuenta", cloudConfigured() ? "Cuenta" : "Datos"]]
+    .map(([k, l]) => `<button type="button" role="tab" class="col-tab ${colTab === k ? "active" : ""}" aria-selected="${colTab === k}" onclick="setColTab('${k}')">${l}</button>`).join("");
+
+  const cartasHtml = `
     <!-- Hero Portfolio Card estilo Collectr -->
     <div class="portfolio-hero-card">
       <div class="phc-header">
@@ -641,23 +646,22 @@ function renderCollection() {
           : `<p class="phc-pl pl-none">Añade el precio de compra en la ficha de cada carta para ver tu ganancia o pérdida.</p>`}
         ${value.missing ? `<p class="phc-pl pl-none">${value.missing} carta(s) sin precio no están incluidas en el total.</p>` : ""}
       </div>
-      <div class="phc-stats-grid">
-        <div class="phc-stat"><span class="phc-num">${total}</span><span class="phc-lbl">Cartas</span></div>
-        <div class="phc-stat"><span class="phc-num">${collection.length}</span><span class="phc-lbl">Únicas</span></div>
-        <div class="phc-stat"><span class="phc-num">${holosCount}</span><span class="phc-lbl">Holos / Foils</span></div>
-        <div class="phc-stat"><span class="phc-num">${langsCount}</span><span class="phc-lbl">Idiomas</span></div>
-      </div>
     </div>
-
-    <div class="an-card"><h3>Dónde está tu valor</h3>${analysisHtml()}</div>
-
-    <div class="an-card"><h3>Evolución del Portfolio</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
 
     <div class="col-prices ${viejo ? "stale" : ""}">
       <span>Precios${masAntiguo ? ` de ${timeAgo(masAntiguo)}` : " sin fecha"}${fxNote(value) ? " · " + esc(fxNote(value)) : ""}</span>
       ${editable && collection.length ? `<button class="link-btn" id="btn-refresh-collection" onclick="refreshCollectionPrices()">${HEROICONS.arrowPath} Actualizar precios</button>` : ""}
     </div>
 
+
+    <div class="col-find">
+    <div class="search-bar" >
+      <input type="search" class="search-input" id="collection-search" placeholder="Filtrar colección por nombre..." value="${esc(collectionFilter.text)}"
+        oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
+    </div>
+
+      <details class="col-filters" ${filtrosActivos ? "open" : ""}>
+        <summary>Filtros y orden${filtrosActivos ? ` (${filtrosActivos})` : ""}</summary>
     <!-- Barra de Filtros Collectr dentro de la Colección -->
     <div class="collectr-filter-bar" style="margin-top: 8px;">
       <div class="filter-group">
@@ -686,18 +690,38 @@ function renderCollection() {
       </div>
     </div>
 
-    <div class="search-bar" style="margin: 12px 0 6px;">
-      <input type="search" class="search-input" id="collection-search" placeholder="Filtrar colección por nombre..." value="${esc(collectionFilter.text)}"
-        oninput="collectionFilter.text=this.value; renderCollection(); const i=document.getElementById('collection-search'); i.focus(); i.setSelectionRange(i.value.length,i.value.length);">
+      </details>
     </div>
+`;
 
+  const analisisHtml = `
+    <div class="portfolio-hero-card phc-compact">
+      <div class="phc-stats-grid">
+        <div class="phc-stat"><span class="phc-num">${total}</span><span class="phc-lbl">Cartas</span></div>
+        <div class="phc-stat"><span class="phc-num">${collection.length}</span><span class="phc-lbl">Únicas</span></div>
+        <div class="phc-stat"><span class="phc-num">${holosCount}</span><span class="phc-lbl">Holos / Foils</span></div>
+        <div class="phc-stat"><span class="phc-num">${langsCount}</span><span class="phc-lbl">Idiomas</span></div>
+      </div>
+    </div>
+    <div class="an-card"><h3>Dónde está tu valor</h3>${analysisHtml()}</div>
+
+    <div class="an-card"><h3>Evolución del Portfolio</h3><div id="value-chart" class="value-chart"><div class="an-muted">Cargando histórico…</div></div></div>
+
+`;
+
+  const cuentaHtml = `
+    ${auth}
     <div class="col-tools">
       ${useCloud() && profile.public_collection ? `<button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Compartir enlace público</button>` : ""}
       <button class="dab-btn" onclick="exportCollectionCsv()">Exportar CSV</button>
       ${editable ? `<button class="dab-btn" id="btn-import-csv" onclick="document.getElementById('csv-file').click()">Importar CSV</button>
       <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none" onchange="importCollectionCsv(this.files[0]); this.value=''">` : ""}
     </div>
+`;
 
+  root.innerHTML = `
+    <div class="col-tabs" role="tablist" aria-label="Secciones de la colección">${tabs}</div>
+    ${colTab === "analisis" ? analisisHtml : colTab === "cuenta" ? cuentaHtml : cartasHtml + `
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "No hay cartas que coincidan con los filtros aplicados." : (editable ? "Aún no tienes cartas en tu colección. Búscalas o escanéalas y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
 
     <div class="results-grid" style="display:grid">
@@ -743,6 +767,6 @@ function renderCollection() {
           </div>
         </article>`;
       }).join("")}
-    </div>`;
+    </div>`}`;
   renderValueChart();
 }

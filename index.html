@@ -2,7 +2,7 @@
   Project: Kard Lume
   Kard Lume Design System 
   Author: Sangar Studio
-  Version: 3.20.0
+  Version: 3.21.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
@@ -20,7 +20,7 @@
   <meta property="og:title" content="Kard Lume">
   <meta property="og:description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering.">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="3.20.0">
+  <meta name="version" content="3.21.0">
   <title>Kard Lume — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -504,35 +504,48 @@
 
           <p class="detail-owned" id="card-owned" aria-live="polite"></p>
 
-          <!-- Precio de compra: base para calcular ganancia o pérdida -->
-          <div class="detail-cost" id="detail-cost">
-            <label class="detail-label" for="cost-input">Precio de compra por carta (€)</label>
-            <div class="cost-row">
-              <input type="number" id="cost-input" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" oninput="onCostInput(this.value)">
-              <button type="button" class="link-btn" id="btn-save-cost" onclick="guardarCosteActual()" style="display:none">Guardar coste</button>
-            </div>
-            <p class="detail-pl" id="detail-pl" aria-live="polite"></p>
-          </div>
 
-          <!-- Seguimiento y alertas de precio -->
-          <div class="detail-alert" id="detail-alert">
-            <label class="detail-label">Alertas de precio <small>(<span id="alert-currency">€</span>)</small></label>
-            <div class="alert-row">
-              <input type="number" id="alert-below" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si baja de" aria-label="Avisar si baja de">
-              <input type="number" id="alert-above" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si sube de" aria-label="Avisar si sube de">
-            </div>
-            <div class="alert-actions">
-              <button type="button" class="btn-secondary" id="btn-follow" onclick="guardarSeguimiento()">Seguir</button>
-              <button type="button" class="link-btn" id="btn-unfollow" onclick="dejarDeSeguir()" style="display:none">Dejar de seguir</button>
-            </div>
-          </div>
 
-          <div class="detail-actions">
-            <button class="btn-primary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()">Añadir a colección</button>
-            <button class="btn-secondary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()">Añadir al mazo</button>
-          </div>
 
           <div id="price-chart" class="price-chart" aria-live="polite"></div>
+
+          <!-- Precio de compra y alertas: plegado (se usa menos que ver el precio y añadir) -->
+          <details class="detail-more" id="detail-more">
+            <summary>Precio de compra y alertas</summary>
+            <!-- Precio de compra: base para calcular ganancia o pérdida -->
+            <div class="detail-cost" id="detail-cost">
+              <label class="detail-label" for="cost-input">Precio de compra por carta (€)</label>
+              <div class="cost-row">
+                <input type="number" id="cost-input" min="0" step="0.01" inputmode="decimal" placeholder="Opcional" oninput="onCostInput(this.value)">
+                <button type="button" class="link-btn" id="btn-save-cost" onclick="guardarCosteActual()" style="display:none">Guardar coste</button>
+              </div>
+              <p class="detail-pl" id="detail-pl" aria-live="polite"></p>
+            </div>
+            <!-- Seguimiento y alertas de precio -->
+            <div class="detail-alert" id="detail-alert">
+              <label class="detail-label">Alertas de precio <small>(<span id="alert-currency">€</span>)</small></label>
+              <div class="alert-row">
+                <input type="number" id="alert-below" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si baja de" aria-label="Avisar si baja de">
+                <input type="number" id="alert-above" min="0" step="0.01" inputmode="decimal" placeholder="Avisar si sube de" aria-label="Avisar si sube de">
+              </div>
+              <div class="alert-actions">
+                <button type="button" class="btn-secondary" id="btn-follow" onclick="guardarSeguimiento()">Seguir</button>
+                <button type="button" class="link-btn" id="btn-unfollow" onclick="dejarDeSeguir()" style="display:none">Dejar de seguir</button>
+              </div>
+            </div>
+          </details>
+
+        </div>
+
+        <!-- Barra fija: cantidad + añadir -->
+        <div class="detail-actions detail-actions-sticky">
+          <div class="qty-stepper" role="group" aria-label="Cantidad a añadir">
+            <button type="button" onclick="cambiarCantidadAlta(-1)" aria-label="Una menos">−</button>
+            <span id="add-qty" aria-live="polite">1</span>
+            <button type="button" onclick="cambiarCantidadAlta(1)" aria-label="Una más">+</button>
+          </div>
+          <button class="btn-primary" id="btn-add-to-collection" onclick="addCurrentCardToCollection()" aria-label="Añadir a la colección">Añadir</button>
+          <button class="btn-secondary" id="btn-add-to-deck" onclick="addCurrentCardToDeck()" aria-label="Añadir al mazo">Al mazo</button>
         </div>
       </div>
     </div>

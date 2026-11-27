@@ -5,7 +5,7 @@
  * respaldo. Las peticiones a otros dominios (APIs de precios, Supabase, CDN) no se tocan.
  * Sube CACHE al publicar una versión para limpiar la caché anterior.
  */
-const CACHE = "kardlume-v3.20.0";
+const CACHE = "kardlume-v3.21.0";
 const SHELL = [
   "./", "./index.html", "./privacidad.html", "./borrar-cuenta.html", "./manifest.webmanifest",
   "./css/style.css", "./css/design.css",
