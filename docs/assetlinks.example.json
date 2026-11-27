@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "es.sangarstudio.kardlume",
+      "sha256_cert_fingerprints": [
+        "HUELLA_SHA256_DE_TU_CLAVE_DE_SUBIDA (PWABuilder)",
+        "HUELLA_SHA256_DE_LA_FIRMA_DE_GOOGLE_PLAY (Play Console → Integridad de la app)"
+      ]
+    }
+  }
+]

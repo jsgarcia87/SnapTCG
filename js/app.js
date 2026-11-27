@@ -756,6 +756,11 @@ async function ejecutarBusqueda() {
 // ─────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────
+// Service worker: abre sin conexión e instala la app (PWA / Android). Solo en https o localhost.
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(e => console.warn("SW no registrado:", e)));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   let juego = "pokemon";
   try { juego = localStorage.getItem("snaptcg_game") === "magic" ? "magic" : "pokemon"; } catch { /* opcional */ }

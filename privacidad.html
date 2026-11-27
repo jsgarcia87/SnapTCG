@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'">
+  <meta name="theme-color" content="#0f172a">
+  <title>Política de privacidad — Kard Lume</title>
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <style>
+    :root { --ink: #0f172a; --muted: #5b5c78; --bg: #f9f8f8; --line: #e5e4ea; --accent: #aff33f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    header img { height: 56px; width: auto; }
+    h1 { font-size: 28px; line-height: 1.2; margin: 0; }
+    h2 { font-size: 19px; margin: 32px 0 8px; }
+    p, li { color: var(--ink); }
+    small, .muted { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 15px; }
+    th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--line); }
+    th { font-weight: 700; }
+    a { color: inherit; text-underline-offset: 2px; }
+    .back { display: inline-block; margin-top: 32px; padding: 10px 18px; border-radius: 10px; background: var(--accent); color: var(--ink); font-weight: 800; text-decoration: none; }
+    @media (max-width: 560px) { table, thead, tbody, tr, th, td { display: block; } thead { display: none; } td { border: 0; padding: 2px 0; } tr { border-bottom: 1px solid var(--line); padding: 8px 0; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="img/kardlume-dark.svg" alt="" width="54" height="56">
+    <div><h1>Política de privacidad</h1><small>Kard Lume · Última actualización: 27 de noviembre de 2026</small></div>
+  </header>
+
+  <p>Esta política explica qué datos trata la aplicación <strong>Kard Lume</strong> (web y app de Android), para qué y con quién se comparten. Kard Lume no muestra publicidad, no usa herramientas de analítica ni de seguimiento y no vende datos.</p>
+
+  <h2>1. Responsable</h2>
+  <p>Sangar Studio. Contacto para cualquier cuestión de privacidad: <strong>[EMAIL DE CONTACTO]</strong>.</p>
+
+  <h2>2. Qué datos se tratan</h2>
+  <table>
+    <thead><tr><th>Dato</th><th>Para qué</th><th>Dónde se guarda</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Imagen de la cámara</strong></td><td>Leer el nombre y el número de la carta que escaneas.</td><td>Se procesa <strong>solo en tu dispositivo</strong>. Las imágenes no se guardan ni se envían a ningún servidor.</td></tr>
+      <tr><td><strong>Fotos de la galería</strong> (si eliges una)</td><td>Igual que la cámara.</td><td>Solo en tu dispositivo; no se suben.</td></tr>
+      <tr><td><strong>Colección, mazos, seguimiento, precio de compra y ajustes</strong> sin iniciar sesión</td><td>Que la app funcione.</td><td>Solo en el almacenamiento de tu dispositivo. Si borras los datos de la app, se pierden.</td></tr>
+      <tr><td><strong>Correo electrónico</strong> (solo si inicias sesión)</td><td>Enviarte el enlace de acceso y mantener tu sesión.</td><td>Supabase (servidores en la Unión Europea, Irlanda).</td></tr>
+      <tr><td><strong>Colección</strong> con sesión iniciada</td><td>Sincronizarla entre dispositivos y mostrarla en tu enlace público.</td><td>Supabase. La colección (cartas y cantidades) es <strong>pública</strong> por diseño para poder compartirla.</td></tr>
+      <tr><td><strong>Mazos, seguimiento y precio de compra</strong> con sesión iniciada</td><td>Copia de seguridad y alertas.</td><td>Supabase, en tablas <strong>privadas</strong>: solo tu cuenta puede leerlas.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Servicios de terceros</h2>
+  <p>Para buscar cartas y precios, la app hace peticiones a estos servicios. Reciben el término de búsqueda (por ejemplo, el nombre de una carta) y, como en cualquier conexión a internet, tu dirección IP:</p>
+  <ul>
+    <li><strong>TCGdex</strong> y <strong>Pokémon TCG API</strong>: datos y precios de cartas de Pokémon.</li>
+    <li><strong>Scryfall</strong>: datos y precios de cartas de Magic.</li>
+    <li><strong>Frankfurter</strong> (datos del Banco Central Europeo): tipo de cambio dólar-euro.</li>
+    <li><strong>jsDelivr</strong> y <strong>Tesseract</strong>: descarga del motor de reconocimiento de texto y de los idiomas, que luego funcionan en tu dispositivo.</li>
+    <li><strong>Google Fonts</strong>: tipografías de la interfaz.</li>
+    <li><strong>Supabase</strong>: inicio de sesión y almacenamiento, solo si inicias sesión.</li>
+  </ul>
+  <p>Los enlaces «Ver en Cardmarket» y «Ver en TCGplayer» abren esas webs, que tienen sus propias políticas.</p>
+
+  <h2>4. Base legal y conservación</h2>
+  <p>Tratamos tus datos para prestarte el servicio que solicitas al usar la app (art. 6.1.b del RGPD). Los datos de tu cuenta se conservan mientras la mantengas. Los datos guardados solo en tu dispositivo los controlas tú.</p>
+
+  <h2>5. Tus derechos y borrado de datos</h2>
+  <p>Puedes pedir acceso, rectificación, portabilidad o <strong>borrado de tu cuenta y de todos sus datos</strong> escribiendo a <strong>[EMAIL DE CONTACTO]</strong>. Lo haremos en un plazo máximo de 30 días. También puedes exportar tu colección en CSV desde la propia app. Si crees que no hemos atendido bien tu solicitud, puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p>
+
+  <h2>6. Menores</h2>
+  <p>Kard Lume no está dirigida a menores de 14 años y no recoge conscientemente sus datos.</p>
+
+  <h2>7. Marcas</h2>
+  <p>Kard Lume es una herramienta independiente. <strong>No está afiliada, patrocinada ni aprobada</strong> por Nintendo, The Pokémon Company, Wizards of the Coast, Cardmarket ni TCGplayer. Pokémon y Magic: The Gathering son marcas de sus respectivos titulares. Las imágenes y datos de las cartas proceden de TCGdex y Scryfall.</p>
+
+  <h2>8. Cambios</h2>
+  <p>Si cambiamos esta política, actualizaremos la fecha de arriba. Si el cambio es importante, lo avisaremos en la app.</p>
+
+  <a class="back" href="./">Volver a Kard Lume</a>
+</main>
+</body>
+</html>

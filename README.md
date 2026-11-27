@@ -2,7 +2,7 @@
 
 **Kard Lume** es una herramienta profesional de gestión para jugadores de TCG (Trading Card Games). Permite escanear cartas físicamente, consultar precios en tiempo real y construir mazos competitivos de **Pokémon TCG** y **Magic: The Gathering** con validación de reglas avanzada.
 
-![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.16.0-gold)
+![Versión](https://img.shields.io/badge/Versi%C3%B3n-3.17.0-gold)
 ![Tech](https://img.shields.io/badge/Tech-Vanilla_JS-blue)
 ![OCR](https://img.shields.io/badge/OCR-Tesseract.js-green)
 
@@ -44,6 +44,9 @@
 - **Micro-interacciones**: Efectos de escala, pop-ups y animaciones de carga (Skeletons) para una experiencia fluida.
 
 ---
+
+## Android / Google Play
+La app es una PWA instalable (manifiesto + service worker) y se publica en Google Play como Trusted Web Activity. Guía paso a paso en [`docs/PLAY_STORE.md`](docs/PLAY_STORE.md). Política de privacidad: [`privacidad.html`](privacidad.html).
 
 ## Stack Tecnológico
 - **Frontend**: HTML5, CSS3 (Variables, Flexbox, Grid).

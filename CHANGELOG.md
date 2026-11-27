@@ -4,6 +4,17 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.17.0] - 2026-11-27
+
+### Preparación para Android / Google Play
+- **PWA instalable**: `manifest.webmanifest` (nombre, colores de marca, iconos normales y *maskable*, accesos directos a Escanear y Colección) y `sw.js` (abre sin conexión; red primero para no servir versiones viejas; no toca APIs ni Supabase). Sin errores de instalabilidad en Chrome.
+- **Política de privacidad** (`privacidad.html`) y aviso de marcas («no afiliada a Nintendo, The Pokémon Company ni Wizards of the Coast») en el pie de la app.
+- **Recursos de la ficha**: icono 512×512 y gráfico destacado 1024×500 en `store/`.
+- **Guía de publicación** (`docs/PLAY_STORE.md`): empaquetado TWA con PWABuilder, verificación de dominio, textos de la ficha, formulario de seguridad de datos y clasificación de contenido. Plantilla `docs/assetlinks.example.json`.
+- Avatar de la barra lateral: «CD» → «KL».
+
+---
+
 ## [3.16.0] - 2026-11-27
 
 ### Selectores de juego

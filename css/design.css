@@ -2221,3 +2221,7 @@ body.modal-open { overflow: hidden; }
 .gt-btn .game-ico { flex-shrink: 0; }
 .gt-btn .game-ico-pk { width: 22px; height: 22px; }
 .gt-btn .game-ico-pw { width: 13px; height: 22px; }
+
+/* Aviso legal y privacidad */
+.app-legal { margin: 32px 0 8px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.app-legal a { color: var(--text-primary); font-weight: 700; text-underline-offset: 2px; }

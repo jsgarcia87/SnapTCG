@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** Kard Lume (repositorio SnapTCG)
-- **Versión Actual:** 3.16.0
+- **Versión Actual:** 3.17.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (Kard Lume Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
@@ -33,6 +33,11 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ```bash
 SnapTCG/
 ├── index.html         # Shell principal de la app, navegación, barra de filtros Collectr, modales y carga de scripts
+├── manifest.webmanifest # Manifiesto PWA (nombre, iconos, colores, accesos directos)
+├── sw.js              # Service worker: red primero + caché de respaldo (sube CACHE en cada versión)
+├── privacidad.html    # Política de privacidad (obligatoria en Google Play)
+├── docs/              # PLAY_STORE.md (guía de publicación) y assetlinks.example.json
+├── store/             # Icono 512 y gráfico destacado 1024×500 para la ficha de Play
 ├── img/
 │   ├── kardlume-dark.svg   # Logo oficial (fondos claros). Úsalo tal cual
 │   ├── kardlume-light.svg  # Misma marca en Bright Snow (#F9F8F8) para fondos oscuros
