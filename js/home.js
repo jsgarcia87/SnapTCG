@@ -10,16 +10,6 @@ function irABuscar() { switchTab("scanner"); document.getElementById("search-inp
 function irANuevoMazo() { switchTab("deck"); newDeck(); showDeckTab("editor"); }
 function abrirMazo(idx) { switchTab("deck"); loadDeck(idx); }
 
-let activeHomeRange = "all";
-
-function setHomeRange(btn, range) {
-  activeHomeRange = range;
-  document.querySelectorAll(".hw-range-pills .range-pill").forEach(b => {
-    const act = (b === btn);
-    b.classList.toggle("active", act);
-    b.setAttribute("aria-pressed", act);
-  });
-}
 
 function moversHtml() {
   const list = collection.length ? collection : [];
@@ -191,11 +181,6 @@ async function renderHome() {
         <h2 class="hw-title">Hola. Todo bajo control.</h2>
         <p class="hw-sub">Resumen de tu colección en tiempo real</p>
       </div>
-      <div class="hw-range-pills" role="group" aria-label="Rango de tiempo">
-        <button class="range-pill active" onclick="setHomeRange(this, 'all')">Todos</button>
-        <button class="range-pill" onclick="setHomeRange(this, '30d')">30 días</button>
-        <button class="range-pill" onclick="setHomeRange(this, '7d')">7 días</button>
-      </div>
     </div>
 
     ${staleBannerHtml()}
@@ -282,27 +267,6 @@ async function renderHome() {
 
     <!-- Fila 3: Banner Escáner + Últimos Escaneos -->
     <div class="home-bottom-grid">
-      <!-- Banner Escáner Inteligente -->
-      <div class="scanner-hero-banner" onclick="irAEscanear()">
-        <div class="shb-viewfinder">
-          <div class="reticle-corner top-left"></div>
-          <div class="reticle-corner top-right"></div>
-          <div class="reticle-corner bottom-left"></div>
-          <div class="reticle-corner bottom-right"></div>
-          <div class="shb-card-preview">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="scanner-svg-icon"><path d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
-          </div>
-        </div>
-        <div class="shb-content">
-          <span class="shb-tag">ESCANEO INTELIGENTE</span>
-          <h3 class="shb-title">ESCANEA UNA CARTA CON LA CÁMARA</h3>
-          <p class="shb-desc">Detecta texto, variantes, rarezas y calcula el valor de mercado al instante.</p>
-        </div>
-        <button class="shb-action-circle" aria-label="Abrir escáner">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
-        </button>
-      </div>
-
       <!-- Últimas Cartas Añadidas -->
       <div class="home-panel-card">
         <div class="hpc-header">

@@ -17,7 +17,7 @@
   
   --text-primary: #0F172A;
   --text-secondary: #5b5c78;
-  --text-muted: #7e7f9a;
+  --text-muted: #5B5C78;   /* Lavender Grey oscurecido: #7E7F9A no llega a 4,5:1 sobre blanco */
 
   --border-color: #e5e4ea;
   --border-bright: #d2d1da;
@@ -428,7 +428,7 @@ body.modal-open { overflow: hidden; }
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #7e7f9a;
+  color: #B8B9CC;
 }
 
 .mcl-label {
@@ -488,7 +488,7 @@ body.modal-open { overflow: hidden; }
 
 .mcd-meta {
   font-size: 12px;
-  color: #7e7f9a;
+  color: #B8B9CC;
   margin-bottom: 18px;
 }
 
@@ -617,7 +617,7 @@ body.modal-open { overflow: hidden; }
   border: none;
   font-size: 12px;
   font-weight: 700;
-  color: #65A30D;
+  color: #3F6212;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
@@ -978,7 +978,7 @@ body.modal-open { overflow: hidden; }
 
 .shb-desc {
   font-size: 12px;
-  color: #7e7f9a;
+  color: #B8B9CC;
   margin: 0;
   line-height: 1.4;
 }
@@ -1231,7 +1231,7 @@ body.modal-open { overflow: hidden; }
 
 .gt-btn.active-magic {
   background: #eb9486;
-  color: #FFFFFF;
+  color: #0F172A;
   box-shadow: 0 2px 6px rgba(235, 148, 134, 0.35);
 }
 
@@ -1383,7 +1383,7 @@ body.modal-open { overflow: hidden; }
 .portfolio-hero-card .phc-lbl {
   font-size: 10px;
   font-weight: 700;
-  color: #7e7f9a;
+  color: #B8B9CC;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 2px;
@@ -1734,7 +1734,7 @@ body.modal-open { overflow: hidden; }
 .scanner-lang-pill {
   background: rgba(23, 34, 49, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #7e7f9a;
+  color: #B8B9CC;
 }
 
 .scanner-lang-pill:hover {
@@ -1891,7 +1891,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .condition-pill.active small {
-  color: #7e7f9a;
+  color: #B8B9CC;
 }
 
 .market-stats-grid {
@@ -2065,7 +2065,7 @@ body.modal-open { overflow: hidden; }
 
   .spc-desc {
     font-size: 11px;
-    color: #7e7f9a;
+    color: #B8B9CC;
     display: block;
     margin-bottom: 8px;
   }
@@ -2258,3 +2258,16 @@ body[data-tab="scanner"] .scan-fab, body.scanner-open .scan-fab, body.modal-open
 .account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .dab-btn.danger { color: #b91c1c; border-color: rgba(185, 28, 28, 0.35); }
 a.dab-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* Auditoría UX (arreglos rápidos) */
+.detail-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: #F1F0F2; border: 1px solid #E5E4EA; color: #0F172A; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.badge-finish.normal { background: rgba(15, 23, 42, 0.82); color: #FFFFFF; }
+/* «Lo que más se mueve» no debe ensanchar la página en móvil */
+.home-panel-card { min-width: 0; }
+@media (max-width: 899px) { .home-middle-grid, .home-bottom-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 900px) {
+  .home-middle-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+  .home-bottom-grid { grid-template-columns: minmax(0, 1fr); }   /* sin el banner de escaneo queda una sola tarjeta */
+}
+@media (max-width: 480px) { .mover-perf-bar { display: none; } .mover-row { gap: 10px; } }

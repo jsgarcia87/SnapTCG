@@ -7,7 +7,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ## 1. Visión General del Proyecto
 
 - **Nombre del Producto:** Kard Lume (repositorio SnapTCG)
-- **Versión Actual:** 3.18.1
+- **Versión Actual:** 3.19.0
 - **Autor / Estudio:** Sangar Studio
 - **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (Kard Lume Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).

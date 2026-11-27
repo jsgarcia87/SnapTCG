@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.19.0] - 2026-11-28
+
+### Auditoría UX/UI: arreglos rápidos
+- **Contraste WCAG AA en todo el texto** (comprobado de forma automática en Inicio, Buscar, ficha, Colección, Mazos y modo Magic, móvil y escritorio: 0 fallos). Precios en texto principal (antes lima sobre blanco, 1,34:1); subidas `#3F6212` y bajadas `#B91C1C` (antes 1,74:1 y 2,77:1); enlaces de acción en verde oscuro; texto secundario `#5B5C78` sobre fondos claros y `#B8B9CC` sobre fondos oscuros; texto del selector Magic activo en azul oscuro sobre salmón.
+- **Ficha técnica legible**: los chips (idioma, rareza, edición, tipo) tenían estilos vacíos y se leían pegados.
+- **El Inicio ya no se sale por la derecha** en móvil (medía 432 px en una pantalla de 390).
+- Quitado el selector Todos / 30 días / 7 días del Inicio, que no hacía nada.
+- Quitado el banner «Escanea una carta» del Inicio: repetía la llamada a escanear y prometía detectar rarezas.
+- Mazos: el botón «Nuevo» deja de ir en rojo (no es una acción destructiva).
+- Etiqueta de acabado «Normal» legible sobre la imagen de la carta.
+
+---
+
 ## [3.18.1] - 2026-11-28
 
 ### Listo para el servidor propio (sin aplicar)
