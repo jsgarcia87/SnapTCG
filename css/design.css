@@ -2271,3 +2271,69 @@ a.dab-btn { text-decoration: none; display: inline-flex; align-items: center; ju
   .home-bottom-grid { grid-template-columns: minmax(0, 1fr); }   /* sin el banner de escaneo queda una sola tarjeta */
 }
 @media (max-width: 480px) { .mover-perf-bar { display: none; } .mover-row { gap: 10px; } }
+
+/* ───────────── Escáner a pantalla completa con bandeja (v3.20) ───────────── */
+body.scanner-open { overflow: hidden; }
+body.scanner-open #scanner-wrap {
+  position: fixed; inset: 0; z-index: 400; margin: 0;
+  display: flex !important; flex-direction: column; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
+  background: #0F172A; color: #F9F8F8;
+}
+body.scanner-open .scanner-lang-bar { margin: 0; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; flex: none; }
+body.scanner-open .scanner-lang-bar::-webkit-scrollbar { display: none; }
+body.scanner-open .scanner-lang-pill { flex: none; }
+body.scanner-open .scanner-container {
+  flex: 1 1 auto; min-height: 220px; aspect-ratio: auto; width: 100%;
+  border-radius: 18px; container-type: size;
+}
+/* El marco de la carta cabe siempre en el visor, sea cual sea el alto que deje la bandeja */
+body.scanner-open .scanner-card-frame { width: min(74cqw, calc(86cqh * 63 / 88)); }
+body.scanner-open .scanner-actions-bar { margin: 0; flex: none; }
+body.scanner-open .scanner-secondary-btn { background: rgba(249, 248, 248, 0.1); color: #F9F8F8; border-color: rgba(249, 248, 248, 0.2); }
+body.scanner-open .scan-fab, body.scanner-open .main-nav { display: none; }
+
+.scan-tray { display: none; }
+body.scanner-open .scan-tray {
+  display: flex; flex-direction: column; gap: 8px; flex: none;
+  max-height: 38vh; background: #F9F8F8; color: #0F172A; border-radius: 18px; padding: 12px;
+}
+body.scanner-open .scan-tray.is-empty { max-height: none; }
+.scan-tray-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+.scan-tray.is-empty .scan-tray-head { font-weight: 600; color: #5B5C78; }
+.scan-tray-head .link-btn { min-height: 36px; padding: 6px 4px; }
+.scan-tray-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.scan-tray.is-empty .scan-tray-list { display: none; }
+.scan-item { display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 1px solid #E5E4EA; border-radius: 12px; padding: 6px; }
+.scan-item.needs-review { border-color: #EB9486; }
+.si-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.si-main img { width: 36px; height: 50px; object-fit: cover; border-radius: 4px; background: #E5E4EA; flex: none; }
+.si-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.si-name { font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-meta { font-size: 12px; color: #5B5C78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.si-flag { font-size: 11px; font-weight: 800; color: #9A3412; }
+.si-price { font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; flex: none; }
+.si-qty { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.si-qty button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #E5E4EA; background: #F9F8F8; color: #0F172A; font-size: 18px; font-weight: 800; cursor: pointer; }
+.si-qty span { min-width: 22px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.scan-tray-add { width: 100%; min-height: 48px; }
+.scan-tray-add:disabled { opacity: 0.55; cursor: default; }
+
+/* Hoja de una carta de la bandeja */
+.scan-item-sheet { position: fixed; inset: 0; z-index: 450; background: rgba(15, 23, 42, 0.6); display: flex; align-items: flex-end; }
+.scan-item-sheet[hidden] { display: none; }
+.sis-panel { width: 100%; max-height: 80vh; overflow-y: auto; background: #F9F8F8; color: #0F172A; border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px); }
+.sis-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 17px; }
+.sis-close { width: 40px; height: 40px; border-radius: 12px; border: 1px solid #E5E4EA; background: #FFFFFF; font-size: 16px; cursor: pointer; color: #0F172A; }
+.sis-label { margin: 14px 0 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #5B5C78; }
+.sis-prints { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.sis-print { display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 12px; border: 2px solid #E5E4EA; background: #FFFFFF; font: inherit; font-size: 11px; color: #0F172A; cursor: pointer; text-align: left; }
+.sis-print img { width: 100%; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 6px; background: #E5E4EA; }
+.sis-print.active { border-color: #0F172A; box-shadow: 0 0 0 2px #AFF33F; }
+.sis-variants { display: flex; flex-wrap: wrap; gap: 8px; }
+.sis-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.sis-actions .btn-primary { flex: 1; min-height: 44px; }
+@media (min-width: 900px) {
+  body.scanner-open #scanner-wrap { left: 50%; right: auto; width: min(560px, 100vw); transform: translateX(-50%); box-shadow: 0 0 0 100vmax rgba(15, 23, 42, 0.7); }
+  .sis-panel { max-width: 560px; margin: 0 auto; }
+}

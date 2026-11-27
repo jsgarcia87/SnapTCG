@@ -171,21 +171,14 @@ async function persistCollectionEntry(entry, removed) {
   await persistCost(entry, removed);
 }
 
-async function collectionAdd(card, variant = null, condition = null) {
-  if (!canEditCollection()) return;
-  if (!useCloud()) recordPriceSnapshot(card);
-
-  const chosenVariant = variant || card.selectedVariant || "normal";
-  const chosenCondition = condition || card.condition || "NM";
-  const chosenLang = card.lang || "en";
-
+/** Suma `qty` copias de una carta a la colección en memoria (sin guardar). Devuelve la fila. */
+function addToCollectionMemory(card, variant = null, condition = null, qty = 1) {
   const cardToSave = {
     ...card,
-    selectedVariant: chosenVariant,
-    condition: chosenCondition,
-    lang: chosenLang
+    selectedVariant: variant || card.selectedVariant || "normal",
+    condition: condition || card.condition || "NM",
+    lang: card.lang || "en"
   };
-
   // Coste por carta (€): al sumar copias a otro precio se guarda la media ponderada
   const coste = card.coste == null || card.coste === "" ? NaN : parseFloat(card.coste);
   if (coste >= 0) cardToSave.coste = coste; else delete cardToSave.coste;
@@ -195,15 +188,47 @@ async function collectionAdd(card, variant = null, condition = null) {
   if (entry) {
     if (coste >= 0) {
       const previo = parseFloat(entry.card.coste);
-      entry.card.coste = previo >= 0 ? (previo * entry.qty + coste) / (entry.qty + 1) : coste;
+      entry.card.coste = previo >= 0 ? (previo * entry.qty + coste * qty) / (entry.qty + qty) : coste;
     }
-    entry.qty++;
+    entry.qty += qty;
   } else {
-    entry = { key, card: cardToSave, qty: 1 };
+    entry = { key, card: cardToSave, qty };
     collection.push(entry);
   }
+  return entry;
+}
+
+async function collectionAdd(card, variant = null, condition = null) {
+  if (!canEditCollection()) return;
+  if (!useCloud()) recordPriceSnapshot(card);
+  const entry = addToCollectionMemory(card, variant, condition, 1);
   await persistCollectionEntry(entry, false);
   renderCollection();
+}
+
+/** Añade muchas cartas de una vez ([{card, qty}]) con una sola escritura. Devuelve cuántas copias añadió. */
+async function collectionAddBatch(items) {
+  if (!canEditCollection() || !items.length) return 0;
+  const tocadas = new Set();
+  let copias = 0;
+  for (const { card, qty } of items) {
+    if (!(qty > 0)) continue;
+    if (!useCloud()) recordPriceSnapshot(card);
+    tocadas.add(addToCollectionMemory(card, null, null, qty));
+    copias += qty;
+  }
+  if (!useCloud()) {
+    localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection));
+  } else {
+    const owner = sbSession.user.id, now = new Date().toISOString();
+    const filas = [...tocadas].map(e => ({ owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: now }));
+    const { error } = await sbClient.from("collection").upsert(filas, { onConflict: "owner,card_id" });
+    if (error) { console.error(error); showDeckToast("Error al guardar en la nube", "warn"); await loadCollection(); renderCollection(); return 0; }
+    for (const e of tocadas) await persistCost(e, false);
+  }
+  renderCollection();
+  if (typeof renderHome === "function") renderHome();
+  return copias;
 }
 
 async function collectionRemove(encodedKey) {

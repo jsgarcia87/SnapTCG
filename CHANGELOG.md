@@ -4,6 +4,19 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.20.0] - 2026-11-28
+
+### Escáner continuo a pantalla completa (auditoría UX, prioridad crítica)
+- El escáner ocupa toda la pantalla (antes iba incrustado bajo el buscador y la barra inferior tapaba el visor). En escritorio se abre como panel centrado.
+- **Escaneo continuo con bandeja**: cada carta leída se identifica sin salir de la cámara (búsqueda + número de coleccionista + comparación de diseño) y se suma a una bandeja con miniatura, edición, acabado, precio y cantidad (− / +). Total de cartas y valor en la cabecera de la bandeja.
+- **Varias copias de la misma carta**: dos lecturas seguidas de la misma carta en menos de 2,5 s cuentan como una (la carta sigue en el visor); al retirarla y poner otra copia, se suma.
+- Si la edición no está clara, la fila se marca «Revisa la edición». Al tocar una fila se abre una hoja para elegir la edición entre las candidatas, cambiar el acabado, ver la ficha completa o quitarla.
+- **«Añadir N a la colección»** guarda toda la bandeja de una vez (nueva `collectionAddBatch`: una sola escritura en local o en la nube) y lleva a la Colección.
+- La bandeja se conserva al cerrar el escáner y al recargar la pestaña, hasta que se añade o se vacía; al cerrar con cartas pendientes se avisa.
+- El botón **Atrás** de Android cierra el escáner en vez de salir de la app.
+
+---
+
 ## [3.19.0] - 2026-11-28
 
 ### Auditoría UX/UI: arreglos rápidos

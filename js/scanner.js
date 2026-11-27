@@ -21,6 +21,7 @@ let ocrWorkerLang     = null;
 let isWorkerLoading   = false;
 let isScanning        = false;
 let lastRead          = '';
+let framesSinTexto    = 0;   // tras 2 fotogramas sin texto se da la carta por retirada
 let scanPaused        = false;
 let facingMode        = 'environment';
 let torchActive       = false;
@@ -201,6 +202,8 @@ async function iniciarEscaner() {
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('scanner-wrap').style.display = 'block';
   document.body.classList.add('scanner-open');
+  if (!history.state || history.state.kl !== 'scanner') { try { history.pushState({ kl: 'scanner' }, ''); } catch { /* file:// */ } }
+  if (typeof renderBandeja === 'function') renderBandeja();
 
   // Sincronizar píldoras con el idioma activo
   const activeLang = getActiveScannerLang();
@@ -276,6 +279,16 @@ async function iniciarEscaner() {
   }
 }
 
+/** Cierra el escáner desde la interfaz: deshace la entrada de historial que abrió (si no, cierra directamente). */
+function cerrarEscaner() {
+  if (history.state && history.state.kl === 'scanner') history.back();   // el popstate llama a detenerEscaner
+  else detenerEscaner();
+}
+
+window.addEventListener('popstate', () => {
+  if (document.body.classList.contains('scanner-open')) detenerEscaner();
+});
+
 /**
  * Detiene la cámara y limpia recursos
  */
@@ -298,7 +311,12 @@ function detenerEscaner() {
 
   const wrap = document.getElementById('scanner-wrap');
   if (wrap) wrap.style.display = 'none';
+  const estabaAbierto = document.body.classList.contains('scanner-open');
   document.body.classList.remove('scanner-open');
+  if (typeof cerrarItemBandeja === 'function') cerrarItemBandeja();
+  if (estabaAbierto && typeof bandeja !== 'undefined' && bandeja.length) {
+    showScannerToast(`Tienes ${bandeja.reduce((n, b) => n + b.qty, 0)} cartas en la bandeja del escáner sin añadir.`, 'info');
+  }
 
   const results = document.getElementById('results-grid');
   const spinner = document.getElementById('spinner-wrap');
@@ -544,6 +562,7 @@ async function autoScan() {
     const text = await recognizeRoiText(roiCanvas);
     isScanning = false;
 
+    if (!text) { if (++framesSinTexto >= 2) lastRead = ''; } else framesSinTexto = 0;
     if (!text || text === lastRead) {
       setScannerStatus("AUTO SCAN ACTIVO", "active");
       return;
@@ -694,30 +713,23 @@ async function procesarImagenArchivo(file) {
 /**
  * Acciones ejecutadas al reconocer una carta con éxito
  */
-function dispararExitoEscaneo(nombreCarta, cardCtx = null) {
-  window._scanContext = cardCtx;
-  playSuccessChime();
-  triggerHaptic();
+async function dispararExitoEscaneo(nombreCarta, cardCtx = null) {
+  // Caracteres chinos con el filtro en «todos»: se busca en chino (sin relanzar la búsqueda de la pestaña)
+  if (hasChinese(nombreCarta) && typeof searchFilters !== 'undefined' && searchFilters.lang === 'all') searchFilters.lang = 'zh';
 
-  setScannerStatus(`¡CARTA LEÍDA: ${nombreCarta}!`, "success");
-
-  // Si se detectan caracteres chinos y el filtro estaba en 'all', sincronizar filtro 'zh'
-  if (hasChinese(nombreCarta) && typeof searchFilters !== 'undefined' && searchFilters.lang === 'all') {
-    if (typeof setSearchFilter === 'function') setSearchFilter('lang', 'zh');
+  // Escáner continuo: la carta va a la bandeja y se sigue escaneando sin salir de la cámara
+  const ok = await bandejaRecibirLectura(nombreCarta, cardCtx);
+  if (ok) {
+    const scannerContainer = document.querySelector('.scanner-container');
+    if (scannerContainer) {
+      scannerContainer.classList.add('scan-success-glow');
+      setTimeout(() => scannerContainer.classList.remove('scan-success-glow'), 900);
+    }
   }
-
-  const scannerContainer = document.querySelector('.scanner-container');
-  if (scannerContainer) {
-    scannerContainer.classList.add('scan-success-glow');
-    setTimeout(() => scannerContainer.classList.remove('scan-success-glow'), 1200);
-  }
-
   setTimeout(() => {
-    const input = document.getElementById('search-input');
-    if (input) input.value = nombreCarta;
-    detenerEscaner();
-    ejecutarBusqueda();
-  }, 450);
+    scanPaused = false;
+    if (videoStream) setScannerStatus(bandeja.length ? "SIGUIENTE CARTA…" : "BUSCANDO CARTA...", "active");
+  }, ok ? 900 : 1600);
 }
 
 /**

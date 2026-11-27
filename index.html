@@ -2,7 +2,7 @@
   Project: Kard Lume
   Kard Lume Design System 
   Author: Sangar Studio
-  Version: 3.19.0
+  Version: 3.20.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
@@ -20,7 +20,7 @@
   <meta property="og:title" content="Kard Lume">
   <meta property="og:description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering.">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="3.19.0">
+  <meta name="version" content="3.20.0">
   <title>Kard Lume — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -197,7 +197,7 @@
                   <button type="button" class="cam-ctrl-btn" id="btn-scanner-flip" onclick="cambiarCamara()" title="Cambiar cámara" aria-label="Cambiar entre cámara trasera y delantera">
                     <svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" /></svg>
                   </button>
-                  <button type="button" class="cam-ctrl-btn" id="btn-scanner-close" onclick="detenerEscaner()" title="Cerrar escáner" aria-label="Cerrar escáner">
+                  <button type="button" class="cam-ctrl-btn" id="btn-scanner-close" onclick="cerrarEscaner()" title="Cerrar escáner" aria-label="Cerrar escáner">
                     <svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18 18 6M6 6l12 12" /></svg>
                   </button>
                 </div>
@@ -238,6 +238,17 @@
                 <span>Capturar</span>
               </button>
             </div>
+
+            <!-- Bandeja del escáner continuo: las cartas leídas se acumulan aquí -->
+            <section class="scan-tray is-empty" id="scan-tray" aria-label="Cartas escaneadas">
+              <div class="scan-tray-head">
+                <span id="scan-tray-count" aria-live="polite">Apunta a una carta: se irán sumando aquí</span>
+                <button type="button" class="link-btn" id="scan-tray-clear" onclick="vaciarBandeja()" hidden>Vaciar</button>
+              </div>
+              <ul class="scan-tray-list" id="scan-tray-list"></ul>
+              <button type="button" class="btn-primary scan-tray-add" id="scan-tray-add" onclick="añadirBandejaAColeccion()" disabled>Añadir a la colección</button>
+            </section>
+            <div class="scan-item-sheet" id="scan-item-sheet" hidden onclick="if(event.target===this) cerrarItemBandeja()"></div>
           </div>
 
           <!-- Discovery View (Results / Placeholder) -->
@@ -556,6 +567,7 @@
   <script src="js/api.js"></script>
   <script src="js/cardmatch.js"></script>
   <script src="js/scanner.js"></script>
+  <script src="js/scantray.js"></script>
   <script src="js/deckbuilder.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/cloud.js"></script>
