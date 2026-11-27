@@ -102,7 +102,7 @@ body.modal-open { overflow: hidden; }
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  background: #FFFFFF;
+  background: #F9F8F8;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -130,11 +130,11 @@ body.modal-open { overflow: hidden; }
 
 /* Logo Kard Lume: marca casi cuadrada, sin recortar */
 .brand-logo-badge { width: auto; height: auto; border-radius: 0; overflow: visible; }
-.brand-logo-img { display: block; height: 44px; width: auto; }
-@media (max-width: 480px) { .brand-logo-img { height: 38px; } }
+.brand-logo-img { display: block; height: 64px; width: auto; }
+@media (max-width: 480px) { .brand-logo-img { height: 52px; } }
 
 .brand-text .logo {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #0F172A;
@@ -251,7 +251,7 @@ body.modal-open { overflow: hidden; }
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
   height: calc(var(--nav-height) + var(--safe-area-bottom));
   display: grid; grid-template-columns: repeat(4, 1fr);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(249, 248, 248, 0.96);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-color);
   padding-bottom: var(--safe-area-bottom);
@@ -1944,7 +1944,7 @@ body.modal-open { overflow: hidden; }
     height: 72px;
     padding: 0 32px;
     z-index: 90;
-    background: #FFFFFF;
+    background: #F9F8F8;
     border-bottom: 1px solid var(--border-color);
   }
 
@@ -1973,7 +1973,7 @@ body.modal-open { overflow: hidden; }
     flex-direction: column;
     justify-content: flex-start;
     padding: 20px 16px;
-    background: #FFFFFF;
+    background: #F9F8F8;
     border-top: none;
     border-right: 1px solid var(--border-color);
     z-index: 100;
