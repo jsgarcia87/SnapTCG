@@ -2,7 +2,7 @@
   Project: Kard Lume
   Kard Lume Design System 
   Author: Sangar Studio
-  Version: 3.11.0
+  Version: 3.16.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
@@ -19,7 +19,7 @@
   <meta property="og:title" content="Kard Lume">
   <meta property="og:description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering.">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="3.11.0">
+  <meta name="version" content="3.16.0">
   <title>Kard Lume — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -37,6 +37,21 @@
           integrity="sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F" crossorigin="anonymous"></script>
 </head>
 <body class="mode-pokemon figma-theme">
+  <!-- Iconos de juego (Poké Ball y símbolo de planeswalker) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="ico-pokeball" viewBox="0 0 595.3 594.1">
+      <path fill="#FFFFFF" d="M297.6,380.9c-40.4,0-74.1-28.6-82.1-66.6H81.1c9.5,110.5,102.2,197.2,215.1,197.2 s205.7-86.7,215.1-197.2H379.7C371.7,352.4,338,380.9,297.6,380.9z"/>
+      <path fill="#DFDFDF" d="M345.6,505.9c89.6-21,157.7-97.7,165.7-191.6h-53C453,399.5,408.3,471.7,345.6,505.9z"/>
+      <path fill="#FFFFFF" d="M347.1,297L347.1,297C347,297,347,297,347.1,297c-0.1-6.1-1.2-11.9-3.2-17.3 c-7-18.8-25.1-32.1-46.3-32.1s-39.3,13.4-46.3,32.1c-2,5.4-3.1,11.2-3.1,17.3c0,0,0,0,0,0h0.1c0,0,0,0,0,0 c0,6.1,1.1,11.9,3.1,17.3c7,18.8,25.1,32.1,46.3,32.1c21.2,0,39.3-13.4,46.3-32.1C346,309,347.1,303.1,347.1,297 C347.1,297,347.1,297,347.1,297z"/>
+      <path fill="#FF1C1C" d="M297.7,213.2c40.4,0,74.1,28.6,82.1,66.6h134.4C504.7,169.2,412,82.5,299,82.5S93.4,169.2,83.9,279.7 h131.7C223.6,241.7,257.3,213.2,297.7,213.2z"/>
+      <path fill="#DF1818" d="M458.3,279.7h55.8c-8.2-95.5-78.6-173.3-170.5-192.6C407.4,120.8,452.9,193.7,458.3,279.7z"/>
+      <path fill="#0F172A" d="M299,82.5c113,0,205.7,86.7,215.1,197.2H379.7c-8-38-41.7-66.6-82.1-66.6c-40.4,0-74.1,28.6-82.1,66.6H83.9 C93.4,169.2,186.1,82.5,299,82.5z M343.9,279.7c2,5.4,3.1,11.2,3.1,17.3c0,0,0,0,0,0h0.1c0,0,0,0,0,0c0,6.1-1.1,11.9-3.1,17.3 c-7,18.8-25.1,32.1-46.3,32.1c-21.2,0-39.3-13.4-46.3-32.1c-2-5.4-3.1-11.2-3.1-17.3c0,0,0,0,0,0h-0.1c0,0,0,0,0,0 c0-6.1,1.1-11.9,3.1-17.3c7-18.8,25.1-32.1,46.3-32.1S336.9,261,343.9,279.7z M296.2,511.6c-113,0-205.7-86.7-215.1-197.2h134.4 c8,38,41.7,66.6,82.1,66.6s74.1-28.6,82.1-66.6h131.7C501.9,424.8,409.2,511.6,296.2,511.6z M297.6,41.3 C156.4,41.3,41.9,155.8,41.9,297s114.5,255.7,255.7,255.7S553.4,438.3,553.4,297S438.9,41.3,297.6,41.3z"/>
+    </symbol>
+    <symbol id="ico-planeswalker" viewBox="0 0 17.838 32.002">
+      <path fill="currentColor" d="M8.917 0c.041.076.047.163.063.246.066.441.091.886.125 1.33.076 1.183.137 2.367.211 3.55.125 1.934.268 3.87.548 5.79.137.906.3 1.812.577 2.686.367.027.734.054 1.1.094.181-.535.27-1.095.363-1.651q.123-.78.217-1.563c.249-2.039.423-4.086.611-6.131.043-.421.071-.845.14-1.263.035.09.043.188.058.283.041.286.071.574.102.861.197 1.912.37 3.827.616 5.734a43 43 0 0 0 .405 2.616c.112.566.232 1.134.434 1.677.34.104.678.218 1.005.358.103-.235.18-.48.252-.726.183-.638.31-1.291.42-1.944.239-1.41.379-2.834.566-4.252.049-.323.082-.652.184-.964.05.134.065.277.088.417.09.64.152 1.284.216 1.927.065.699.135 1.397.187 2.096l.008-.032c-.001.098.009.196.019.294q.216 2.528.406 5.058c-.959.363-1.866.861-2.695 1.463a12.9 12.9 0 0 0-2.876 2.916 15 15 0 0 0-1.969 3.791c-.596 1.696-.933 3.474-1.114 5.26-.059.548-.095 1.099-.151 1.647-.02.146-.024.301-.094.434h-.035c-.065-.099-.069-.22-.087-.333-.043-.364-.067-.73-.1-1.094a29 29 0 0 0-.388-2.935c-.302-1.587-.757-3.154-1.468-4.608-.813-1.668-1.933-3.197-3.336-4.417A11.7 11.7 0 0 0 0 16.491c.178-2.348.366-4.695.585-7.04.074-.762.145-1.524.249-2.282.022-.138.039-.278.08-.412l.022.004c.085.274.118.561.161.844.149 1.096.261 2.197.417 3.293.125.878.265 1.755.48 2.616.096.374.201.749.354 1.105.327-.141.666-.253 1.006-.359.127-.338.218-.688.3-1.039.124-.545.222-1.095.31-1.647.356-2.277.564-4.574.796-6.867.042-.412.083-.825.137-1.236.02-.13.031-.263.073-.389.046.287.071.577.1.866.183 1.947.345 3.896.567 5.839.107.923.221 1.847.385 2.762.074.386.147.775.279 1.147.366-.033.732-.066 1.099-.091.274-.862.435-1.755.572-2.648.149-1 .256-2.005.345-3.012.152-1.717.248-3.437.346-5.157.048-.762.084-1.525.165-2.284.021-.169.039-.34.089-.503Z"/>
+    </symbol>
+  </svg>
+
 
   <div class="app-shell">
     
@@ -46,7 +61,7 @@
     <header class="app-header">
       <div class="header-brand">
         <div class="brand-logo-badge">
-          <img src="img/kardlume-dark.svg" alt="" class="brand-logo-img" width="42" height="44">
+          <img src="img/kardlume-dark.svg" alt="" class="brand-logo-img" width="61" height="64">
         </div>
         <div class="brand-text">
           <h1 class="logo" id="logo">Kard<span class="logo-accent">Lume</span></h1>
@@ -65,11 +80,11 @@
       <div class="header-actions">
         <div class="header-game-toggle game-toggle" role="group" aria-label="Juego">
           <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
+            <svg class="btn-icon game-ico game-ico-pk" viewBox="0 0 595.3 594.1" aria-hidden="true" focusable="false"><use href="#ico-pokeball"/></svg>
             <span class="gt-label">Pokémon</span>
           </button>
           <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m-15 0a2.246 2.246 0 0 0-.75 1.622v4.5c0 .621.504 1.125 1.125 1.125h14.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125m-14.25 0c.235-.083.487-.128.75-.128h13.5c.263 0 .515.045.75.128" /></svg>
+            <svg class="btn-icon game-ico game-ico-pw" viewBox="0 0 17.838 32.002" aria-hidden="true" focusable="false"><use href="#ico-planeswalker"/></svg>
             <span class="gt-label">Magic</span>
           </button>
         </div>
@@ -98,8 +113,8 @@
       <section id="tab-scanner" class="tab-section" aria-labelledby="main-tab-scanner">
         <div class="search-panel">
           <div class="game-toggle" role="group" aria-label="Juego">
-            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg> Pokémon</button>
-            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m-15 0a2.246 2.246 0 0 0-.75 1.622v4.5c0 .621.504 1.125 1.125 1.125h14.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125m-14.25 0c.235-.083.487-.128.75-.128h13.5c.263 0 .515.045.75.128" /></svg> Magic</button>
+            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon game-ico game-ico-pk" viewBox="0 0 595.3 594.1" aria-hidden="true" focusable="false"><use href="#ico-pokeball"/></svg> Pokémon</button>
+            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon game-ico game-ico-pw" viewBox="0 0 17.838 32.002" aria-hidden="true" focusable="false"><use href="#ico-planeswalker"/></svg> Magic</button>
           </div>
           <div class="search-bar">
             <input type="text" id="search-input" class="search-input" placeholder="Busca una carta..." aria-label="Nombre de la carta" enterkeyhint="search"
@@ -294,8 +309,8 @@
 
         <div id="deck-editor-section" style="display:flex; flex-direction:column; gap:20px;">
           <div class="game-toggle" role="group" aria-label="Juego del mazo">
-            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" /></svg> Pokémon</button>
-            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m-15 0a2.246 2.246 0 0 0-.75 1.622v4.5c0 .621.504 1.125 1.125 1.125h14.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125m-14.25 0c.235-.083.487-.128.75-.128h13.5c.263 0 .515.045.75.128" /></svg> Magic</button>
+            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon game-ico game-ico-pk" viewBox="0 0 595.3 594.1" aria-hidden="true" focusable="false"><use href="#ico-pokeball"/></svg> Pokémon</button>
+            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon game-ico game-ico-pw" viewBox="0 0 17.838 32.002" aria-hidden="true" focusable="false"><use href="#ico-planeswalker"/></svg> Magic</button>
           </div>
           <div class="deck-name-row" style="flex-direction:column; gap:10px;">
             <input type="text" class="deck-name-input" id="deck-name-input" placeholder="Nombre de tu mazo..." aria-label="Nombre del mazo">
@@ -362,7 +377,7 @@
     <nav class="main-nav" role="navigation" aria-label="Principal">
       <div class="sidebar-header-desktop">
         <div class="brand-logo-badge">
-          <img src="img/kardlume-dark.svg" alt="" class="brand-logo-img" width="42" height="44">
+          <img src="img/kardlume-dark.svg" alt="" class="brand-logo-img" width="61" height="64">
         </div>
         <div class="brand-text">
           <span class="logo">Kard<span class="logo-accent">Lume</span></span>
