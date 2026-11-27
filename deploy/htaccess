@@ -1,0 +1,49 @@
+# Kard Lume · configuración para Apache (se copia como .htaccess en la raíz de dist/)
+# Requiere mod_rewrite, mod_headers, mod_mime y mod_expires (habituales en hostings compartidos).
+
+Options -Indexes
+DirectoryIndex index.html
+
+# ── Forzar HTTPS (la cámara, el service worker y Android exigen HTTPS) ──
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ── Tipos MIME ──
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType application/json .json
+  AddType image/svg+xml .svg
+</IfModule>
+
+# ── Cabeceras de seguridad ──
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=()"
+  # Misma política que la <meta> de index.html + frame-ancestors (solo funciona como cabecera)
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://api.tcgdex.net https://api.scryfall.com https://api.pokemontcg.io https://rgyoatclhoblugdjekwl.supabase.co wss://rgyoatclhoblugdjekwl.supabase.co https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://api.frankfurter.dev https://api.frankfurter.app data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+  # Siempre fresco: el HTML, el service worker y el manifiesto (si no, los usuarios no ven las versiones nuevas)
+  <FilesMatch "(\.html|sw\.js|\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # Digital Asset Links: Android lo pide sin redirecciones y como JSON
+  <FilesMatch "assetlinks\.json$">
+    Header set Content-Type "application/json"
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+</IfModule>
+
+# ── Caché para CSS, JS e imágenes (el service worker ya pide red primero) ──
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 day"
+  ExpiresByType application/javascript "access plus 1 day"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>

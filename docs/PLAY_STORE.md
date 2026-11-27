@@ -29,10 +29,7 @@ Kard Lume es una web (HTML/CSS/JS sin compilar). Para Android se empaqueta como 
 
 El inicio de sesión funciona con un enlace por email. Con el servidor de correo de Supabase, el proyecto **solo puede enviar 2 correos por hora en total**, para todos los usuarios. Para una app pública es imprescindible configurar un SMTP propio. Además, sin él Supabase no deja cambiar los textos del correo (siguen en inglés).
 
-1. Crea una cuenta en un proveedor de correo transaccional (por ejemplo Resend o Brevo; ambos tienen plan gratuito) y verifica un dominio tuyo para el remitente.
-2. En Supabase → **Authentication → Emails → SMTP Settings**, activa *Custom SMTP* y pega los datos del proveedor.
-3. En **Authentication → Rate Limits**, sube el límite de correos por hora.
-4. En **Authentication → Emails → Templates**, cambia *Magic Link* y *Confirm signup* al español con la marca Kard Lume.
+Está preparado para aplicarse en un solo paso con `scripts/supabase-go-live.sh` (SMTP, límite de correos, plantillas en español de `supabase/templates/`, dominio y apertura de registros). Ver `docs/DESPLIEGUE.md`.
 
 ## Riesgo de rechazo: marcas de terceros
 
@@ -51,8 +48,8 @@ No soy abogado: si piensas monetizar la app, consulta con alguien especializado 
 - **Cuentas personales nuevas**: según la política que conozco, antes de publicar en producción hay que hacer una **prueba cerrada con al menos 12 testers durante 14 días seguidos**. Compruébalo en Play Console: Google cambia estas reglas.
 
 ### 2. Generar el paquete Android con PWABuilder
-1. Publica la web (GitHub Pages ya lo hace al fusionar a `main`).
-2. Entra en **pwabuilder.com**, pega `https://jsgarcia87.github.io/SnapTCG/` y pulsa **Package for stores → Android**.
+1. Publica la web en tu servidor (ver `docs/DESPLIEGUE.md`).
+2. Entra en **pwabuilder.com**, pega la URL de tu dominio (p. ej. `https://kardlume.example.com/`) y pulsa **Package for stores → Android**.
 3. Opciones recomendadas:
    - **Package ID**: `es.sangarstudio.kardlume` (no se puede cambiar nunca después de publicar).
    - **App name**: `Kard Lume` · **Launcher name**: `Kard Lume`.
@@ -62,12 +59,9 @@ No soy abogado: si piensas monetizar la app, consulta con alguien especializado 
 ### 3. Verificar el dominio (Digital Asset Links)
 Sin esto la app funciona, pero muestra una barra de navegador arriba, como si fuera una pestaña de Chrome.
 
-El archivo debe estar en la **raíz del dominio**: `https://jsgarcia87.github.io/.well-known/assetlinks.json`. No vale dentro de `/SnapTCG/`. Opciones:
+El archivo debe estar en la **raíz del dominio**: `https://TU-DOMINIO/.well-known/assetlinks.json`. Si la app vive en un subdirectorio (`/kardlume/`), el archivo sigue yendo en la raíz del dominio. Con el servidor propio basta con rellenar `deploy/assetlinks.json`: `scripts/build-dist.sh` lo copia a `dist/.well-known/` en cuanto deja de tener huellas de ejemplo.
 
-- **A. Repositorio de usuario de GitHub Pages**: crea un repositorio público llamado exactamente `jsgarcia87.github.io` con dos archivos: `.nojekyll` (vacío) y `.well-known/assetlinks.json`. Activa Pages en ese repositorio.
-- **B. Dominio propio** (por ejemplo `kardlume.app` o `kardlume.sangar.studio`) apuntando a GitHub Pages. Queda mejor y no depende del nombre de usuario de GitHub. Si cambias de dominio, cambia también la URL de PWABuilder y la de redirección del inicio de sesión en Supabase.
-
-Usa el `assetlinks.json` que te da PWABuilder. Si activas la **firma de apps de Google Play** (recomendado), añade también la huella SHA-256 que aparece en Play Console → *Integridad de la app → Firma de apps*. Hay una plantilla en `docs/assetlinks.example.json`.
+Usa el `assetlinks.json` que te da PWABuilder. Si activas la **firma de apps de Google Play** (recomendado), añade también la huella SHA-256 que aparece en Play Console → *Integridad de la app → Firma de apps*. La plantilla está en `deploy/assetlinks.json`.
 
 ### 4. Ficha de Play Store
 
@@ -103,7 +97,7 @@ Usa el `assetlinks.json` que te da PWABuilder. Si activas la **firma de apps de 
 
 **Categoría**: Herramientas (alternativa: Estilo de vida).
 **Recursos gráficos**: icono `store/play-icon-512.png`, gráfico destacado `store/feature-graphic-1024x500.png`, y entre 2 y 8 capturas de móvil hechas con datos reales.
-**Política de privacidad**: `https://jsgarcia87.github.io/SnapTCG/privacidad.html` (o la de tu dominio).
+**Política de privacidad**: `https://TU-DOMINIO/privacidad.html`.
 
 ### 5. Seguridad de los datos (formulario de Play Console)
 - ¿Recoge o comparte datos? **Sí**.
@@ -112,7 +106,7 @@ Usa el `assetlinks.json` que te da PWABuilder. Si activas la **firma de apps de 
 - **Fotos y vídeos**: **no** se recogen (se procesan en el dispositivo y no se envían).
 - ¿Cifrado en tránsito? **Sí** (HTTPS).
 - ¿Los usuarios pueden pedir que se borren sus datos? **Sí**.
-- **Enlace para borrar la cuenta** (obligatorio): `https://jsgarcia87.github.io/SnapTCG/borrar-cuenta.html` (o la de tu dominio).
+- **Enlace para borrar la cuenta** (obligatorio): `https://TU-DOMINIO/borrar-cuenta.html`.
 - Ubicación, contactos, identificadores de publicidad, analítica: **no**.
 
 ### 6. Clasificación de contenido

@@ -37,7 +37,9 @@ SnapTCG/
 ├── sw.js              # Service worker: red primero + caché de respaldo (sube CACHE en cada versión)
 ├── privacidad.html    # Política de privacidad (obligatoria en Google Play)
 ├── borrar-cuenta.html # Instrucciones de borrado de cuenta (enlace obligatorio en Google Play)
-├── docs/              # PLAY_STORE.md (guía de publicación) y assetlinks.example.json
+├── docs/              # PLAY_STORE.md (Google Play) y DESPLIEGUE.md (lanzamiento en servidor propio)
+├── deploy/            # htaccess (Apache), nginx.conf y plantilla assetlinks.json
+├── dist/              # (ignorado) salida de scripts/build-dist.sh: lo que se sube al servidor
 ├── store/             # Icono 512 y gráfico destacado 1024×500 para la ficha de Play
 ├── img/
 │   ├── kardlume-dark.svg   # Logo oficial (fondos claros). Úsalo tal cual

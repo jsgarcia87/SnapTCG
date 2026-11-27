@@ -4,6 +4,18 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.18.1] - 2026-11-28
+
+### Listo para el servidor propio (sin aplicar)
+- `docs/DESPLIEGUE.md`: lista de lanzamiento paso a paso.
+- `scripts/build-dist.sh`: genera `dist/` solo con los archivos públicos; avisa si falta el email de contacto o las huellas de `assetlinks.json`.
+- `deploy/htaccess` (Apache) y `deploy/nginx.conf`: HTTPS obligatorio, cabeceras de seguridad (CSP con `frame-ancestors`, HSTS, permisos de cámara), MIME del manifiesto y sin caché para HTML, service worker y manifiesto.
+- `deploy/assetlinks.json`: plantilla de Digital Asset Links (antes en `docs/`).
+- `supabase/templates/`: correos en español con la marca, y `scripts/supabase-go-live.sh`, que aplica dominio, SMTP, límite de correos, plantillas y apertura de registros en un solo paso (con modo de prueba).
+- Registros de Supabase **cerrados** de nuevo hasta el lanzamiento.
+
+---
+
 ## [3.18.0] - 2026-11-28
 
 ### Cuentas para todos
