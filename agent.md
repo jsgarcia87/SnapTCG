@@ -1,15 +1,15 @@
-# Guía del Agente — SnapTCG (CardDex)
+# Guía del Agente — SnapTCG (Kard Lume)
 
-Este documento sirve como manual de referencia técnico, arquitectónico y operativo para cualquier **Agente de Inteligencia Artificial** o desarrollador que trabaje, mantenga o expanda el repositorio **SnapTCG** (comercialmente **CardDex**).
+Este documento sirve como manual de referencia técnico, arquitectónico y operativo para cualquier **Agente de Inteligencia Artificial** o desarrollador que trabaje, mantenga o expanda el repositorio **SnapTCG** (comercialmente **Kard Lume**).
 
 ---
 
 ## 1. Visión General del Proyecto
 
-- **Nombre del Producto:** CardDex — SnapTCG Premium
-- **Versión Actual:** 3.14.0
+- **Nombre del Producto:** Kard Lume (repositorio SnapTCG)
+- **Versión Actual:** 3.15.0
 - **Autor / Estudio:** Sangar Studio
-- **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (CardDex Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
+- **Propósito:** Herramienta web móvil y de escritorio (multi-dispositivo) de alto rendimiento para jugadores y coleccionistas de Trading Card Games (TCG). Permite escanear cartas físicas mediante la cámara con OCR continuo multilingüe (Chino Simplificado y Tradicional, Japonés, Coreano, Español, Inglés), consultar precios en tiempo real desde APIs públicas, gestionar colecciones con estética inspirada en el diseño oficial de Figma (Kard Lume Pro) y Collectr, y construir mazos competitivos con validación estricta de reglas de formato (Pokémon Standard, Magic Standard y Commander).
 - **Filosofía Técnica:** **Vanilla Web Stack puro (Zero-Build)**. Sin compiladores, sin bundlers pesados, sin TypeScript o frameworks SPA como React/Vue. Todo se ejecuta directamente en el navegador con HTML5 semántico, CSS3 moderno con variables y JavaScript modular (ES6+).
 
 ---
@@ -18,7 +18,7 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 
 | Capa | Tecnología / Servicio | Descripción |
 |---|---|---|
-| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible basada en el diseño oficial de Figma (CardDex Pro) y Collectr: lienzo limpio (`#F8FAFC`), tarjetas de alto contraste en Obsidian (`#172231`) y blanco (`#FFFFFF`), acento Verde Lima Eléctrico (`#AFF33F`), cabecera con atajo `⌘K`, navegación dual (sidebar lateral en escritorio / barra inferior en móvil), marcos coleccionables con brillo holográfico (`.card-holo-sheen`) y shell responsive hasta 1440px+. |
+| **Frontend** | HTML5 + CSS3 (Variables, Grid, Flexbox) | Interfaz accesible basada en el diseño oficial de Figma (Kard Lume Pro) y Collectr: lienzo limpio (`#F8FAFC`), tarjetas de alto contraste en Obsidian (`#172231`) y blanco (`#FFFFFF`), acento Verde Lima Eléctrico (`#AFF33F`), cabecera con atajo `⌘K`, navegación dual (sidebar lateral en escritorio / barra inferior en móvil), marcos coleccionables con brillo holográfico (`.card-holo-sheen`) y shell responsive hasta 1440px+. |
 | **Lógica** | JavaScript Vanilla (ES6+) | Módulos desacoplados en el ámbito global mediante etiquetas `<script>`. |
 | **OCR / Visión** | [Tesseract.js v5](https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js) | Worker OCR en el navegador configurado en modo adaptativo con modelos multilingües (chi_sim, chi_tra, jpn, kor, spa, eng). |
 | **Tipografía** | Google Fonts | `Inter` (UI/textos principales), `DM Sans` (cuerpo alternativo) y `Cinzel` (títulos/display). |
@@ -33,6 +33,11 @@ Este documento sirve como manual de referencia técnico, arquitectónico y opera
 ```bash
 SnapTCG/
 ├── index.html         # Shell principal de la app, navegación, barra de filtros Collectr, modales y carga de scripts
+├── img/
+│   ├── kardlume-dark.svg   # Logo oficial (fondos claros). Úsalo tal cual
+│   ├── kardlume-light.svg  # Misma marca en Bright Snow (#F9F8F8) para fondos oscuros
+│   ├── favicon.svg         # Marca en Green Yellow sobre Prussian Blue
+│   └── apple-touch-icon.png
 ├── css/
 │   ├── style.css      # Base: tokens OLED, componentes Collectr (filtros, tarjetas 63/88, brillo holo, pickers, portfolio)
 │   └── design.css     # Capa v3 (se carga DESPUÉS): layout responsive, navegación, Inicio, detalle de carta, accesibilidad
@@ -197,6 +202,15 @@ SnapTCG/
    - `seleccionarCarta(index)` y `añadirAHistorial(carta)`: Despliega el modal y actualiza el historial de escaneos de la sesión.
    - `closeModal()`, `volverALista()`, `exportarLista()`, `mostrarCargando(texto)`, `mostrarError(msg)`, `resetUI()`: Utilidades de UI y modales.
 
+
+---
+
+## Marca: Kard Lume
+
+- **Nombre**: Kard Lume (en la UI: `Kard` + `Lume` con acento). El repositorio y las claves de `localStorage` (`snaptcg_*`) conservan el nombre antiguo a propósito: renombrarlas borraría los datos de los usuarios.
+- **Paleta**: Green Yellow `#AFF33F` (acento principal y CTA), Prussian Blue `#0F172A` (superficies oscuras y texto), Sweet Salmon `#EB9486` (acento de Magic), Lavender Grey `#7E7F9A` (bordes y elementos secundarios), Bright Snow `#F9F8F8` (lienzo). Para texto secundario sobre fondo claro se usa `#5B5C78` (Lavender Grey oscurecido) porque `#7E7F9A` no alcanza contraste AA.
+- **Logo**: `img/kardlume-dark.svg` sobre fondos claros y `img/kardlume-light.svg` sobre oscuros. Se muestra junto al texto «KardLume», porque a menos de ~80 px de alto las letras del logo no se leen.
+
 ---
 
 ## 4. Modelos de Datos Unificados
@@ -267,7 +281,7 @@ interface Deck {
 
 El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.dark` y `@theme inline` en [`css/style.css`](css/style.css) (con extensiones en [`css/design.css`](css/design.css)):
 
-### Tokens Principales del Tema (Figma CardDex Pro & Collectr):
+### Tokens Principales del Tema (Figma Kard Lume Pro & Collectr):
 - **Fondo base (`--background` / `--bg-color`):** `#F8FAFC` (lienzo blanco roto de alta legibilidad).
 - **Superficies y Tarjetas Estándar (`--card` / `--surface-color`):** `#FFFFFF` (blanco puro con bordes de 1px `#E2E8F0`).
 - **Superficies Hero / Contraste (`--surface-dark` / `--sidebar-bg`):** `#172231` (Obsidian oscuro / Midnight Slate, RGB `23, 34, 49`).
@@ -297,11 +311,11 @@ El sistema se apoya en una paleta moderna de tokens CSS definidos en `:root`, `.
 
 ### Componentes de UI de Figma & Collectr:
 - **Cabecera de Escritorio (`.app-header`):**
-  - Brand badge con logotipo geométrico CardDex.
+  - Brand badge con logotipo geométrico Kard Lume.
   - Barra de búsqueda interactiva con placeholder descriptivo e indicador visual de atajo de teclado `⌘K` (`Ctrl+K`).
   - Selector de juego (Pokémon / Magic) y botón verde lima de acción rápida `+ Añadir carta`.
 - **Navegación Lateral Izquierda (`.main-nav` en escritorio):**
-  - Logo/Header superior `CardDex Pro`.
+  - Logo/Header superior `Kard Lume Pro`.
   - Enlaces de navegación con icono SVG, etiqueta y píldora indicadora verde lima cuando están activos.
   - Tarjeta promocional de escáner en obsidian (`#172231`) con retícula de cámara.
   - Tarjeta de usuario con avatar y correo.

@@ -1,5 +1,5 @@
 /**
- * home.js — Pantalla de Inicio estilo Figma (CardDex Dashboard)
+ * home.js — Pantalla de Inicio estilo Figma (Kard Lume Dashboard)
  * Author: Sangar Studio
  * Version: 3.7.0
  * Depende de: cloud.js (collection, loadValueHistory, valueSeries), charts.js, prices.js, deckbuilder.js (allDecks)

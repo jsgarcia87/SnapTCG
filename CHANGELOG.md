@@ -4,6 +4,16 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.15.0] - 2026-11-27
+
+### Marca: Kard Lume
+- La aplicación pasa a llamarse **Kard Lume**. Nuevo logo (`img/`) en la cabecera, la barra lateral y como favicon / icono de iOS.
+- Nueva paleta: Green Yellow `#AFF33F`, Prussian Blue `#0F172A`, Sweet Salmon `#EB9486` (acento de Magic, antes violeta), Lavender Grey `#7E7F9A` y Bright Snow `#F9F8F8`. El texto secundario usa una versión más oscura de Lavender Grey para mantener el contraste AA.
+- Título, metadatos (`theme-color`, Open Graph), textos de la interfaz, nombre del CSV exportado (`kardlume-coleccion-AAAA-MM-DD.csv`) y documentación actualizados.
+- Se mantienen las claves de `localStorage` (`snaptcg_*`) y el nombre del repositorio para no perder datos ni romper enlaces.
+
+---
+
 ## [3.14.0] - 2026-11-21
 
 ### Privacidad
