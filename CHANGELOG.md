@@ -4,6 +4,13 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.16.0] - 2026-11-27
+
+### Selectores de juego
+- Los selectores Pokémon / Magic (cabecera, buscador y editor de mazos) usan ahora la **Poké Ball** y el **símbolo de planeswalker** en lugar de iconos genéricos. Van como `<symbol>` en `index.html`; los originales están en `img/icons/`.
+
+---
+
 ## [3.15.1] - 2026-11-27
 
 ### Ajustes de marca
