@@ -2,7 +2,7 @@
   Project: Kard Lume
   Kard Lume Design System 
   Author: Sangar Studio
-  Version: 3.17.0
+  Version: 3.18.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
@@ -20,7 +20,7 @@
   <meta property="og:title" content="Kard Lume">
   <meta property="og:description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering.">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="3.17.0">
+  <meta name="version" content="3.18.0">
   <title>Kard Lume — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -113,10 +113,6 @@
       <!-- Tab: Buscar (buscador, escáner y resultados) -->
       <section id="tab-scanner" class="tab-section" aria-labelledby="main-tab-scanner">
         <div class="search-panel">
-          <div class="game-toggle" role="group" aria-label="Juego">
-            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon game-ico game-ico-pk" viewBox="0 0 595.3 594.1" aria-hidden="true" focusable="false"><use href="#ico-pokeball"/></svg> Pokémon</button>
-            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon game-ico game-ico-pw" viewBox="0 0 17.838 32.002" aria-hidden="true" focusable="false"><use href="#ico-planeswalker"/></svg> Magic</button>
-          </div>
           <div class="search-bar">
             <input type="text" id="search-input" class="search-input" placeholder="Busca una carta..." aria-label="Nombre de la carta" enterkeyhint="search"
                    onkeypress="if(event.key==='Enter') ejecutarBusqueda()">
@@ -309,10 +305,6 @@
         </div>
 
         <div id="deck-editor-section" style="display:flex; flex-direction:column; gap:20px;">
-          <div class="game-toggle" role="group" aria-label="Juego del mazo">
-            <button class="gt-btn active-pokemon" data-game="pokemon" onclick="setGame('pokemon')" aria-pressed="true"><svg class="btn-icon game-ico game-ico-pk" viewBox="0 0 595.3 594.1" aria-hidden="true" focusable="false"><use href="#ico-pokeball"/></svg> Pokémon</button>
-            <button class="gt-btn" data-game="magic" onclick="setGame('magic')" aria-pressed="false"><svg class="btn-icon game-ico game-ico-pw" viewBox="0 0 17.838 32.002" aria-hidden="true" focusable="false"><use href="#ico-planeswalker"/></svg> Magic</button>
-          </div>
           <div class="deck-name-row" style="flex-direction:column; gap:10px;">
             <input type="text" class="deck-name-input" id="deck-name-input" placeholder="Nombre de tu mazo..." aria-label="Nombre del mazo">
             <select id="deck-format-selector" class="gt-btn" style="width:100%; justify-content:flex-start; border:1px solid var(--border-color);" onchange="updateFormat()">
@@ -548,6 +540,13 @@
   </div>
 
   <!-- External scripts initialization -->
+
+  <!-- Acceso directo al escáner, siempre visible en móvil -->
+  <button type="button" class="scan-fab" id="scan-fab" onclick="irAEscanear()" aria-label="Escanear una carta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
+    <span>Escanear</span>
+  </button>
+
   <script src="https://cdn.jsdelivr.net/npm/@tcgdex/sdk@2.9.0/dist/tcgdex.browser.global.min.js"
           integrity="sha384-arzRAWvry9P67MNvQCeuoHjizNFya+DO0f6Q0zZ2LkpWjkRuMHk/PHEfFyE6lRxo" crossorigin="anonymous"></script>
   <script src="js/icons.js"></script>

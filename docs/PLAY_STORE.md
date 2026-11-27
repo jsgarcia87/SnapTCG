@@ -15,14 +15,24 @@ Kard Lume es una web (HTML/CSS/JS sin compilar). Para Android se empaqueta como 
 | Gráfico destacado 1024×500 (`store/feature-graphic-1024x500.png`) | Hecho |
 | Capturas de pantalla | **Pendiente**: hazlas en tu móvil con datos reales (mínimo 2) |
 | Verificación de dominio (Digital Asset Links) | **Pendiente**: ver el paso 3 |
-| Modelo de cuentas apto para usuarios públicos | **Pendiente**: ver «Bloqueante» |
+| Cuentas para todos, colección privada por defecto, borrado de cuenta en la app y en la web | Hecho (v3.18) |
+| Servidor de correo propio (SMTP) | **Pendiente**: ver «Bloqueante» |
 
-## Bloqueante: hoy la app solo sirve a su dueño
+## Modelo de cuentas (hecho en v3.18)
 
-Ahora mismo, quien instala la app ve **tu** colección en solo lectura y no puede guardar la suya: el inicio de sesión es solo para el dueño (los registros están desactivados en Supabase) y sin sesión no se puede añadir nada a la colección. Para una app pública hay que cambiarlo antes de publicar. Hay dos caminos:
+- **Sin sesión**: cada usuario guarda colección, seguimiento y mazos en su dispositivo.
+- **Con cuenta** (cualquiera puede crearla con su email, sin contraseña): todo pasa a la nube. Al entrar, lo que había en el dispositivo se suma a la cuenta.
+- **Privacidad**: la colección es **privada por defecto**. El usuario puede activar «Colección pública» y compartir el enlace `?u=<id>#coleccion`. El precio de compra nunca es público.
+- **Borrado de cuenta** (obligatorio en Play): desde la app (Colección → Tu cuenta → Borrar mi cuenta) y la página web `borrar-cuenta.html`. Borra el usuario y todos sus datos en cascada.
 
-1. **Colección local para todos (recomendado para la primera versión).** Sin sesión, cada usuario guarda su colección en su dispositivo, como en el modo demo. Tu colección pública solo se ve con tu enlace. No hace falta abrir registros ni implementar borrado de cuentas.
-2. **Cuentas para todos.** Abrir registros en Supabase, que cada usuario tenga su colección en la nube, y que la colección deje de ser pública por defecto. Google Play exige entonces **borrar la cuenta desde la app y desde una web**. Es más trabajo y más responsabilidad sobre datos personales.
+## Bloqueante: servidor de correo propio (SMTP)
+
+El inicio de sesión funciona con un enlace por email. Con el servidor de correo de Supabase, el proyecto **solo puede enviar 2 correos por hora en total**, para todos los usuarios. Para una app pública es imprescindible configurar un SMTP propio. Además, sin él Supabase no deja cambiar los textos del correo (siguen en inglés).
+
+1. Crea una cuenta en un proveedor de correo transaccional (por ejemplo Resend o Brevo; ambos tienen plan gratuito) y verifica un dominio tuyo para el remitente.
+2. En Supabase → **Authentication → Emails → SMTP Settings**, activa *Custom SMTP* y pega los datos del proveedor.
+3. En **Authentication → Rate Limits**, sube el límite de correos por hora.
+4. En **Authentication → Emails → Templates**, cambia *Magic Link* y *Confirm signup* al español con la marca Kard Lume.
 
 ## Riesgo de rechazo: marcas de terceros
 
@@ -96,25 +106,22 @@ Usa el `assetlinks.json` que te da PWABuilder. Si activas la **firma de apps de 
 **Política de privacidad**: `https://jsgarcia87.github.io/SnapTCG/privacidad.html` (o la de tu dominio).
 
 ### 5. Seguridad de los datos (formulario de Play Console)
-Respuestas para el modelo **«colección local para todos»** con inicio de sesión solo opcional:
-
-- ¿Recoge o comparte datos? **Sí** (solo si el usuario inicia sesión).
-- **Información personal → Dirección de correo**: recogida, no compartida, **opcional**, para *funcionalidad de la app* y *gestión de la cuenta*.
-- **Fotos y vídeos**: **no** se recogen (se procesan en el dispositivo y no se envían; Google no considera «recogido» lo que no sale del dispositivo).
-- Otros datos (contenido de la app: colección y mazos): recogidos solo con sesión, para funcionalidad; la colección es pública por diseño.
+- ¿Recoge o comparte datos? **Sí**.
+- **Información personal → Dirección de correo**: recogida, no compartida, **opcional** (solo si se crea una cuenta). Fines: *funcionalidad de la app* y *gestión de la cuenta*.
+- **Actividad en la app → Otro contenido generado por el usuario** (colección, mazos, seguimiento, precio de compra): recogido, **opcional**, para *funcionalidad de la app*. Solo se hace visible para otros si el usuario activa «Colección pública».
+- **Fotos y vídeos**: **no** se recogen (se procesan en el dispositivo y no se envían).
 - ¿Cifrado en tránsito? **Sí** (HTTPS).
-- ¿El usuario puede pedir que se borren sus datos? **Sí** (por email, según la política de privacidad).
+- ¿Los usuarios pueden pedir que se borren sus datos? **Sí**.
+- **Enlace para borrar la cuenta** (obligatorio): `https://jsgarcia87.github.io/SnapTCG/borrar-cuenta.html` (o la de tu dominio).
 - Ubicación, contactos, identificadores de publicidad, analítica: **no**.
 
-Si eliges «cuentas para todos», añade el **enlace web de borrado de cuenta**, que es obligatorio.
-
 ### 6. Clasificación de contenido
-Cuestionario IARC: sin violencia, sexo, lenguaje, drogas ni apuestas; sin compras ni anuncios; sin interacción entre usuarios. Debería salir **PEGI 3 / Para todos**. Si te pregunta si los usuarios pueden compartir contenido, la respuesta es sí: la colección pública se puede compartir por enlace.
+Cuestionario IARC: sin violencia, sexo, lenguaje, drogas ni apuestas; sin compras ni anuncios; sin interacción entre usuarios. Debería salir **PEGI 3 / Para todos**. Si te pregunta si los usuarios pueden compartir contenido, la respuesta es sí: quien lo active puede compartir su colección por enlace.
 
 ### 7. Probar antes de enviar
 1. Instala en tu móvil el `.apk` de PWABuilder.
 2. Comprueba que no aparece la barra de URL arriba (si aparece, el `assetlinks.json` no está bien).
-3. Prueba: escanear (Chrome pedirá permiso de cámara), buscar, añadir a la colección, iniciar sesión con el enlace del correo (debe volver a la app), modo sin conexión.
+3. Prueba: escanear (Chrome pedirá permiso de cámara), buscar, añadir a la colección sin cuenta, crear una cuenta con el enlace del correo (debe volver a la app y subir lo que tenías), activar y abrir el enlace público, borrar la cuenta, y el modo sin conexión.
 4. Sube el `.aab` a **Prueba cerrada**, invita a tus testers y espera los 14 días si tu cuenta lo requiere.
 
 ## Al publicar nuevas versiones de la web

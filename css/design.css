@@ -2225,3 +2225,36 @@ body.modal-open { overflow: hidden; }
 /* Aviso legal y privacidad */
 .app-legal { margin: 32px 0 8px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
 .app-legal a { color: var(--text-primary); font-weight: 700; text-underline-offset: 2px; }
+
+/* Botón flotante de escanear: siempre a mano en móvil (en escritorio está «Añadir carta» en la cabecera) */
+.scan-fab {
+  position: fixed; z-index: 110;
+  right: 16px; bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 16px);
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 56px; padding: 0 20px 0 16px; border: 0; border-radius: 999px;
+  background: #AFF33F; color: #0F172A; font: 800 15px/1 Inter, system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28); cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.scan-fab svg { width: 24px; height: 24px; }
+.scan-fab:active { transform: scale(0.96); }
+.scan-fab:focus-visible { outline: 3px solid #0F172A; outline-offset: 3px; }
+body[data-tab="scanner"] .scan-fab, body.scanner-open .scan-fab, body.modal-open .scan-fab { opacity: 0; pointer-events: none; transform: scale(0.8); }
+@media (min-width: 900px) { .scan-fab { display: none; } }
+@media (prefers-reduced-motion: reduce) { .scan-fab { transition: none; } }
+@media (max-width: 899px) { .app-content { padding-bottom: 88px; } }   /* que el botón flotante no tape el final */
+
+/* Panel de cuenta */
+.account-panel { background: var(--surface-color, #fff); border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; scroll-margin-top: 90px; }
+.account-title { margin: 0; font-weight: 800; font-size: 16px; }
+.account-panel .an-muted { margin: 0; }
+.account-panel .col-login { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-panel .col-login input { flex: 1 1 200px; min-width: 0; }
+.account-legal { font-size: 12px; }
+.account-legal a { color: inherit; }
+.account-toggle { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; padding: 10px 0; }
+.account-toggle input { width: 22px; height: 22px; margin-top: 2px; accent-color: #65A30D; flex: none; }
+.account-toggle small { color: var(--text-secondary); }
+.account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dab-btn.danger { color: #b91c1c; border-color: rgba(185, 28, 28, 0.35); }
+a.dab-btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

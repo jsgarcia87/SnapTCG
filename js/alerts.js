@@ -28,16 +28,14 @@ function loadLocalWatchlist() {
 }
 
 async function loadWatchlist() {
-  if (!cloudReady()) { watchlist = loadLocalWatchlist(); refreshWatchlistIfStale(); return; }
-  if (!sbSession) { watchlist = []; return; }   // el seguimiento es privado: solo con sesión
+  if (!useCloud()) { watchlist = viewingOther() ? [] : loadLocalWatchlist(); if (!viewingOther()) refreshWatchlistIfStale(); return; }
   const { data, error } = await sbClient.from("watchlist").select("card_id,card,below,above").eq("owner", sbSession.user.id);
   if (error) { console.error(error); watchlist = []; return; }
   watchlist = data.map(r => ({ id: r.card_id, card: r.card, below: r.below == null ? null : Number(r.below), above: r.above == null ? null : Number(r.above) }));
 }
 
 async function persistWatch(w, removed) {
-  if (!cloudReady()) { try { localStorage.setItem(WATCH_KEY, JSON.stringify(watchlist)); } catch { /* sin espacio */ } return; }
-  if (!sbSession) return;
+  if (!useCloud()) { try { localStorage.setItem(WATCH_KEY, JSON.stringify(watchlist)); } catch { /* sin espacio */ } return; }
   const owner = sbSession.user.id;
   const q = removed
     ? sbClient.from("watchlist").delete().eq("owner", owner).eq("card_id", w.id)
@@ -47,7 +45,19 @@ async function persistWatch(w, removed) {
   if (error) { console.error(error); showDeckToast("Error al guardar el seguimiento", "warn"); }
 }
 
-/** Modo demo: refresca los precios de las cartas seguidas si tienen más de 6 h (en la nube lo hace el job diario). */
+/** Al iniciar sesión: sube el seguimiento guardado en el dispositivo y lo borra de él. */
+async function uploadLocalWatchlist() {
+  const local = loadLocalWatchlist();
+  if (!local.length) return;
+  for (const l of local) {
+    if (watchlist.some(w => w.id === l.id)) continue;
+    watchlist.push(l);
+    await persistWatch(l, false);
+  }
+  try { localStorage.removeItem(WATCH_KEY); } catch { /* opcional */ }
+}
+
+/** Sin sesión: refresca los precios de las cartas seguidas si tienen más de 6 h (en la nube lo hace el job diario). */
 async function refreshWatchlistIfStale() {
   const viejas = watchlist.map(w => w.card).filter(c => !c.consultado || Date.now() - new Date(c.consultado).getTime() > 6 * 3600e3);
   if (!viejas.length) return;
@@ -66,7 +76,7 @@ function readTarget(id) {
 async function guardarSeguimiento() {
   const card = window._currentCard;
   if (!card) return;
-  if (cloudConfigured() && !sbSession) { showDeckToast("Inicia sesión para seguir cartas", "warn"); return; }
+  if (viewingOther()) return;
   const below = readTarget("alert-below"), above = readTarget("alert-above");
   if (below != null && above != null && below >= above) { showDeckToast("El precio de bajada debe ser menor que el de subida", "warn"); return; }
   let w = watchOf(card);

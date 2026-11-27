@@ -124,3 +124,72 @@ create policy "collection_cost_owner_all" on public.collection_cost
   for all to authenticated
   using (owner = auth.uid())
   with check (owner = auth.uid());
+
+-- ═════════ v3.18 · Cuentas para todos ═════════
+-- Cualquiera puede registrarse. La colección pasa a ser PRIVADA por defecto y solo es visible
+-- públicamente si su dueño lo activa en `profiles.public_collection`. Borrado de cuenta desde la app.
+
+create schema if not exists private;
+
+-- ───────── Perfil (por ahora solo la opción de colección pública) ─────────
+create table if not exists public.profiles (
+  id                uuid        primary key references auth.users(id) on delete cascade,
+  public_collection boolean     not null default false,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_owner_all" on public.profiles;
+create policy "profiles_owner_all" on public.profiles
+  for all to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
+
+drop policy if exists "profiles_public_read" on public.profiles;
+create policy "profiles_public_read" on public.profiles
+  for select using (public_collection);
+
+-- ¿Este dueño ha hecho pública su colección? (esquema privado: no se expone en la API)
+create or replace function private.is_public_collection(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce((select p.public_collection from public.profiles p where p.id = uid), false);
+$$;
+revoke all on function private.is_public_collection(uuid) from public;
+grant usage on schema private to anon, authenticated;
+grant execute on function private.is_public_collection(uuid) to anon, authenticated;
+
+-- ───────── Colección: el dueño siempre; los demás solo si es pública ─────────
+drop policy if exists "collection_public_read" on public.collection;
+drop policy if exists "collection_read" on public.collection;
+create policy "collection_read" on public.collection
+  for select using (owner = (select auth.uid()) or private.is_public_collection(owner));
+
+drop policy if exists "value_history_public_read" on public.collection_value_history;
+drop policy if exists "value_history_read" on public.collection_value_history;
+create policy "value_history_read" on public.collection_value_history
+  for select using (owner = (select auth.uid()) or private.is_public_collection(owner));
+
+-- ───────── Borrar mi cuenta (exigido por Google Play) ─────────
+-- Borra el usuario de auth; todas las tablas con owner → auth.users tienen ON DELETE CASCADE.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select auth.uid()) is null then
+    raise exception 'No hay sesión iniciada';
+  end if;
+  delete from auth.users where id = (select auth.uid());
+end;
+$$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

@@ -156,7 +156,7 @@ function staleBannerHtml() {
   const dias = Math.floor((Date.now() - Math.max(...fechas)) / 86400e3);
   if (dias < 2) return "";
   return `<div class="stale-banner" role="status"><strong>Precios de hace ${dias} días.</strong>
-    ${cloudConfigured() ? "El trabajo diario de precios puede haber fallado: revisa la pestaña Actions del repositorio." : "Pulsa «Actualizar precios» en Colección para refrescarlos."}</div>`;
+    ${useCloud() ? "Se actualizan cada día; si sigue así, puede que el servicio de precios esté fallando." : "Pulsa «Actualizar precios» en Colección para refrescarlos."}</div>`;
 }
 
 async function renderHome() {

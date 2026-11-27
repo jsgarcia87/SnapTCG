@@ -4,6 +4,24 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.18.0] - 2026-11-28
+
+### Cuentas para todos
+- **Cualquiera puede crear una cuenta** con su email (enlace sin contraseña). Sin sesión, la colección, el seguimiento y los mazos se guardan en el dispositivo; al iniciar sesión se suman a la cuenta (cantidades y coste medio) y se borran del dispositivo.
+- **Colección privada por defecto.** Nueva tabla `profiles` con la opción «Colección pública»; la colección y su histórico de valor solo son visibles para su dueño o, si la hace pública, para quien tenga el enlace `?u=<id>#coleccion`. Ya no hay una colección pública por defecto (se elimina `PUBLIC_OWNER_ID`).
+- **Borrar mi cuenta** desde la app (Colección → Tu cuenta) y página web `borrar-cuenta.html`, como exige Google Play. Función `delete_my_account()` (borra el usuario y todos sus datos en cascada; solo para usuarios autenticados).
+- Panel **Tu cuenta**: email, interruptor de colección pública, copiar/compartir enlace, cerrar sesión y borrar cuenta. El seguimiento de cartas ya funciona sin sesión.
+- Política de privacidad actualizada.
+
+### Interfaz
+- Quitados los selectores de juego repetidos en Buscar y en el editor de mazos (el de la cabecera está siempre visible).
+- **Botón flotante «Escanear»** siempre visible en móvil (se oculta en Buscar, con el escáner abierto o con una ficha abierta).
+
+### Base de datos
+- `supabase/schema.sql`: `profiles`, `private.is_public_collection()`, nuevas políticas de lectura de `collection` y `collection_value_history`, y `public.delete_my_account()`. Registros activados en Supabase.
+
+---
+
 ## [3.17.0] - 2026-11-27
 
 ### Preparación para Android / Google Play

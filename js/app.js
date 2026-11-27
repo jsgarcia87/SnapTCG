@@ -53,7 +53,7 @@ function setGame(juego) {
 //  NAVIGATION
 // ─────────────────────────────────────────────
 const TAB_HASH = { home: "", scanner: "#buscar", deck: "#mazos", collection: "#coleccion" };
-const HASH_TAB = { "#buscar": "scanner", "#mazos": "deck", "#coleccion": "collection", "#inicio": "home" };
+const HASH_TAB = { "#buscar": "scanner", "#mazos": "deck", "#coleccion": "collection", "#cuenta": "collection", "#inicio": "home" };
 
 function switchTab(tab) {
   ["home", "scanner", "deck", "collection"].forEach(t => {
@@ -63,6 +63,7 @@ function switchTab(tab) {
     if (t === tab) btn.setAttribute("aria-current", "page"); else btn.removeAttribute("aria-current");
   });
   if (tab !== "scanner") detenerEscaner();
+  document.body.dataset.tab = tab;   // el botón flotante de escanear se oculta en Buscar (allí ya está la cámara)
 
   if (tab === "home") renderHome();
   if (tab === "deck") { renderDeckStats(); renderDeckList(); }

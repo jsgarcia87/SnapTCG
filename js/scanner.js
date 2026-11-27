@@ -200,6 +200,7 @@ async function iniciarEscaner() {
   resetUI();
   document.getElementById('placeholder').style.display = 'none';
   document.getElementById('scanner-wrap').style.display = 'block';
+  document.body.classList.add('scanner-open');
 
   // Sincronizar píldoras con el idioma activo
   const activeLang = getActiveScannerLang();
@@ -297,6 +298,7 @@ function detenerEscaner() {
 
   const wrap = document.getElementById('scanner-wrap');
   if (wrap) wrap.style.display = 'none';
+  document.body.classList.remove('scanner-open');
 
   const results = document.getElementById('results-grid');
   const spinner = document.getElementById('spinner-wrap');

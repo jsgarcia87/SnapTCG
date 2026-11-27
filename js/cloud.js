@@ -2,8 +2,9 @@
  * cloud.js — Colección de cartas + sincronización con Supabase
  * Author: Sangar Studio
  * Version: 2.2.0
- * Modo demo (sin config): colección y mazos en localStorage.
- * Modo nube (config.js rellenado): el dueño inicia sesión y edita; los visitantes ven la colección en solo lectura.
+ * Sin sesión: la colección, el seguimiento y los mazos se guardan en este dispositivo (localStorage).
+ * Con sesión (cualquiera puede crear cuenta): todo se guarda en Supabase, privado por defecto.
+ * Colección pública: solo si su dueño la activa; se ve con el enlace ?u=<id>#coleccion (solo lectura).
  * Depende de: config.js, stats.js (esc), deckbuilder.js (allDecks, saveDecks, showDeckToast), app.js (juegoActual)
  */
 
@@ -24,8 +25,16 @@ const encKey = (k) => encodeURIComponent(k).replace(/'/g, "%27");
 const demoForced = () => new URLSearchParams(location.search).has("demo");
 const cloudConfigured = () => !!(SUPABASE_URL && SUPABASE_ANON_KEY) && !demoForced();
 const cloudReady = () => cloudConfigured() && !!sbClient;
-const canEditCollection = () => !cloudConfigured() || !!sbSession;
-const collectionOwner = () => (sbSession ? sbSession.user.id : PUBLIC_OWNER_ID);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Dueño de la colección pública que se está viendo por enlace (?u=…), o null. */
+const sharedOwner = () => { const u = new URLSearchParams(location.search).get("u"); return u && UUID_RE.test(u) ? u.toLowerCase() : null; };
+const viewingOther = () => !!sharedOwner() && (!sbSession || sbSession.user.id !== sharedOwner());
+/** Los datos propios van a la nube solo con sesión iniciada; si no, al dispositivo. */
+const useCloud = () => cloudReady() && !!sbSession && !viewingOther();
+const canEditCollection = () => !viewingOther();
+const collectionOwner = () => (viewingOther() ? sharedOwner() : sbSession ? sbSession.user.id : null);
+let profile = { public_collection: false };
+const initialHash = location.hash;   // #cuenta abre directamente el panel de cuenta (enlace de borrado de Play)
 
 /* ───────────── Inicialización ───────────── */
 
@@ -61,11 +70,16 @@ async function initCloud() {
   initFx().then(f => { if (f) { renderCollection(); if (typeof renderHome === "function") renderHome(); } });
   // Tras el enlace mágico Supabase devuelve los tokens en el fragmento (#access_token=...)
   if (location.hash.includes("access_token")) switchTab("collection");
+  if (initialHash === "#cuenta") { switchTab("collection"); document.getElementById("cuenta")?.scrollIntoView({ block: "start" }); }
 }
 
 async function onAuthChanged() {
-  if (sbSession && cloudReady()) await pullDecksFromCloud();
+  if (sbSession && cloudReady()) {
+    await loadProfile();
+    await pullDecksFromCloud();
+  }
   await loadCollection();
+  if (useCloud()) await uploadLocalData();
   if (typeof loadWatchlist === "function") await loadWatchlist();
   renderCollection();
   updateCollectionButton();
@@ -76,8 +90,9 @@ async function onAuthChanged() {
 function setSyncStatus() {
   const el = document.getElementById("sync-status");
   if (!el) return;
-  el.textContent = !cloudConfigured() ? "Modo demo · datos en este navegador"
-    : sbSession ? "Sesión iniciada · colección publicada" : "Colección pública · solo lectura";
+  el.textContent = viewingOther() ? "Colección compartida · solo lectura"
+    : useCloud() ? `Sesión iniciada · ${profile.public_collection ? "colección pública" : "colección privada"}`
+    : "Sin sesión · datos en este dispositivo";
 }
 
 /* ───────────── Colección: datos ───────────── */
@@ -89,7 +104,8 @@ function loadLocalCollection() {
 }
 
 async function loadCollection() {
-  if (!cloudReady()) { collection = loadLocalCollection(); return; }
+  if (viewingOther() && !cloudReady()) { collection = []; return; }
+  if (!viewingOther() && !useCloud()) { collection = loadLocalCollection(); return; }
   const owner = collectionOwner();
   if (!owner) { collection = []; return; }
   const { data, error } = await sbClient.from("collection").select("card_id,card,qty").eq("owner", owner);
@@ -105,7 +121,7 @@ async function loadCollection() {
 const publicCard = (card) => { const { coste, ...rest } = card; return rest; };
 
 async function loadCosts() {
-  if (!sbSession) return;   // solo el dueño ve sus costes
+  if (!useCloud()) return;   // solo el dueño ve sus costes
   const { data, error } = await sbClient.from("collection_cost").select("card_id,coste").eq("owner", sbSession.user.id);
   if (error) { console.error(error); return; }
   const byKey = new Map(data.map(r => [r.card_id, Number(r.coste)]));
@@ -113,7 +129,7 @@ async function loadCosts() {
 }
 
 async function persistCost(entry, removed) {
-  if (!cloudReady() || !sbSession) return;
+  if (!useCloud()) return;
   const owner = sbSession.user.id;
   const has = !removed && entry.card.coste != null && entry.card.coste >= 0;
   const { error } = has
@@ -124,7 +140,7 @@ async function persistCost(entry, removed) {
 
 /** Filas antiguas (card_id = id de carta): se reescriben con la clave id+variante+estado+idioma. */
 async function migrateLegacyKeys() {
-  if (!sbSession) return;
+  if (!useCloud()) return;
   const legacy = collection.filter(e => e.key === e.card.id && entryKey(e.card) !== e.key);
   for (const e of legacy) {
     const owner = sbSession.user.id, newKey = entryKey(e.card);
@@ -139,7 +155,7 @@ async function migrateLegacyKeys() {
 }
 
 async function persistCollectionEntry(entry, removed) {
-  if (!cloudReady()) {
+  if (!useCloud()) {
     localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection));
     return;
   }
@@ -157,7 +173,7 @@ async function persistCollectionEntry(entry, removed) {
 
 async function collectionAdd(card, variant = null, condition = null) {
   if (!canEditCollection()) return;
-  if (!cloudReady()) recordPriceSnapshot(card);
+  if (!useCloud()) recordPriceSnapshot(card);
 
   const chosenVariant = variant || card.selectedVariant || "normal";
   const chosenCondition = condition || card.condition || "NM";
@@ -215,8 +231,8 @@ async function collectionSetCost(key, coste) {
 }
 
 async function persistAllCollection() {
-  if (!cloudReady()) { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); return; }
-  if (!sbSession || collection.length === 0) return;
+  if (!useCloud()) { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); return; }
+  if (collection.length === 0) return;
   const owner = sbSession.user.id;
   const rows = collection.map(e => ({
     owner, card_id: e.key, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString()
@@ -272,7 +288,7 @@ async function loadCardHistory(card, days = 365) {
 
 /** Valor de la colección por día: [{day, eur, usd, cards}]. */
 async function loadValueHistory(days = 365) {
-  if (!cloudReady()) return localValueHistory(days);
+  if (!useCloud() && !(viewingOther() && cloudReady())) return localValueHistory(days);
   const owner = collectionOwner();
   if (!owner) return [];
   const { data, error } = await sbClient.from("collection_value_history").select("day,eur,usd,cards,eur_all")
@@ -311,7 +327,7 @@ function paintValueChart() {
   const { moneda, pts, all } = valueSeries(valueRows, valueRange);
   const useUsd = moneda === "usd";
   if (valueRows.length < 2 || pts.length < 2) {
-    box.innerHTML = `<div class="an-muted">${cloudReady()
+    box.innerHTML = `<div class="an-muted">${useCloud() || viewingOther()
       ? "El histórico se registra cada día (tarea diaria a las 10:30 UTC). Vuelve mañana para ver la evolución."
       : "Cada día que abras la app se guarda el valor de tu colección. Vuelve mañana para ver la evolución."}</div>`;
     return;
@@ -327,10 +343,11 @@ function paintValueChart() {
 async function renderValueChart() {
   const box = document.getElementById("value-chart");
   if (!box) return;
-  if (!cloudReady() && collection.length) recordValueSnapshot(collection);
+  if (!useCloud() && !viewingOther() && collection.length) recordValueSnapshot(collection);
   // En la nube el histórico lo escribe el trabajo diario: basta con pedirlo cada 5 min por dueño
-  const owner = cloudReady() ? collectionOwner() : "local";
-  if (cloudReady() && valueRows && valueRowsOwner === owner && Date.now() - valueRowsAt < 300e3) { paintValueChart(); return; }
+  const enNube = useCloud() || (viewingOther() && cloudReady());
+  const owner = enNube ? collectionOwner() : "local";
+  if (enNube && valueRows && valueRowsOwner === owner && Date.now() - valueRowsAt < 300e3) { paintValueChart(); return; }
   try { valueRows = await loadValueHistory(365); valueRowsOwner = owner; valueRowsAt = Date.now(); }
   catch (e) { console.error(e); box.innerHTML = `<div class="an-muted">No se pudo cargar el histórico.</div>`; return; }
   paintValueChart();
@@ -379,17 +396,118 @@ async function pullDecksFromCloud() {
 
 async function cloudLogin() {
   const input = document.getElementById("collection-email");
-  const email = input.value.trim();
-  if (!email) return;
+  const email = (input ? input.value : "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showDeckToast("Escribe un email válido", "warn"); return; }
+  if (!sbClient) { showDeckToast("No hay conexión con la nube", "warn"); return; }
+  const btn = document.getElementById("btn-login");
+  if (btn) btn.disabled = true;
+  // shouldCreateUser: si el email no tiene cuenta, se crea al confirmar el enlace
   const { error } = await sbClient.auth.signInWithOtp({
-    email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname }
+    email, options: { shouldCreateUser: true, emailRedirectTo: location.origin + location.pathname }
   });
-  showDeckToast(error ? "No se pudo enviar el enlace" : "Revisa tu correo: enlace enviado", error ? "warn" : "success");
-  if (error) console.error(error);
+  if (btn) btn.disabled = false;
+  if (error) {
+    console.error(error);
+    const limite = /rate|limit|too many/i.test(error.message || "");
+    showDeckToast(limite ? "Demasiados intentos: espera unos minutos y vuelve a probar" : "No se pudo enviar el enlace", "warn");
+    return;
+  }
+  showDeckToast("Revisa tu correo y abre el enlace en este dispositivo", "success");
 }
 
 async function cloudLogout() {
   await sbClient.auth.signOut();
+  profile = { public_collection: false };
+}
+
+/* ───────────── Cuenta: perfil, subida de datos locales y borrado ───────────── */
+
+async function loadProfile() {
+  profile = { public_collection: false };
+  const { data, error } = await sbClient.from("profiles").select("public_collection").eq("id", sbSession.user.id).maybeSingle();
+  if (error) { console.error(error); return; }
+  if (data) profile = data;
+}
+
+async function setPublicCollection(on) {
+  if (!useCloud()) return;
+  const { error } = await sbClient.from("profiles").upsert({ id: sbSession.user.id, public_collection: !!on, updated_at: new Date().toISOString() });
+  if (error) { console.error(error); showDeckToast("No se pudo cambiar la visibilidad", "warn"); renderCollection(); return; }
+  profile.public_collection = !!on;
+  setSyncStatus();
+  renderCollection();
+  showDeckToast(on ? "Tu colección es pública: cualquiera con el enlace puede verla" : "Tu colección vuelve a ser privada", "success");
+}
+
+/**
+ * Al iniciar sesión, lo que había en este dispositivo se suma a la cuenta (cantidades y coste medio)
+ * y se borra del dispositivo para no volver a subirlo dos veces.
+ */
+async function uploadLocalData() {
+  const local = loadLocalCollection();
+  let subidas = 0;
+  if (local.length) {
+    for (const l of local) {
+      const e = collection.find(x => x.key === l.key);
+      if (e) {
+        const cl = parseFloat(l.card.coste), ce = parseFloat(e.card.coste);
+        if (cl >= 0) e.card.coste = ce >= 0 ? (ce * e.qty + cl * l.qty) / (e.qty + l.qty) : cl;
+        e.qty += l.qty;
+      } else collection.push({ key: l.key, card: l.card, qty: l.qty });
+      subidas += l.qty;
+    }
+    const filas = collection.map(e => ({ owner: sbSession.user.id, card_id: e.key, game: e.card.tipo, qty: e.qty, card: publicCard(e.card), updated_at: new Date().toISOString() }));
+    const { error } = await sbClient.from("collection").upsert(filas, { onConflict: "owner,card_id" });
+    if (error) { console.error(error); showDeckToast("No se pudieron subir las cartas de este dispositivo", "warn"); await loadCollection(); return; }
+    for (const e of collection) await persistCost(e, false);
+    try { localStorage.removeItem(COLLECTION_KEY); } catch { /* opcional */ }
+  }
+  if (typeof uploadLocalWatchlist === "function") await uploadLocalWatchlist();
+  if (subidas) showDeckToast(`${subidas} carta(s) de este dispositivo añadidas a tu cuenta`, "success");
+}
+
+async function deleteAccount() {
+  if (!useCloud()) return;
+  const email = sbSession.user.email || "tu cuenta";
+  const ok = prompt(`Vas a borrar ${email} y TODOS sus datos en la nube: colección, mazos, seguimiento y precios de compra. No se puede deshacer.\n\nEscribe BORRAR para confirmar.`);
+  if ((ok || "").trim().toUpperCase() !== "BORRAR") { showDeckToast("No se ha borrado nada", "info"); return; }
+  const { error } = await sbClient.rpc("delete_my_account");
+  if (error) { console.error(error); showDeckToast("No se pudo borrar la cuenta. Escríbenos y lo haremos nosotros.", "warn"); return; }
+  try { await sbClient.auth.signOut(); } catch { /* la sesión ya no existe */ }
+  try { ["snaptcg_decks", WATCH_KEY, COLLECTION_KEY].forEach(k => localStorage.removeItem(k)); } catch { /* opcional */ }
+  if (typeof loadDecks === "function") { loadDecks(); if (typeof renderDeckLibrary === "function") renderDeckLibrary(); }
+  sbSession = null; profile = { public_collection: false };
+  await onAuthChanged();
+  showDeckToast("Cuenta y datos borrados", "success");
+}
+
+function accountPanelHtml() {
+  if (!cloudConfigured()) return "";
+  if (viewingOther()) {
+    return `<div class="account-panel" id="cuenta"><p class="account-title">Estás viendo una colección compartida</p>
+      <p class="an-muted">Es de otra persona y solo puedes verla.</p>
+      <a class="dab-btn" href="${esc(location.pathname)}#coleccion">Ir a mi colección</a></div>`;
+  }
+  if (!sbSession) {
+    return `<div class="account-panel" id="cuenta">
+      <p class="account-title">Guarda tu colección en la nube</p>
+      <p class="an-muted">Ahora tus cartas están solo en este dispositivo. Con una cuenta las tendrás en todos y podrás compartirlas. Te enviamos un enlace al correo: no hay contraseña.${collection.length ? " Las cartas de este dispositivo se añadirán a tu cuenta." : ""}</p>
+      <div class="col-login"><input type="email" id="collection-email" class="deck-name-input" placeholder="tu@email.com" autocomplete="email" inputmode="email"
+        onkeydown="if(event.key==='Enter') cloudLogin()">
+      <button class="dab-btn primary" id="btn-login" onclick="cloudLogin()">Entrar o crear cuenta</button></div>
+      <p class="an-muted account-legal">Al crear una cuenta aceptas la <a href="privacidad.html">política de privacidad</a>.</p></div>`;
+  }
+  const pub = !!profile.public_collection;
+  return `<div class="account-panel" id="cuenta">
+    <p class="account-title">Tu cuenta</p>
+    <p class="an-muted">${esc(sbSession.user.email || "")}</p>
+    <label class="account-toggle"><input type="checkbox" ${pub ? "checked" : ""} onchange="setPublicCollection(this.checked)">
+      <span><strong>Colección pública</strong><br><small>${pub ? "Cualquiera con el enlace puede ver tus cartas y su valor (no tu precio de compra)." : "Solo tú puedes verla."}</small></span></label>
+    <div class="account-actions">
+      ${pub ? `<button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Copiar enlace público</button>` : ""}
+      <button class="dab-btn" onclick="cloudLogout()">Cerrar sesión</button>
+      <button class="dab-btn danger" onclick="deleteAccount()">Borrar mi cuenta</button>
+    </div></div>`;
 }
 
 /* ───────────── UI ───────────── */
@@ -400,8 +518,10 @@ function updateCollectionButton() {
 }
 
 function copyCollectionLink() {
-  const url = location.href.split("#")[0].split("?")[0] + "#coleccion";
-  navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"));
+  if (!useCloud() || !profile.public_collection) { showDeckToast("Activa «Colección pública» en tu cuenta para compartirla", "info"); return; }
+  const url = `${location.origin}${location.pathname}?u=${sbSession.user.id}#coleccion`;
+  if (navigator.share) { navigator.share({ title: "Mi colección en Kard Lume", url }).catch(() => {}); return; }
+  navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"), () => prompt("Copia este enlace:", url));
 }
 
 function setCollectionFilter(key, value) {
@@ -415,16 +535,12 @@ function renderCollection() {
 
   const editable = canEditCollection();
   const mode = !cloudConfigured() ? "Modo demo · guardado solo en este navegador"
-    : sbSession ? "Sesión iniciada · los cambios se publican"
-    : "Colección pública · solo lectura";
-
-  let auth = "";
-  if (cloudConfigured()) {
-    auth = sbSession
-      ? `<button class="dab-btn" onclick="cloudLogout()">Cerrar sesión</button>`
-      : `<div class="col-login"><input type="email" id="collection-email" class="deck-name-input" placeholder="Tu email (solo el dueño)">
-         <button class="dab-btn primary" onclick="cloudLogin()">Entrar</button></div>`;
-  }
+    : viewingOther() ? "Colección compartida · solo lectura"
+    : useCloud() ? `Sesión iniciada · guardada en tu cuenta (${profile.public_collection ? "pública" : "privada"})`
+    : "Sin sesión · guardada solo en este dispositivo";
+  // conserva lo escrito en el email si se repinta mientras se escribe
+  const emailPrevio = document.getElementById("collection-email")?.value || "";
+  const auth = accountPanelHtml().replace('id="collection-email"', `id="collection-email" value="${esc(emailPrevio)}"`);
 
   const total = collection.reduce((s, e) => s + e.qty, 0);
   const value = sumValue(collection);
@@ -551,7 +667,7 @@ function renderCollection() {
     </div>
 
     <div class="col-tools">
-      <button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Compartir enlace público</button>
+      ${useCloud() && profile.public_collection ? `<button class="dab-btn" onclick="copyCollectionLink()">${HEROICONS.link} Compartir enlace público</button>` : ""}
       <button class="dab-btn" onclick="exportCollectionCsv()">Exportar CSV</button>
       ${editable ? `<button class="dab-btn" id="btn-import-csv" onclick="document.getElementById('csv-file').click()">Importar CSV</button>
       <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none" onchange="importCollectionCsv(this.files[0]); this.value=''">` : ""}
