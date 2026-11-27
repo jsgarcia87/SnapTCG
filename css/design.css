@@ -1,26 +1,26 @@
 /*
-   CardDex — Capa de Diseño Figma System v3.7.0
+   Kard Lume — Capa de Diseño Figma System v3.7.0
    Adaptado al diseño oficial de Figma (TCG-App-Design)
-   Estética: Clean Modern Dashboard con tarjetas blancas, tarjetas Obsidian de contraste (#172231)
+   Estética: Clean Modern Dashboard con tarjetas blancas, tarjetas Obsidian de contraste (#0f172a)
    y acento Verde Eléctrico Neón (#AFF33F).
 */
 
 :root {
   /* Paleta Figma Oficial */
-  --bg-color: #F8FAFC;
+  --bg-color: #f9f8f8;
   --surface-color: #FFFFFF;
-  --surface-dark: #172231;
-  --surface-dark-card: #172231;
+  --surface-dark: #0f172a;
+  --surface-dark-card: #0f172a;
   --surface-dark-border: rgba(255, 255, 255, 0.08);
-  --surface-hover: #F1F5F9;
-  --surface-active: #E2E8F0;
+  --surface-hover: #f1f0f2;
+  --surface-active: #e5e4ea;
   
   --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
+  --text-secondary: #5b5c78;
+  --text-muted: #7e7f9a;
 
-  --border-color: #E2E8F0;
-  --border-bright: #CBD5E1;
+  --border-color: #e5e4ea;
+  --border-bright: #d2d1da;
 
   /* Acentos de juego */
   --pk-accent: #AFF33F;
@@ -28,8 +28,8 @@
   --pk-accent-hover: #9AE828;
   --pk-accent-dark: #0F172A;
 
-  --mtg-accent: #8B5CF6;
-  --mtg-accent-rgb: 139, 92, 246;
+  --mtg-accent: #eb9486;
+  --mtg-accent-rgb: 235, 148, 134;
 
   --accent-color: var(--pk-accent);
   --accent-rgb: var(--pk-accent-rgb);
@@ -128,6 +128,11 @@ body.modal-open { overflow: hidden; }
   height: 100%;
 }
 
+/* Logo Kard Lume: marca casi cuadrada, sin recortar */
+.brand-logo-badge { width: auto; height: auto; border-radius: 0; overflow: visible; }
+.brand-logo-img { display: block; height: 44px; width: auto; }
+@media (max-width: 480px) { .brand-logo-img { height: 38px; } }
+
 .brand-text .logo {
   font-size: 20px;
   font-weight: 800;
@@ -154,7 +159,7 @@ body.modal-open { overflow: hidden; }
   display: none;
   align-items: center;
   gap: 10px;
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 8px 16px;
@@ -423,7 +428,7 @@ body.modal-open { overflow: hidden; }
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #94A3B8;
+  color: #7e7f9a;
 }
 
 .mcl-label {
@@ -456,7 +461,7 @@ body.modal-open { overflow: hidden; }
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  background: #F1F5F9;
+  background: #f1f0f2;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
 }
@@ -483,7 +488,7 @@ body.modal-open { overflow: hidden; }
 
 .mcd-meta {
   font-size: 12px;
-  color: #94A3B8;
+  color: #7e7f9a;
   margin-bottom: 18px;
 }
 
@@ -510,7 +515,7 @@ body.modal-open { overflow: hidden; }
 .mcl-multi-progress {
   height: 8px;
   border-radius: var(--radius-pill);
-  background: #F1F5F9;
+  background: #f1f0f2;
   display: flex;
   overflow: hidden;
   margin-bottom: 12px;
@@ -524,7 +529,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .seg-lime { background: #AFF33F; }
-.seg-purple { background: #8B5CF6; }
+.seg-purple { background: #eb9486; }
 .seg-orange { background: #F59E0B; }
 
 .mcl-legend {
@@ -549,7 +554,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .dot-lime { background: #65A30D; }
-.dot-purple { background: #8B5CF6; }
+.dot-purple { background: #eb9486; }
 .dot-orange { background: #F59E0B; }
 
 .mcl-spark {
@@ -634,7 +639,7 @@ body.modal-open { overflow: hidden; }
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid #f1f0f2;
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -655,7 +660,7 @@ body.modal-open { overflow: hidden; }
   height: 52px;
   border-radius: 6px;
   overflow: hidden;
-  background: #F1F5F9;
+  background: #f1f0f2;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
@@ -693,7 +698,7 @@ body.modal-open { overflow: hidden; }
 .mover-perf-bar {
   width: 50px;
   height: 6px;
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-radius: var(--radius-pill);
   overflow: hidden;
   flex-shrink: 0;
@@ -724,7 +729,7 @@ body.modal-open { overflow: hidden; }
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   display: flex;
@@ -764,7 +769,7 @@ body.modal-open { overflow: hidden; }
   overflow: hidden;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  background: #172231;
+  background: #0f172a;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -826,7 +831,7 @@ body.modal-open { overflow: hidden; }
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
-  background: #F1F5F9;
+  background: #f1f0f2;
   padding: 2px 8px;
   border-radius: var(--radius-pill);
 }
@@ -834,7 +839,7 @@ body.modal-open { overflow: hidden; }
 .adw-prog-track {
   height: 6px;
   border-radius: var(--radius-pill);
-  background: #F1F5F9;
+  background: #f1f0f2;
   overflow: hidden;
   margin-bottom: 12px;
 }
@@ -850,8 +855,8 @@ body.modal-open { overflow: hidden; }
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 10px 0;
-  border-top: 1px solid #F1F5F9;
-  border-bottom: 1px solid #F1F5F9;
+  border-top: 1px solid #f1f0f2;
+  border-bottom: 1px solid #f1f0f2;
   margin-bottom: 14px;
   text-align: center;
 }
@@ -876,7 +881,7 @@ body.modal-open { overflow: hidden; }
 
 .adw-cta-btn {
   width: 100%;
-  background: #F8FAFC;
+  background: #f9f8f8;
   color: #0F172A;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -888,7 +893,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .adw-cta-btn:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-color: var(--border-bright);
 }
 
@@ -973,7 +978,7 @@ body.modal-open { overflow: hidden; }
 
 .shb-desc {
   font-size: 12px;
-  color: #94A3B8;
+  color: #7e7f9a;
   margin: 0;
   line-height: 1.4;
 }
@@ -1003,7 +1008,7 @@ body.modal-open { overflow: hidden; }
   align-items: center;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid #f1f0f2;
   cursor: pointer;
   transition: background var(--transition-fast);
 }
@@ -1017,7 +1022,7 @@ body.modal-open { overflow: hidden; }
   height: 46px;
   border-radius: 5px;
   object-fit: cover;
-  background: #F1F5F9;
+  background: #f1f0f2;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
@@ -1131,13 +1136,13 @@ body.modal-open { overflow: hidden; }
 }
 
 .search-bar .scan-btn {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
   margin-left: 6px;
 }
 
 .search-bar .scan-btn:hover {
-  background: #E2E8F0;
+  background: #e5e4ea;
 }
 
 .collectr-filter-bar {
@@ -1169,7 +1174,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .filter-pill {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 12px;
@@ -1182,7 +1187,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .filter-pill:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
 }
 
@@ -1197,7 +1202,7 @@ body.modal-open { overflow: hidden; }
 /* Selector de Juego */
 .game-toggle {
   display: inline-flex;
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-radius: var(--radius-md);
   padding: 4px;
   gap: 4px;
@@ -1225,9 +1230,9 @@ body.modal-open { overflow: hidden; }
 }
 
 .gt-btn.active-magic {
-  background: #8B5CF6;
+  background: #eb9486;
   color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 2px 6px rgba(235, 148, 134, 0.35);
 }
 
 /* Cuadrícula de Cartas Coleccionables */
@@ -1291,7 +1296,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .detail-card-wrapper {
-  background: #172231;
+  background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.35);
   border-radius: 14px;
@@ -1310,7 +1315,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .btn-secondary {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
   font-weight: 700;
   border: 1px solid var(--border-color);
@@ -1378,7 +1383,7 @@ body.modal-open { overflow: hidden; }
 .portfolio-hero-card .phc-lbl {
   font-size: 10px;
   font-weight: 700;
-  color: #94A3B8;
+  color: #7e7f9a;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 2px;
@@ -1450,7 +1455,7 @@ body.modal-open { overflow: hidden; }
 
 .pill-btn:hover {
   color: #0F172A;
-  background: #F8FAFC;
+  background: #f9f8f8;
 }
 
 .pill-btn.active {
@@ -1504,7 +1509,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .deck-action-bar .dab-btn:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-color: var(--border-bright);
 }
 
@@ -1558,7 +1563,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .deck-progress .deck-format-badge {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
   border-radius: var(--radius-pill);
   padding: 3px 10px;
@@ -1568,7 +1573,7 @@ body.modal-open { overflow: hidden; }
 
 .deck-progress .progress-bar-wrap {
   height: 8px;
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-radius: var(--radius-pill);
 }
 
@@ -1597,7 +1602,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .deck-card-row:hover {
-  border-color: #CBD5E1;
+  border-color: #d2d1da;
   transform: translateY(-1px);
 }
 
@@ -1621,13 +1626,13 @@ body.modal-open { overflow: hidden; }
 }
 
 .deck-card-row .dcr-btn {
-  background: #F1F5F9;
+  background: #f1f0f2;
   border: 1px solid var(--border-color);
   color: #0F172A;
 }
 
 .deck-card-row .dcr-btn:hover {
-  background: #E2E8F0;
+  background: #e5e4ea;
 }
 
 .deck-card-row .dcr-btn.remove {
@@ -1650,7 +1655,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .saved-deck-item .sdi-icon {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: 44px;
@@ -1673,7 +1678,7 @@ body.modal-open { overflow: hidden; }
 
 /* ───────────── Escáner Activo de Cámara Figma Pro ───────────── */
 .scanner-container {
-  background: #172231;
+  background: #0f172a;
   border-radius: var(--radius-lg);
   border: 1px solid var(--surface-dark-border);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.3);
@@ -1698,7 +1703,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .cam-ctrl-btn:hover {
-  background: #172231;
+  background: #0f172a;
   color: #AFF33F;
   border-color: #AFF33F;
 }
@@ -1729,7 +1734,7 @@ body.modal-open { overflow: hidden; }
 .scanner-lang-pill {
   background: rgba(23, 34, 49, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #94A3B8;
+  color: #7e7f9a;
 }
 
 .scanner-lang-pill:hover {
@@ -1779,7 +1784,7 @@ body.modal-open { overflow: hidden; }
 }
 
 .scanner-secondary-btn:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-color: var(--border-bright);
 }
 
@@ -1818,13 +1823,13 @@ body.modal-open { overflow: hidden; }
 }
 
 .btn-export-session:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   border-color: var(--border-bright);
 }
 
 /* ───────────── Modales y Selectores Figma Pro ───────────── */
 .variant-pill {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
@@ -1848,14 +1853,14 @@ body.modal-open { overflow: hidden; }
 }
 
 .lang-pill {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
 }
 
 .lang-pill:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
 }
 
@@ -1868,14 +1873,14 @@ body.modal-open { overflow: hidden; }
 }
 
 .condition-pill {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
 }
 
 .condition-pill:hover {
-  background: #F1F5F9;
+  background: #f1f0f2;
   color: #0F172A;
 }
 
@@ -1886,11 +1891,11 @@ body.modal-open { overflow: hidden; }
 }
 
 .condition-pill.active small {
-  color: #94A3B8;
+  color: #7e7f9a;
 }
 
 .market-stats-grid {
-  background: #F8FAFC;
+  background: #f9f8f8;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
 }
@@ -1980,7 +1985,7 @@ body.modal-open { overflow: hidden; }
     align-items: center;
     gap: 10px;
     padding: 4px 8px 20px;
-    border-bottom: 1px solid #F1F5F9;
+    border-bottom: 1px solid #f1f0f2;
   }
 
   .sidebar-nav-links {
@@ -2004,7 +2009,7 @@ body.modal-open { overflow: hidden; }
   }
 
   .main-nav .nav-btn:hover {
-    background: #F1F5F9;
+    background: #f1f0f2;
     color: #0F172A;
   }
 
@@ -2060,7 +2065,7 @@ body.modal-open { overflow: hidden; }
 
   .spc-desc {
     font-size: 11px;
-    color: #94A3B8;
+    color: #7e7f9a;
     display: block;
     margin-bottom: 8px;
   }
@@ -2089,14 +2094,14 @@ body.modal-open { overflow: hidden; }
   }
 
   .sidebar-user-card:hover {
-    background: #F1F5F9;
+    background: #f1f0f2;
   }
 
   .suc-avatar {
     width: 34px;
     height: 34px;
     border-radius: var(--radius-pill);
-    background: #E2E8F0;
+    background: #e5e4ea;
     color: #0F172A;
     font-weight: 800;
     font-size: 12px;
@@ -2184,7 +2189,7 @@ body.modal-open { overflow: hidden; }
 /* Ganancia / pérdida */
 .pl-up { color: #15803d; }
 .pl-down { color: #dc2626; }
-.pl-none { color: var(--text-muted, #64748B); }
+.pl-none { color: var(--text-muted, #5b5c78); }
 .dark-hero-card .pl-up, .portfolio-hero-card .pl-up { color: #4ade80; }
 .dark-hero-card .pl-down, .portfolio-hero-card .pl-down { color: #f87171; }
 .trend-tag-red { background: rgba(248, 113, 113, 0.16); color: #dc2626; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 800; }
@@ -2193,20 +2198,20 @@ body.modal-open { overflow: hidden; }
 .detail-cost, .detail-alert { margin: 14px 0; display: flex; flex-direction: column; gap: 8px; }
 .cost-row, .alert-row, .alert-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cost-row input, .alert-row input { flex: 1 1 120px; min-width: 0; padding: 10px 12px; border-radius: 10px;
-  border: 1px solid var(--border-color, #CBD5E1); background: var(--surface-color, #fff); color: inherit; font: inherit; }
+  border: 1px solid var(--border-color, #d2d1da); background: var(--surface-color, #fff); color: inherit; font: inherit; }
 .detail-pl { margin: 0; font-size: 13px; font-weight: 800; min-height: 1em; }
 /* Alertas */
 .alert-threshold { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 8px; }
-.alert-threshold input { width: 64px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-color, #CBD5E1); background: var(--surface-color, #fff); color: inherit; font: inherit; }
+.alert-threshold input { width: 64px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-color, #d2d1da); background: var(--surface-color, #fff); color: inherit; font: inherit; }
 .alert-row-item { display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: 12px; cursor: pointer;
-  border-left: 4px solid #94A3B8; }
+  border-left: 4px solid #7e7f9a; }
 .alert-row-item:hover, .alert-row-item:focus-visible { background: rgba(148, 163, 184, 0.14); }
 .alert-row-item.alert-below, .alert-row-item.alert-down { border-left-color: #dc2626; }
 .alert-row-item.alert-above, .alert-row-item.alert-up { border-left-color: #16a34a; }
 .home-alerts-panel { margin-bottom: 16px; }
 
 /* Análisis, avisos y herramientas de la colección */
-.an-sub { margin: 14px 0 4px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted, #64748B); }
+.an-sub { margin: 14px 0 4px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted, #5b5c78); }
 .stale-banner { margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.5); font-size: 14px; }
 .col-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .price-links { margin: 6px 0 0; font-size: 13px; }

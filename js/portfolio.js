@@ -87,7 +87,7 @@ function exportCollectionCsv() {
   if (!collection.length) { showDeckToast("No hay cartas que exportar", "warn"); return; }
   const url = URL.createObjectURL(new Blob([collectionToCsv()], { type: "text/csv;charset=utf-8" }));
   const a = document.createElement("a");
-  a.href = url; a.download = `carddex-coleccion-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.href = url; a.download = `kardlume-coleccion-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   showDeckToast(`${collection.length} filas exportadas`, "success");
@@ -116,7 +116,7 @@ const parseDec = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, ""
 
 let importingCsv = false;
 
-/** Importa un CSV exportado por CardDex (necesita juego e id de cada fila). */
+/** Importa un CSV exportado por Kard Lume (necesita juego e id de cada fila). */
 async function importCollectionCsv(file) {
   if (!file || importingCsv) return;
   if (!canEditCollection()) { showDeckToast("Inicia sesión para importar", "warn"); return; }

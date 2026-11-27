@@ -6,24 +6,24 @@
 :root {
   --card: #ffffff;
   --ring: #aff33f;
-  --input: #f8fafc;
-  --muted: #f1f5f9;
+  --input: #f9f8f8;
+  --muted: #f1f0f2;
   --accent: #aff33f;
-  --border: #e2e8f0;
+  --border: #e5e4ea;
   --radius: 0.75rem;
   --chart-1: #aff33f;
-  --chart-2: #8b5cf6;
+  --chart-2: #eb9486;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
-  --chart-5: #64748b;
+  --chart-5: #5b5c78;
   --popover: #ffffff;
   --primary: #aff33f;
   --sidebar: #ffffff;
   --spacing: 0.25rem;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --secondary: #f1f5f9;
-  --background: #f8fafc;
+  --secondary: #f1f0f2;
+  --background: #f9f8f8;
   --font-serif: "Inter", ui-sans-serif, sans-serif;
   --foreground: #0f172a;
   --destructive: #ef4444;
@@ -33,13 +33,13 @@
   --shadow-spread: 0px;
   --letter-spacing: -0.01em;
   --shadow-opacity: 0.06;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-border: #e2e8f0;
+  --sidebar-accent: #f1f0f2;
+  --sidebar-border: #e5e4ea;
   --card-foreground: #0f172a;
   --shadow-offset-x: 0;
   --shadow-offset-y: 2px;
   --sidebar-primary: #aff33f;
-  --muted-foreground: #64748b;
+  --muted-foreground: #5b5c78;
   --accent-foreground: #0f172a;
   --popover-foreground: #0f172a;
   --primary-foreground: #0f172a;
@@ -54,11 +54,11 @@
   --surface-color: var(--card);
   --surface-hover: var(--secondary);
   --surface-active: var(--border);
-  --surface-dark: #172231;
-  --surface-dark-card: #172231;
+  --surface-dark: #0f172a;
+  --surface-dark-card: #0f172a;
   --surface-dark-border: rgba(255, 255, 255, 0.08);
   --border-color: var(--border);
-  --border-bright: #cbd5e1;
+  --border-bright: #d2d1da;
   
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
@@ -67,8 +67,8 @@
   /* Game Themes */
   --pk-accent: #aff33f;
   --pk-accent-rgb: 175, 243, 63;
-  --mtg-accent: #8b5cf6;
-  --mtg-accent-rgb: 139, 92, 246;
+  --mtg-accent: #eb9486;
+  --mtg-accent-rgb: 235, 148, 134;
   
   /* Dynamic Accent */
   --accent-color: var(--pk-accent);
@@ -886,7 +886,7 @@ body::before {
   border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
-  color: #cbd5e1;
+  color: #d2d1da;
   letter-spacing: 0.04em;
 }
 
@@ -909,7 +909,7 @@ body::before {
 }
 
 .badge-finish.reverse {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(139, 92, 246, 0.4));
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.4), rgba(235, 148, 134, 0.4));
   border: 1px solid rgba(6, 182, 212, 0.7);
   backdrop-filter: blur(4px);
   color: #bae6fd;
@@ -924,7 +924,7 @@ body::before {
 .badge-condition {
   background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #94a3b8;
+  color: #7e7f9a;
   font-size: 9px;
   font-weight: 800;
   padding: 1px 5px;

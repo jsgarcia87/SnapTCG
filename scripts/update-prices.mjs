@@ -78,7 +78,7 @@ async function main() {
     for (const group of chunk(magic, 75)) {
       try {
         const data = await fetchJSON("https://api.scryfall.com/cards/collection", {
-          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": "SnapTCG-price-job/1.0" },
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": "KardLume-price-job/1.0" },
           body: JSON.stringify({ identifiers: group.map(c => ({ id: c.id })) })
         });
         const byId = new Map((data.data || []).map(c => [c.id, c]));
