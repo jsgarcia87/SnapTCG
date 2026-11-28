@@ -2394,3 +2394,39 @@ body.scanner-open .scan-tray.is-empty { max-height: none; }
 }
 .market-stats-grid:not([hidden]) { display: flex !important; }
 .market-stats-grid .market-stat-box { flex: 1; }
+
+/* ───────────── Cabecera móvil compacta (v3.22): una sola fila ───────────── */
+@media (max-width: 899px) {
+  .app-header { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; }
+  .app-header .header-brand { min-width: 0; flex: 1; gap: 8px; }
+  .app-header .brand-logo-img { height: 42px; }
+  .app-header .brand-text { min-width: 0; }
+  .app-header .brand-text .logo { font-size: 20px; }
+  .app-header .brand-text .subtitle { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-header .header-actions { flex: none; }
+  .header-game-toggle .gt-btn { padding: 8px 10px; min-height: 44px; min-width: 44px; justify-content: center; }
+  .header-game-toggle .gt-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* solo icono; el nombre sigue para lectores de pantalla */
+}
+
+/* ───────────── Sets: completar colección (v3.22) ───────────── */
+.sets-intro { margin: 0 0 10px; }
+.sets-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.set-row { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 14px; text-align: left; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 14px; font: inherit; color: #0F172A; cursor: pointer; }
+.set-row:hover, .set-row:focus-visible { border-color: #0F172A; }
+.set-row-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.set-row-name { font-weight: 800; font-size: 15px; }
+.set-row-pct { font-weight: 800; font-variant-numeric: tabular-nums; }
+.set-row-meta { font-size: 12px; color: #5B5C78; }
+.set-row-bar { display: block; height: 8px; border-radius: 999px; background: #F1F0F2; overflow: hidden; }
+.set-row-bar > span { display: block; height: 100%; background: #AFF33F; border-right: 2px solid #3F6212; border-radius: 999px; }
+.set-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.set-head h3 { margin: 0; font-size: 20px; }
+.set-head .link-btn { align-self: flex-start; padding-left: 0; }
+.set-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.set-card { position: relative; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 8px; }
+.set-card img { display: block; width: 100%; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 8px; background: #E5E4EA; }
+.set-card.missing img { filter: grayscale(1); opacity: 0.35; }
+.set-card-num { position: absolute; left: 4px; bottom: 4px; padding: 1px 6px; border-radius: 6px; background: rgba(15, 23, 42, 0.85); color: #FFFFFF; font-size: 11px; font-weight: 700; }
+.set-card-flag { position: absolute; right: 4px; top: 4px; padding: 1px 6px; border-radius: 6px; background: #F9F8F8; color: #0F172A; font-size: 10px; font-weight: 800; border: 1px solid #E5E4EA; }
+.set-card.owned { outline: 2px solid #AFF33F; outline-offset: 1px; }

@@ -2,7 +2,7 @@
   Project: Kard Lume
   Kard Lume Design System 
   Author: Sangar Studio
-  Version: 3.21.0
+  Version: 3.22.0
   Focus: Accessibility, Intuitiveness, and Visual Excellence
 -->
 <!DOCTYPE html>
@@ -20,7 +20,7 @@
   <meta property="og:title" content="Kard Lume">
   <meta property="og:description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering.">
   <meta name="author" content="Sangar Studio">
-  <meta name="version" content="3.21.0">
+  <meta name="version" content="3.22.0">
   <title>Kard Lume — Escáner y Constructor de Mazos TCG</title>
   <meta name="description" content="Busca, escanea y valora cartas de Pokémon TCG y Magic: The Gathering. Construye y guarda tus mazos.">
   
@@ -125,47 +125,50 @@
           </div>
 
           <!-- Filtros estilo Collectr: Idioma, Acabado/Holo, Ordenación -->
-          <div class="collectr-filter-bar" id="search-filter-bar">
-            <!-- Selector de Idioma -->
-            <div class="filter-group">
-              <span class="filter-group-label" title="Idioma"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"/></svg></span>
-              <button class="filter-pill active" data-filter="lang" data-value="all" onclick="setSearchFilter('lang','all')">Todos</button>
-              <button class="filter-pill" data-filter="lang" data-value="en" onclick="setSearchFilter('lang','en')">EN</button>
-              <button class="filter-pill" data-filter="lang" data-value="es" onclick="setSearchFilter('lang','es')">ES</button>
-              <button class="filter-pill" data-filter="lang" data-value="ja" onclick="setSearchFilter('lang','ja')">JA</button>
-              <button class="filter-pill" data-filter="lang" data-value="zh" onclick="setSearchFilter('lang','zh')">ZH (Chino)</button>
-              <button class="filter-pill" data-filter="lang" data-value="zh-cn" onclick="setSearchFilter('lang','zh-cn')">ZH-CN</button>
-              <button class="filter-pill" data-filter="lang" data-value="zh-tw" onclick="setSearchFilter('lang','zh-tw')">ZH-TW</button>
-              <button class="filter-pill" data-filter="lang" data-value="ko" onclick="setSearchFilter('lang','ko')">KO</button>
-              <button class="filter-pill" data-filter="lang" data-value="fr" onclick="setSearchFilter('lang','fr')">FR</button>
-              <button class="filter-pill" data-filter="lang" data-value="de" onclick="setSearchFilter('lang','de')">DE</button>
-              <button class="filter-pill" data-filter="lang" data-value="it" onclick="setSearchFilter('lang','it')">IT</button>
-            </div>
+          <details class="col-filters search-filters" id="search-filters">
+            <summary>Filtros y orden<span id="search-filters-count"></span></summary>
+            <div class="collectr-filter-bar" id="search-filter-bar">
+              <!-- Selector de Idioma -->
+              <div class="filter-group">
+                <span class="filter-group-label" title="Idioma"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"/></svg></span>
+                <button class="filter-pill active" data-filter="lang" data-value="all" onclick="setSearchFilter('lang','all')">Todos</button>
+                <button class="filter-pill" data-filter="lang" data-value="en" onclick="setSearchFilter('lang','en')">EN</button>
+                <button class="filter-pill" data-filter="lang" data-value="es" onclick="setSearchFilter('lang','es')">ES</button>
+                <button class="filter-pill" data-filter="lang" data-value="ja" onclick="setSearchFilter('lang','ja')">JA</button>
+                <button class="filter-pill" data-filter="lang" data-value="zh" onclick="setSearchFilter('lang','zh')">ZH (Chino)</button>
+                <button class="filter-pill" data-filter="lang" data-value="zh-cn" onclick="setSearchFilter('lang','zh-cn')">ZH-CN</button>
+                <button class="filter-pill" data-filter="lang" data-value="zh-tw" onclick="setSearchFilter('lang','zh-tw')">ZH-TW</button>
+                <button class="filter-pill" data-filter="lang" data-value="ko" onclick="setSearchFilter('lang','ko')">KO</button>
+                <button class="filter-pill" data-filter="lang" data-value="fr" onclick="setSearchFilter('lang','fr')">FR</button>
+                <button class="filter-pill" data-filter="lang" data-value="de" onclick="setSearchFilter('lang','de')">DE</button>
+                <button class="filter-pill" data-filter="lang" data-value="it" onclick="setSearchFilter('lang','it')">IT</button>
+              </div>
             
-            <div class="filter-divider"></div>
+              <div class="filter-divider"></div>
 
-            <!-- Selector de Acabado / Holo -->
-            <div class="filter-group">
-              <span class="filter-group-label" title="Estilo / Acabado"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m-15 0a2.246 2.246 0 0 0-.75 1.622v4.5c0 .621.504 1.125 1.125 1.125h14.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125m-14.25 0c.235-.083.487-.128.75-.128h13.5c.263 0 .515.045.75.128" /></svg></span>
-              <button class="filter-pill active" data-filter="finish" data-value="all" onclick="setSearchFilter('finish','all')">Todos</button>
-              <button class="filter-pill" data-filter="finish" data-value="holo" onclick="setSearchFilter('finish','holo')">Holofoil</button>
-              <button class="filter-pill" data-filter="finish" data-value="normal" onclick="setSearchFilter('finish','normal')">Normal</button>
-              <button class="filter-pill" data-filter="finish" data-value="reverse" onclick="setSearchFilter('finish','reverse')">Reverse</button>
+              <!-- Selector de Acabado / Holo -->
+              <div class="filter-group">
+                <span class="filter-group-label" title="Estilo / Acabado"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m-15 0a2.246 2.246 0 0 0-.75 1.622v4.5c0 .621.504 1.125 1.125 1.125h14.25c.621 0 1.125-.504 1.125-1.125v-4.5c0-.621-.504-1.125-1.125-1.125m-14.25 0c.235-.083.487-.128.75-.128h13.5c.263 0 .515.045.75.128" /></svg></span>
+                <button class="filter-pill active" data-filter="finish" data-value="all" onclick="setSearchFilter('finish','all')">Todos</button>
+                <button class="filter-pill" data-filter="finish" data-value="holo" onclick="setSearchFilter('finish','holo')">Holofoil</button>
+                <button class="filter-pill" data-filter="finish" data-value="normal" onclick="setSearchFilter('finish','normal')">Normal</button>
+                <button class="filter-pill" data-filter="finish" data-value="reverse" onclick="setSearchFilter('finish','reverse')">Reverse</button>
+              </div>
+
+              <div class="filter-divider"></div>
+
+              <!-- Ordenación -->
+              <div class="filter-group">
+                <span class="filter-group-label" title="Ordenar por"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/></svg></span>
+                <select id="search-sort-select" class="filter-select" onchange="setSearchFilter('sort', this.value)">
+                  <option value="relevance">Relevancia</option>
+                  <option value="price-desc">Mayor precio</option>
+                  <option value="price-asc">Menor precio</option>
+                  <option value="name-asc">Nombre (A-Z)</option>
+                </select>
+              </div>
             </div>
-
-            <div class="filter-divider"></div>
-
-            <!-- Ordenación -->
-            <div class="filter-group">
-              <span class="filter-group-label" title="Ordenar por"><svg class="heroicon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"/></svg></span>
-              <select id="search-sort-select" class="filter-select" onchange="setSearchFilter('sort', this.value)">
-                <option value="relevance">Relevancia</option>
-                <option value="price-desc">Mayor precio</option>
-                <option value="price-asc">Menor precio</option>
-                <option value="name-asc">Nombre (A-Z)</option>
-              </select>
-            </div>
-          </div>
+          </details>
         </div>
 
         
@@ -586,6 +589,7 @@
   <script src="js/cloud.js"></script>
   <script src="js/alerts.js"></script>
   <script src="js/portfolio.js"></script>
+  <script src="js/sets.js"></script>
   <script src="js/home.js"></script>
   <script src="js/app.js"></script>
 </body>

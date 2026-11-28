@@ -144,11 +144,19 @@ function setSearchFilter(type, val) {
     }
   }
 
+  actualizarContadorFiltros();
   // Filtrado y ordenación sobre los resultados cargados
   if (rawSearchResults.length) {
     const filtrados = filterAndSortCards(rawSearchResults);
     renderizarLista(filtrados);
   }
+}
+
+/** «Filtros y orden (n)» en Buscar: cuántos filtros no están en su valor por defecto. */
+function actualizarContadorFiltros() {
+  const n = (searchFilters.lang !== "all") + (searchFilters.finish !== "all") + (searchFilters.sort !== "relevance");
+  const el = document.getElementById("search-filters-count");
+  if (el) el.textContent = n ? ` (${n})` : "";
 }
 
 function filterAndSortCards(cards) {
@@ -242,8 +250,10 @@ function renderizarLista(resultados) {
 
   resultados.forEach((carta, index) => {
     const inDeckCount = getCardCountInDeck(carta.id);
-    const isHolo = carta.variants?.holo || (carta.precioFoil != null && carta.precioFoil > 0);
-    const isReverse = carta.variants?.reverse && !carta.variants?.holo;
+    // La etiqueta solo informa si la carta no existe en versión normal (si no, casi todas decían «Rev Holo»)
+    const soloEspecial = carta.variants?.normal === false;
+    const isHolo = soloEspecial && !!carta.variants?.holo;
+    const isReverse = soloEspecial && !!carta.variants?.reverse && !carta.variants?.holo;
     const langBadge = formatLanguageBadge(carta.lang);
     const langName = formatLanguageName(carta.lang);
     

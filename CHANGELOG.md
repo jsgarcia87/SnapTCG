@@ -4,6 +4,21 @@ Todos los cambios notables de este proyecto se documentan en este archivo según
 
 ---
 
+## [3.22.0] - 2026-11-28
+
+### Completar colecciones por set
+- Nueva pestaña **Sets** en Colección: cada set en el que tienes cartas, con barra de progreso y «tengo / total oficial» (más las secretas aparte). Totales de TCGdex (Pokémon) y Scryfall (Magic), en caché 7 días.
+- Al abrir un set se ven **todas sus cartas**: las tuyas resaltadas y las que faltan atenuadas con la etiqueta «Falta». Filtros Todas / Me faltan / Tengo. Tocar una carta abre su ficha (tu copia si la tienes) para consultarla o añadirla.
+- Las cartas se cuentan por número de coleccionista: la misma carta en otro idioma o acabado cuenta una vez, y «002» y «2» son la misma.
+
+### Auditoría UX (prioridad media)
+- **Cabecera móvil compacta**: logo, nombre y selector de juego en una sola fila (el selector muestra solo los iconos; el nombre sigue disponible para lectores de pantalla). Se recuperan unos 70 px en cada pantalla.
+- **Filtros de Buscar plegados** en «Filtros y orden», con el número de filtros activos.
+- Las etiquetas de acabado en los resultados solo aparecen si la carta **no existe en versión normal** (antes casi todas decían «Rev Holo»).
+- **Mazo vacío con guía**: explica cómo añadir cartas y tiene el botón «Buscar cartas para este mazo».
+
+---
+
 ## [3.21.0] - 2026-11-28
 
 ### Ficha de carta (auditoría UX, prioridad alta)

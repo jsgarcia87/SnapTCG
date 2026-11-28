@@ -555,7 +555,10 @@ function copyCollectionLink() {
   navigator.clipboard?.writeText(url).then(() => showDeckToast("Enlace copiado", "success"), () => prompt("Copia este enlace:", url));
 }
 
-function setColTab(tab) { colTab = tab; renderCollection(); window.scrollTo({ top: 0 }); }
+function setColTab(tab) {
+  if (tab !== colTab && typeof setOpen !== "undefined") setOpen = null;
+  colTab = tab; renderCollection(); window.scrollTo({ top: 0 });
+}
 
 function setCollectionFilter(key, value) {
   collectionFilter[key] = value;
@@ -632,7 +635,7 @@ function renderCollection() {
   ].map(([k, l]) => `<button class="filter-pill ${collectionFilter.lang === k ? "active" : ""}" onclick="setCollectionFilter('lang','${k}')">${l}</button>`).join("");
 
   const filtrosActivos = ["game", "finish", "lang"].filter(k => collectionFilter[k] !== "all").length;
-  const tabs = [["cartas", "Cartas"], ["analisis", "Análisis"], ["cuenta", cloudConfigured() ? "Cuenta" : "Datos"]]
+  const tabs = [["cartas", "Cartas"], ["sets", "Sets"], ["analisis", "Análisis"], ["cuenta", cloudConfigured() ? "Cuenta" : "Datos"]]
     .map(([k, l]) => `<button type="button" role="tab" class="col-tab ${colTab === k ? "active" : ""}" aria-selected="${colTab === k}" onclick="setColTab('${k}')">${l}</button>`).join("");
 
   const cartasHtml = `
@@ -721,7 +724,7 @@ function renderCollection() {
 
   root.innerHTML = `
     <div class="col-tabs" role="tablist" aria-label="Secciones de la colección">${tabs}</div>
-    ${colTab === "analisis" ? analisisHtml : colTab === "cuenta" ? cuentaHtml : cartasHtml + `
+    ${colTab === "analisis" ? analisisHtml : colTab === "cuenta" ? cuentaHtml : colTab === "sets" ? (typeof setsHtml === "function" ? setsHtml() : "") : cartasHtml + `
     ${list.length === 0 ? `<div class="an-empty">${collection.length ? "No hay cartas que coincidan con los filtros aplicados." : (editable ? "Aún no tienes cartas en tu colección. Búscalas o escanéalas y pulsa «Añadir a colección»." : "Esta colección está vacía.")}</div>` : ""}
 
     <div class="results-grid" style="display:grid">

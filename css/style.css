@@ -1846,3 +1846,5 @@ button:active, .btn:active {
   color: var(--text-muted);
   text-transform: uppercase;
 }
+.deck-list-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.deck-list-empty p { margin: 0; max-width: 340px; }

@@ -169,7 +169,11 @@ function renderDeckList() {
   container.innerHTML = "";
 
   if (currentDeck.length === 0) {
-    container.innerHTML = `<div class="deck-list-empty">Tu mazo está vacío. Empieza añadiendo cartas.</div>`;
+    container.innerHTML = `<div class="deck-list-empty">
+      <p><strong>Tu mazo está vacío.</strong></p>
+      <p>Busca o escanea una carta, ábrela y pulsa «Al mazo». Las cartas que ya tienes en la colección también se pueden añadir desde su ficha.</p>
+      <button type="button" class="btn-primary-sm" onclick="irABuscar()">Buscar cartas para este mazo</button>
+    </div>`;
     return;
   }
 
